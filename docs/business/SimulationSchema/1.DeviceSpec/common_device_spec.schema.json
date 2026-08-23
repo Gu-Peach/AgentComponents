@@ -1,0 +1,33 @@
+{
+  "schema_id": "common_device_spec_schema_v0_1",
+  "schema_type": "CommonDeviceSpecSchema",
+  "version": "0.1.0",
+  "name": "通用设备本体规范",
+  "description": "所有设备本体 JSON 都应遵守的通用结构。具体设备通过 type_specific_contract 扩展特殊运动或控制能力。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/common_device_spec.schema.json" },
+  "created_for": "设备本体行为建模",
+  "references": ["../common_schema_contract.json", "schema.json"],
+  "notes": ["DeviceSpec 是设备本体建模，不保存场景实例连接关系。", "所有设备都通过统一接口进入场景级工艺仿真 schema。"],
+  "required_common_device_fields": [
+    "device_type",
+    "display_name",
+    "asset",
+    "params_schema",
+    "physical_interfaces",
+    "process_ports",
+    "signal_ports",
+    "interface_bindings",
+    "transport_behaviors",
+    "runtime_contract",
+    "type_specific_contract"
+  ],
+  "field_contract": {
+    "physical_interfaces": "真实空间中的连接、抓取、放置、入料、出料等锚点。",
+    "process_ports": "工艺流程画布上的抽象入口/出口。",
+    "signal_ports": "设备可接收或发出的运行时事件/状态。",
+    "transport_behaviors": "设备可执行的物料流转行为能力。",
+    "runtime_contract": "FSM、资源、容量、错误策略和运行约束。",
+    "type_specific_contract": "设备类型专属的运动、控制、容量或几何语义。"
+  }
+}
+

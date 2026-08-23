@@ -1,0 +1,13 @@
+{
+  "schema_id": "executable_sim_graph_schema_contract_v0_1",
+  "schema_type": "ExecutableSimGraphSchemaContract",
+  "version": "0.1.0",
+  "name": "ExecutableSimGraph 可执行图规范",
+  "description": "定义 Runtime 可执行 action graph，包括 guards、effects、资源锁和失败处理。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/6.ExecutableSimGraph/schema.json" },
+  "created_for": "Runtime 调度执行",
+  "references": ["../common_schema_contract.json", "../5.SimPlan/schema.json", "../4.SignalBusSchema/schema.json"],
+  "notes": ["ExecutableSimGraph 面向调度器，不面向普通用户编辑。"],
+  "required_sections": ["runtime_plan_id", "action_nodes", "dependencies", "guards", "effects", "resource_locks", "failure_handlers", "replan_triggers"]
+}
+

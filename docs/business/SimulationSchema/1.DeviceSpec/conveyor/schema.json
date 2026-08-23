@@ -1,0 +1,15 @@
+﻿{
+  "schema_id": "conveyor_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Conveyor DeviceSpec 规范",
+  "description": "传送带设备本体规范，适用于连续输送、阻塞等待和物料到达触发。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/schema.json" },
+  "created_for": "图 1 / 图 4 / 图 7 中传送带设备建模",
+  "references": ["../common_device_spec.schema.json", "conveyor_1.json"],
+  "notes": ["传送带通过 entry/exit 暴露通用流转接口，通过 part_ready/blocked 信号参与调度。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["conveyor_geometry", "motion_model", "queue_policy"],
+  "required_behaviors": ["accept_material", "transport_to_exit", "release_material"],
+  "required_signals": ["part_ready", "blocked", "done", "release_waiting_material"]
+}

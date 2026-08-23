@@ -1,0 +1,34 @@
+{
+  "schema_id": "device_spec_schema_v0_1",
+  "schema_type": "DeviceSpecSchema",
+  "version": "0.1.0",
+  "name": "DeviceSpec 板块通用规范",
+  "description": "定义设备本体行为模型的通用结构。具体设备类型应在该规范基础上扩展 type_specific_contract。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/schema.json" },
+  "created_for": "设备本体行为建模与场景级工艺仿真编译",
+  "references": ["../common_schema_contract.json", "../device_data_structure.md"],
+  "notes": ["该文件是可读规范，不是严格 JSON Schema Draft。", "设备本体不保存场景连接关系，也不保存运行时状态。"],
+  "required_sections": [
+    "asset",
+    "params_schema",
+    "physical_interfaces",
+    "process_ports",
+    "signal_ports",
+    "interface_bindings",
+    "transport_behaviors",
+    "runtime_contract",
+    "type_specific_contract"
+  ],
+  "section_contract": {
+    "asset": "GLB 等设备资产引用。",
+    "params_schema": "设备可配置参数定义。",
+    "physical_interfaces": "真实物理锚点与连接能力。",
+    "process_ports": "工艺流程抽象口。",
+    "signal_ports": "运行时信号输入输出能力。",
+    "interface_bindings": "流程口到物理接口的绑定。",
+    "transport_behaviors": "设备本体支持的物料流转行为。",
+    "runtime_contract": "FSM、资源、容量、错误策略等运行契约。",
+    "type_specific_contract": "设备类型专属运动、控制或容量特性。"
+  }
+}
+

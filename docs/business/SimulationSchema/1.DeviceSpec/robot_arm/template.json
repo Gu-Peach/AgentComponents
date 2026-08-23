@@ -1,0 +1,50 @@
+﻿{
+  "schema_id": "robot_arm_template_required",
+  "schema_type": "DeviceSpecTemplate",
+  "version": "0.1.0",
+  "name": "机械臂设备本体填写模板",
+  "description": "用于新增机械臂 DeviceSpec，保留驱动器所需 urdf.joints 与 trajectoryConfig 格式。",
+  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/template.json" },
+  "created_for": "robot_arm 设备本体建模",
+  "references": ["../common_device_spec.schema.json", "schema.json", "robot_arm_1.json"],
+  "notes": ["_required 表示必填，_optional 表示可选。", "urdf.joints 与 trajectoryConfig 应按驱动器标准填写。"],
+  "device_spec_id": "robot_arm_id_required",
+  "device_type": "robot_arm",
+  "display_name": "机械臂展示名_required",
+  "asset": { "model_format": "glb_required", "model_key": "assets/models/robot_arm/{file}.glb_required", "root_node_name": "rootNodeName_required" },
+  "params_schema": {
+    "speed": { "type": "number", "default": "默认速度_required", "min": "最小速度_optional", "max": "最大速度_optional", "unit": "m/s" },
+    "payload_kg": { "type": "number", "default": "负载_required", "min": 0, "max": "最大负载_optional", "unit": "kg" },
+    "lift_height": { "type": "number", "default": "抬升高度_required", "unit": "m" }
+  },
+  "physical_interfaces": [
+    { "interface_id": "pick_area", "kind": "material", "direction": "input", "node_name": "PickAnchor_required", "material_classes": ["workpiece_required"], "local_position": ["x_optional", "y_optional", "z_optional"], "local_forward": ["x_optional", "y_optional", "z_optional"] },
+    { "interface_id": "place_area", "kind": "material", "direction": "output", "node_name": "PlaceAnchor_required", "material_classes": ["workpiece_required"], "local_position": ["x_optional", "y_optional", "z_optional"], "local_forward": ["x_optional", "y_optional", "z_optional"] },
+    { "interface_id": "tool_center_point", "kind": "tool", "direction": "bidirectional", "node_name": "TCP节点_required", "material_classes": ["workpiece_required"] }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Pick Input" },
+    { "port_id": "flow_output", "direction": "output", "label": "Place Output" }
+  ],
+  "signal_ports": [
+    { "port_id": "start_pick", "direction": "input", "value_type": "event", "description": "触发抓取" },
+    { "port_id": "busy", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" },
+    { "port_id": "error", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "pick_area" },
+    { "process_port": "flow_output", "physical_interface": "place_area" }
+  ],
+  "transport_behaviors": [
+    { "behavior_id": "pick_and_place", "behavior_type": "material_transfer", "input_physical_interface": "pick_area", "output_physical_interface": "place_area", "default_algorithm": "robot_pick_place", "input_signals": ["start_pick"], "output_signals": ["busy", "done", "error"], "resources": ["robot_arm", "gripper"], "preconditions": ["fsm_state == idle", "material_at(input_physical_interface)", "gripper.empty == true"], "effects": ["material_at(output_physical_interface)", "emit done"] }
+  ],
+  "runtime_contract": { "fsm_states": ["idle", "busy", "waiting", "error"], "default_state": "idle", "resources": [{ "resource_id": "robot_arm", "exclusive": true }, { "resource_id": "gripper", "exclusive": true }], "capacity": { "max_active_materials": 1 }, "error_policy": { "on_timeout": "emit_observation", "on_unreachable_target": "pause_and_request_replan" } },
+  "type_specific_contract": {
+    "rootNodeName": "模型根节点_required",
+    "urdf": { "joints": [{ "name": "joint_1_required", "nodeName": "关节节点_required", "type": "revolute|required", "axis": { "x": 0, "y": 1, "z": 0 }, "limit": { "lower": "下限_required", "upper": "上限_required" } }] },
+    "trajectoryConfig": { "liftHeight": "抬升高度_required", "speed": "轨迹速度_required" },
+    "workspace": { "shape": "工作空间形状_optional", "radius_m": "半径_optional", "height_m": "高度_optional" },
+    "gripper": { "type": "夹爪类型_required", "supported_material_classes": ["workpiece_required"], "max_payload_kg": "最大负载_optional" }
+  }
+}

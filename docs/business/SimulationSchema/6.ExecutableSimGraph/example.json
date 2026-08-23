@@ -1,0 +1,31 @@
+{
+  "schema_id": "executable_sim_graph_example_figure_1_v0_1",
+  "schema_type": "ExecutableSimGraph",
+  "version": "0.1.0",
+  "name": "Figure 1 ExecutableSimGraph Example",
+  "description": "传送带到机械臂交接的 Runtime 可执行图示例。",
+  "source": { "kind": "compiled_example", "compiled_from": "../5.SimPlan/example.json" },
+  "created_for": "Runtime 可执行图示例",
+  "references": ["../3.SceneTransportSchema/example.json", "../4.SignalBusSchema/example.json", "../5.SimPlan/example.json"],
+  "notes": ["guards 与 effects 使用可读表达式，后续可替换为表达式 AST。"],
+  "runtime_plan_id": "runtime_plan_figure_1_001",
+  "action_nodes": [
+    { "node_id": "action_conveyor_transport", "instance_id": "conveyor_1", "behavior_id": "transport_to_exit" },
+    { "node_id": "action_robot_pick", "instance_id": "robot_1", "behavior_id": "pick_and_place" }
+  ],
+  "dependencies": [
+    { "from": "action_conveyor_transport", "to": "action_robot_pick", "type": "signal_dependency", "signal": "conveyor_1.part_ready" }
+  ],
+  "guards": [
+    { "node_id": "action_robot_pick", "conditions": ["robot_1.fsm_state == idle", "material_at(part_001, conveyor_1.exit)", "resource(robot_1.gripper).locked_by == null"] }
+  ],
+  "effects": [
+    { "node_id": "action_robot_pick", "on_start": ["set robot_1.busy = true", "lock robot_1.gripper"], "on_complete": ["emit robot_1.done", "move part_001 to robot_1.pick_area", "unlock robot_1.gripper"] }
+  ],
+  "resource_locks": ["robot_1.gripper"],
+  "failure_handlers": [
+    { "condition": "timeout(action_robot_pick)", "handler": "emit_observation" }
+  ],
+  "replan_triggers": ["deadlock_detected", "user_interrupt", "timeout"]
+}
+

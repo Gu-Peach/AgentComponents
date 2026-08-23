@@ -1,0 +1,81 @@
+﻿{
+  "schema_id": "robot_arm_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "Fanuc 机械臂 1",
+  "description": "6 轴工业机械臂，负责物料抓取、搬运和放置。",
+  "source": { "kind": "image_and_existing_driver_config", "path": "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/robot_arm_1.json" },
+  "created_for": "图 1 / 图 4 / 图 11 中机械臂设备本体建模",
+  "references": ["schema.json", "../../../test/1.png", "../../../test/4.png", "../../../test/11.png"],
+  "notes": ["保留原驱动器标准格式：rootNodeName、urdf.joints、trajectoryConfig。", "该 DeviceSpec 是设备本体，不保存与具体场景中其他设备的连接关系。"],
+  "id": "robot_arm_1",
+  "device_spec_id": "robot_arm_1",
+  "device_type": "robot_arm",
+  "display_name": "Fanuc 机械臂 1",
+  "asset": { "model_format": "glb", "model_key": "assets/models/robot_arm/fanuc_robot_arm.glb", "root_node_name": "UR10_00Hn" },
+  "params_schema": {
+    "speed": { "type": "number", "default": 1.0, "min": 0.05, "max": 3.0, "unit": "m/s" },
+    "payload_kg": { "type": "number", "default": 5.0, "min": 0, "max": 20, "unit": "kg" },
+    "lift_height": { "type": "number", "default": 0.3, "min": 0, "max": 1.5, "unit": "m" }
+  },
+  "physical_interfaces": [
+    { "interface_id": "pick_area", "kind": "material", "direction": "input", "node_name": "PickAnchor", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [0.45, 0, 0.2], "local_forward": [1, 0, 0] },
+    { "interface_id": "place_area", "kind": "material", "direction": "output", "node_name": "PlaceAnchor", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [-0.45, 0, 0.2], "local_forward": [-1, 0, 0] },
+    { "interface_id": "tool_center_point", "kind": "tool", "direction": "bidirectional", "node_name": "Link6_00Nn", "material_classes": ["workpiece", "workpiece_carrier"] }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Pick Input" },
+    { "port_id": "flow_output", "direction": "output", "label": "Place Output" }
+  ],
+  "signal_ports": [
+    { "port_id": "start_pick", "direction": "input", "value_type": "event", "description": "触发抓取动作" },
+    { "port_id": "busy", "direction": "output", "value_type": "boolean", "description": "机械臂正在执行动作" },
+    { "port_id": "done", "direction": "output", "value_type": "event", "description": "动作完成" },
+    { "port_id": "error", "direction": "output", "value_type": "event", "description": "动作失败或目标不可达" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "pick_area" },
+    { "process_port": "flow_output", "physical_interface": "place_area" }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "pick_and_place",
+      "behavior_type": "material_transfer",
+      "input_physical_interface": "pick_area",
+      "output_physical_interface": "place_area",
+      "default_algorithm": "robot_pick_place",
+      "input_signals": ["start_pick"],
+      "output_signals": ["busy", "done", "error"],
+      "resources": ["robot_arm", "gripper"],
+      "preconditions": ["fsm_state == idle", "material_at(input_physical_interface)", "gripper.empty == true"],
+      "effects": ["material_at(output_physical_interface)", "emit done"]
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle", "busy", "waiting", "error"],
+    "default_state": "idle",
+    "resources": [
+      { "resource_id": "robot_arm", "exclusive": true },
+      { "resource_id": "gripper", "exclusive": true }
+    ],
+    "capacity": { "max_active_materials": 1 },
+    "error_policy": { "on_timeout": "emit_observation", "on_unreachable_target": "pause_and_request_replan" }
+  },
+  "type_specific_contract": {
+    "rootNodeName": "UR10_00Hn",
+    "urdf": {
+      "joints": [
+        { "name": "joint_1", "nodeName": "Link1_00In", "type": "revolute", "axis": { "x": 0, "y": 1, "z": 0 }, "limit": { "lower": -3.14, "upper": 3.14 } },
+        { "name": "joint_2", "nodeName": "Link2_00Jn", "type": "revolute", "axis": { "x": 0, "y": 0, "z": 1 }, "limit": { "lower": -1.57, "upper": 2.36 } },
+        { "name": "joint_3", "nodeName": "Link3_00Kn", "type": "revolute", "axis": { "x": 0, "y": 0, "z": 1 }, "limit": { "lower": -1.57, "upper": 2.36 } },
+        { "name": "joint_4", "nodeName": "Link4_00Ln", "type": "revolute", "axis": { "x": 0, "y": 0, "z": 1 }, "limit": { "lower": -1.57, "upper": 2.36 } },
+        { "name": "joint_5", "nodeName": "Link5_00Mn", "type": "revolute", "axis": { "x": 1, "y": 0, "z": 0 }, "limit": { "lower": -1.57, "upper": 2.36 } },
+        { "name": "joint_6", "nodeName": "Link6_00Nn", "type": "revolute", "axis": { "x": 0, "y": 1, "z": 0 }, "limit": { "lower": -1.57, "upper": 2.36 } }
+      ]
+    },
+    "trajectoryConfig": { "liftHeight": 0.3, "speed": 1.0 },
+    "workspace": { "shape": "cylinder", "radius_m": 1.2, "height_m": 1.5 },
+    "gripper": { "type": "vacuum_or_clamp", "supported_material_classes": ["workpiece", "workpiece_carrier"], "max_payload_kg": 5.0 }
+  }
+}
+

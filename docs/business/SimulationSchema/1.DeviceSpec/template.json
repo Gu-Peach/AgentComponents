@@ -1,0 +1,109 @@
+﻿{
+  "schema_id": "template_device_spec_id_required",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "设备本体名称_required",
+  "description": "设备用途说明_required",
+  "source": {
+    "kind": "manual_template_required",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/template.json"
+  },
+  "created_for": "设备本体建模_required",
+  "references": [
+    "schema.json",
+    "common_device_spec.schema.json"
+  ],
+  "notes": [
+    "这是所有设备本体通用填写模板；具体设备类型应使用对应子目录 template.json。",
+    "字段值中带 _required 表示必须填写；_optional 表示可选；_inferred_from_example 表示可从示例或模型推断后填写。"
+  ],
+  "device_spec_id": "device_spec_id_required",
+  "device_type": "device_type_required",
+  "display_name": "展示名称_required",
+  "asset": {
+    "model_format": "glb_required",
+    "model_key": "assets/models/{device_type}/{model_file}.glb_required",
+    "root_node_name": "模型根节点_optional"
+  },
+  "params_schema": {
+    "param_name_required": {
+      "type": "number|string|boolean|integer_required",
+      "default": "默认值_required",
+      "min": "最小值_optional",
+      "max": "最大值_optional",
+      "unit": "单位_optional",
+      "description": "参数说明_optional"
+    }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "物理接口ID_required",
+      "kind": "material|tool|support|storage_required",
+      "direction": "input|output|bidirectional_required",
+      "node_name": "GLB节点名_required_if_model_bound",
+      "material_classes": ["支持物料类型_required"],
+      "local_position": ["x_optional", "y_optional", "z_optional"],
+      "local_forward": ["x_optional", "y_optional", "z_optional"]
+    }
+  ],
+  "process_ports": [
+    {
+      "port_id": "flow_input_or_flow_output_required",
+      "direction": "input|output_required",
+      "label": "流程口展示名_optional"
+    }
+  ],
+  "signal_ports": [
+    {
+      "port_id": "信号口ID_required",
+      "direction": "input|output_required",
+      "value_type": "event|boolean|command|number|string_required",
+      "description": "信号说明_optional"
+    }
+  ],
+  "interface_bindings": [
+    {
+      "process_port": "process_ports.port_id_required",
+      "physical_interface": "physical_interfaces.interface_id_required"
+    }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "行为ID_required",
+      "behavior_type": "行为类型_required",
+      "input_physical_interface": "输入物理接口_optional",
+      "output_physical_interface": "输出物理接口_optional",
+      "default_algorithm": "默认算法_optional",
+      "input_signals": ["输入信号_optional"],
+      "output_signals": ["输出信号_optional"],
+      "resources": ["占用资源_optional"],
+      "preconditions": ["启动前条件_optional"],
+      "effects": ["完成后效果_optional"]
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle_required", "error_required"],
+    "default_state": "idle_required",
+    "resources": [
+      {
+        "resource_id": "资源ID_optional",
+        "exclusive": "是否独占_optional"
+      }
+    ],
+    "capacity": {
+      "max_active_materials": "最大活动物料数_optional"
+    },
+    "error_policy": {
+      "on_timeout": "超时策略_optional",
+      "on_error": "错误策略_optional"
+    }
+  },
+  "type_specific_contract": {
+    "device_specific_key": "设备类型专属字段_required_by_type_schema"
+  },
+  "field_requirement_legend": {
+    "required": "必须由设备建模者明确填写。",
+    "optional": "没有时可省略或使用默认策略。",
+    "inferred_from_example": "可根据图片、GLB 节点、已有驱动配置或示例设备推断后填写。"
+  }
+}

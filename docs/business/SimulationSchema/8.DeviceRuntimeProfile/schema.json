@@ -1,0 +1,13 @@
+{
+  "schema_id": "device_runtime_profile_schema_contract_v0_1",
+  "schema_type": "DeviceRuntimeProfileSchemaContract",
+  "version": "0.1.0",
+  "name": "DeviceRuntimeProfile 设备运行画像规范",
+  "description": "定义设备当前可执行、等待、阻塞或正在执行的行为视图。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/8.DeviceRuntimeProfile/schema.json" },
+  "created_for": "设备运行时行为画像计算",
+  "references": ["../common_schema_contract.json", "../6.ExecutableSimGraph/schema.json", "../7.RuntimeSnapshot/schema.json"],
+  "notes": ["DeviceRuntimeProfile 是动态视图，不是设备源数据，也不是场景事实。"],
+  "required_sections": ["run_id", "device_instance_id", "current_state", "enabled_behaviors", "waiting_behaviors", "blocked_behaviors", "executing_behavior", "next_events"]
+}
+

@@ -1,0 +1,13 @@
+{
+  "schema_id": "scene_transport_schema_contract_v0_1",
+  "schema_type": "SceneTransportSchemaContract",
+  "version": "0.1.0",
+  "name": "SceneTransportSchema 场景物料流转规范",
+  "description": "定义场景中可发生的物料流转节点、边和行为绑定。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/3.SceneTransportSchema/schema.json" },
+  "created_for": "场景级 transport 拓扑编译",
+  "references": ["../common_schema_contract.json", "../2.SceneDocument/schema.json"],
+  "notes": ["该 schema 是派生结果，必须能从 DeviceSpec + SceneDocument 重建。"],
+  "required_sections": ["scene_id", "scene_revision", "transport_nodes", "transport_edges", "behavior_bindings", "diagnostics"]
+}
+

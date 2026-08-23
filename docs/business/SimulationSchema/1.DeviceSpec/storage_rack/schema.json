@@ -1,0 +1,16 @@
+﻿{
+  "schema_id": "storage_rack_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Storage Rack DeviceSpec 规范",
+  "description": "存储柜/货架设备本体规范，表达库位、容量、入库和出库接口。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/storage_rack/schema.json" },
+  "created_for": "图 7 中存储柜/货架建模",
+  "references": ["../common_device_spec.schema.json", "storage_rack_1.json"],
+  "notes": ["当前先作为静态存储设备建模，自动出入库可后续扩展 storage_system。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["cells", "capacity", "reservation_policy"],
+  "required_behaviors": ["store_to_cell", "release_from_cell", "reserve_cell"],
+  "required_signals": ["cell_available", "cell_full", "stored", "released"]
+}
+

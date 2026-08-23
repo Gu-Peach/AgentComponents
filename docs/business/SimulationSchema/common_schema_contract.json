@@ -1,0 +1,44 @@
+{
+  "schema_id": "common_schema_contract_v0_1",
+  "schema_type": "CommonSchemaContract",
+  "version": "0.1.0",
+  "name": "通用 Schema 元信息规范",
+  "description": "所有 SimulationSchema JSON 文件都应包含的共享元信息字段。该文件是可读规范，不是严格 JSON Schema Draft。",
+  "source": {
+    "kind": "manual_design",
+    "path": "docs/business/SimulationSchema/common_schema_contract.json"
+  },
+  "created_for": "基于 Agent 的三维工艺行为仿真 schema 初版设计",
+  "references": [
+    "docs/business/SimulationSchema/device_data_structure.md"
+  ],
+  "notes": [
+    "schema_id 用于唯一标识规范、示例或派生结构。",
+    "schema_type 用于区分八大 schema 板块或设备类型规范。",
+    "version 采用语义化版本，初版统一为 0.1.0。",
+    "source 记录来源，可指向人工设计、场景编译、Agent run 或 Runtime run。",
+    "references 用于记录上游 schema、示例、图片或文档依据。"
+  ],
+  "required_common_fields": [
+    "schema_id",
+    "schema_type",
+    "version",
+    "name",
+    "description",
+    "source",
+    "created_for",
+    "references",
+    "notes"
+  ],
+  "common_field_contract": {
+    "schema_id": { "type": "string", "required": true, "example": "device_spec_robot_arm_v0_1" },
+    "schema_type": { "type": "string", "required": true, "example": "DeviceSpec" },
+    "version": { "type": "string", "required": true, "example": "0.1.0" },
+    "name": { "type": "string", "required": true, "example": "Robot Arm DeviceSpec" },
+    "description": { "type": "string", "required": true },
+    "source": { "type": "object", "required": true },
+    "created_for": { "type": "string", "required": true },
+    "references": { "type": "array", "items": "string", "required": true },
+    "notes": { "type": "array", "items": "string", "required": true }
+  }
+}

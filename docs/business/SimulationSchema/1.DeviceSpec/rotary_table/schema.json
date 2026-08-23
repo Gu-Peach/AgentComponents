@@ -1,0 +1,15 @@
+﻿{
+  "schema_id": "rotary_table_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Rotary Table DeviceSpec 规范",
+  "description": "旋转台设备本体规范，适用于多工位旋转定位和物料转位。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/rotary_table/schema.json" },
+  "created_for": "图 11 中旋转台设备建模",
+  "references": ["../common_device_spec.schema.json", "rotary_table_1.json"],
+  "notes": ["旋转台通过角度到位、工位占用和旋转完成信号参与调度。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["stations", "rotation_axis", "indexing_policy"],
+  "required_behaviors": ["rotate_to_station", "accept_material", "release_material"],
+  "required_signals": ["at_station", "occupied", "rotating", "done"]
+}

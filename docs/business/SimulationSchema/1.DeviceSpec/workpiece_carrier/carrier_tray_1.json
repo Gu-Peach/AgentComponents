@@ -1,0 +1,42 @@
+﻿{
+  "schema_id": "carrier_tray_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "物料载具 / 承载托盘 1",
+  "description": "图 1 中承载多个物料并参与运输的载具，可表示托盘、载盘或夹具。",
+  "source": { "kind": "image_inferred", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece_carrier/carrier_tray_1.json" },
+  "created_for": "图 1 中 workpiece_carrier 建模",
+  "references": ["schema.json", "../../../test/1.png"],
+  "notes": ["技术名使用 workpiece_carrier，实例名使用 carrier_tray_1。"],
+  "device_spec_id": "carrier_tray_1",
+  "device_type": "workpiece_carrier",
+  "display_name": "物料载具 / 承载托盘 1",
+  "asset": { "model_format": "glb", "model_key": "assets/models/carrier/carrier_tray.glb" },
+  "params_schema": { "slot_count": { "type": "integer", "default": 12, "min": 1, "max": 64 } },
+  "physical_interfaces": [
+    { "interface_id": "load_surface", "kind": "support", "direction": "input", "node_name": "LoadSurface", "material_classes": ["workpiece"] },
+    { "interface_id": "carrier_bottom", "kind": "support", "direction": "bidirectional", "node_name": "CarrierBottom", "material_classes": ["workpiece_carrier"] }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Load" },
+    { "port_id": "flow_output", "direction": "output", "label": "Unload" }
+  ],
+  "signal_ports": [
+    { "port_id": "loaded", "direction": "output", "value_type": "event" },
+    { "port_id": "unloaded", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "load_surface" },
+    { "process_port": "flow_output", "physical_interface": "load_surface" }
+  ],
+  "transport_behaviors": [
+    { "behavior_id": "carry_material", "behavior_type": "passive_carry", "input_physical_interface": "load_surface", "output_signals": ["loaded"] },
+    { "behavior_id": "release_material", "behavior_type": "passive_release", "output_physical_interface": "load_surface", "output_signals": ["unloaded"] }
+  ],
+  "runtime_contract": { "fsm_states": ["empty", "loaded", "in_transport"], "default_state": "empty", "resources": [{ "resource_id": "carrier_slots", "exclusive": false }], "capacity": { "max_active_materials": 12 } },
+  "type_specific_contract": {
+    "carrier_geometry": { "length_m": 0.8, "width_m": 0.45, "height_m": 0.08 },
+    "slots": { "slot_count": 12, "layout": "grid", "rows": 3, "columns": 4 },
+    "load_policy": { "accepted_material_classes": ["workpiece"], "allow_partial_load": true }
+  }
+}

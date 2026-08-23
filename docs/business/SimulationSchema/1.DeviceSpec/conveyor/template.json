@@ -1,0 +1,154 @@
+﻿{
+  "schema_id": "conveyor_template_required",
+  "schema_type": "DeviceSpecTemplate",
+  "version": "0.1.0",
+  "name": "传送带设备本体填写模板",
+  "description": "用于新增传送带 DeviceSpec。",
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/template.json"
+  },
+  "created_for": "conveyor 设备本体建模",
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "conveyor_1.json"
+  ],
+  "notes": ["entry/exit 是传送带最小必填物理接口。"],
+  "device_spec_id": "conveyor_id_required",
+  "device_type": "conveyor",
+  "display_name": "传送带展示名_required",
+  "asset": {
+    "model_format": "glb_required",
+    "model_key": "assets/models/conveyor/{file}.glb_required"
+  },
+  "params_schema": {
+    "speed_mps": {
+      "type": "number",
+      "default": "速度_required",
+      "unit": "m/s"
+    },
+    "capacity": {
+      "type": "integer",
+      "default": "容量_required"
+    }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "entry",
+      "kind": "material",
+      "direction": "input",
+      "node_name": "EntryAnchor_required",
+      "material_classes": ["workpiece_required"],
+      "local_position": ["x_optional", "y_optional", "z_optional"],
+      "local_forward": ["x_optional", "y_optional", "z_optional"]
+    },
+    {
+      "interface_id": "exit",
+      "kind": "material",
+      "direction": "output",
+      "node_name": "ExitAnchor_required",
+      "material_classes": ["workpiece_required"],
+      "local_position": ["x_optional", "y_optional", "z_optional"],
+      "local_forward": ["x_optional", "y_optional", "z_optional"]
+    }
+  ],
+  "process_ports": [
+    {
+      "port_id": "flow_input",
+      "direction": "input",
+      "label": "Input"
+    },
+    {
+      "port_id": "flow_output",
+      "direction": "output",
+      "label": "Output"
+    }
+  ],
+  "signal_ports": [
+    {
+      "port_id": "part_ready",
+      "direction": "output",
+      "value_type": "event"
+    },
+    {
+      "port_id": "blocked",
+      "direction": "output",
+      "value_type": "boolean"
+    },
+    {
+      "port_id": "done",
+      "direction": "output",
+      "value_type": "event"
+    },
+    {
+      "port_id": "release_waiting_material",
+      "direction": "input",
+      "value_type": "event"
+    }
+  ],
+  "interface_bindings": [
+    {
+      "process_port": "flow_input",
+      "physical_interface": "entry"
+    },
+    {
+      "process_port": "flow_output",
+      "physical_interface": "exit"
+    }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "accept_material",
+      "behavior_type": "material_transfer",
+      "input_physical_interface": "entry"
+    },
+    {
+      "behavior_id": "transport_to_exit",
+      "behavior_type": "continuous_transport",
+      "input_physical_interface": "entry",
+      "output_physical_interface": "exit",
+      "default_algorithm": "linear_conveyor_motion",
+      "output_signals": ["part_ready", "done"]
+    },
+    {
+      "behavior_id": "release_material",
+      "behavior_type": "handoff",
+      "input_signals": ["release_waiting_material"],
+      "output_physical_interface": "exit"
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle", "moving", "waiting_downstream", "blocked", "error"],
+    "default_state": "idle",
+    "resources": [
+      {
+        "resource_id": "belt_surface",
+        "exclusive": false
+      }
+    ],
+    "capacity": {
+      "max_active_materials": "容量_required",
+      "queue_id": "exit_queue"
+    },
+    "error_policy": {
+      "on_downstream_timeout": "emit_observation"
+    }
+  },
+  "type_specific_contract": {
+    "conveyor_geometry": {
+      "length_m": "长度_required",
+      "width_m": "宽度_required",
+      "height_m": "高度_optional"
+    },
+    "motion_model": {
+      "type": "linear",
+      "axis": [1, 0, 0],
+      "speed_param": "speed_mps"
+    },
+    "queue_policy": {
+      "when_downstream_busy": "wait_at_exit",
+      "release_on_signal": "release_waiting_material"
+    }
+  }
+}

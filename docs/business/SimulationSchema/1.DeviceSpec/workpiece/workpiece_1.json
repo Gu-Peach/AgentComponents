@@ -1,0 +1,35 @@
+﻿{
+  "schema_id": "workpiece_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "圆柱物料 1",
+  "description": "图 1 中被搬运的小型物料，作为被动对象参与运输、抓取和放置。",
+  "source": { "kind": "image_inferred", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece/workpiece_1.json" },
+  "created_for": "图 1 中物料本体建模",
+  "references": ["schema.json", "../../../test/1.png"],
+  "notes": ["物料通常不主动执行 transport behavior。"],
+  "device_spec_id": "workpiece_1",
+  "device_type": "workpiece",
+  "display_name": "圆柱物料 1",
+  "asset": { "model_format": "glb", "model_key": "assets/models/workpiece/cylindrical_part.glb" },
+  "params_schema": { "mass_kg": { "type": "number", "default": 0.2, "min": 0, "max": 5 } },
+  "physical_interfaces": [
+    { "interface_id": "grasp_surface", "kind": "grasp", "direction": "bidirectional", "node_name": "GraspSurface", "material_classes": ["workpiece"] },
+    { "interface_id": "bottom", "kind": "support", "direction": "input", "node_name": "BottomSurface", "material_classes": ["workpiece"] }
+  ],
+  "process_ports": [],
+  "signal_ports": [
+    { "port_id": "picked", "direction": "output", "value_type": "event" },
+    { "port_id": "placed", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [],
+  "transport_behaviors": [],
+  "runtime_contract": { "fsm_states": ["free", "carried", "placed"], "default_state": "free", "resources": [], "capacity": { "max_active_materials": 0 } },
+  "type_specific_contract": {
+    "material_class": "workpiece",
+    "geometry": { "shape": "cylinder", "diameter_m": 0.08, "height_m": 0.12 },
+    "grasping": { "allowed_grasp_interfaces": ["grasp_surface"], "preferred_grasp": "top_or_side" },
+    "placement": { "stable_surfaces": ["bottom"], "can_stack": false }
+  }
+}
+

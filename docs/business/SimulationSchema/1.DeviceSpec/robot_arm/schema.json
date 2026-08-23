@@ -1,0 +1,16 @@
+﻿{
+  "schema_id": "robot_arm_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Robot Arm DeviceSpec 规范",
+  "description": "机械臂设备本体规范，适用于离散抓取、搬运和放置行为。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/schema.json" },
+  "created_for": "图 1 / 图 4 / 图 11 中机械臂设备建模",
+  "references": ["../common_device_spec.schema.json", "robot_arm_1.json"],
+  "notes": ["机械臂运动特性保留 urdf.joints 与 trajectoryConfig 格式。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["rootNodeName", "urdf", "trajectoryConfig"],
+  "required_behaviors": ["pick_and_place"],
+  "required_signals": ["start_pick", "busy", "done", "error"]
+}
+

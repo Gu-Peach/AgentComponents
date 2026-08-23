@@ -1,0 +1,13 @@
+{
+  "schema_id": "sim_plan_schema_contract_v0_1",
+  "schema_type": "SimPlanSchemaContract",
+  "version": "0.1.0",
+  "name": "SimPlan Agent 仿真计划规范",
+  "description": "定义 Agent 生成的仿真目标、路线、行为步骤、信号规则和成功条件。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/5.SimPlan/schema.json" },
+  "created_for": "Agent 计划生成",
+  "references": ["../common_schema_contract.json", "../3.SceneTransportSchema/schema.json"],
+  "notes": ["SimPlan 不直接驱动设备，Runtime 需要继续编译为 ExecutableSimGraph。"],
+  "required_sections": ["goal", "process_route", "selected_devices", "transport_steps", "signal_rules", "success_criteria", "interrupt_policy"]
+}
+

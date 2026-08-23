@@ -1,0 +1,18 @@
+{
+  "schema_id": "scene_document_schema_v0_1",
+  "schema_type": "SceneDocumentSchema",
+  "version": "0.1.0",
+  "name": "SceneDocument 场景事实规范",
+  "description": "定义场景设备实例、物料实例、工艺边、物理边和信号边。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/2.SceneDocument/schema.json" },
+  "created_for": "场景事实建模",
+  "references": ["../common_schema_contract.json", "../1.DeviceSpec/schema.json"],
+  "notes": ["SceneDocument 不保存当前运行时状态。", "instances 通过 spec_id 引用 DeviceSpec。"],
+  "required_sections": ["scene_id", "revision", "instances", "materials", "process_edges", "physical_edges", "signal_edges", "runtime_config"],
+  "edge_contract": {
+    "process_edges": "流程画布层面的 flow_output -> flow_input。",
+    "physical_edges": "真实 physical interface 之间的连接。",
+    "signal_edges": "设备 signal port 之间的通讯关系。"
+  }
+}
+

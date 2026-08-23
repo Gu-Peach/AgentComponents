@@ -1,0 +1,49 @@
+﻿{
+  "schema_id": "rotary_table_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "旋转台 1",
+  "description": "图 11 中多工位旋转定位设备，用于将物料转到不同作业工位。",
+  "source": { "kind": "image_inferred", "path": "docs/business/SimulationSchema/1.DeviceSpec/rotary_table/rotary_table_1.json" },
+  "created_for": "图 11 中旋转台设备建模",
+  "references": ["schema.json", "../../../test/11.png"],
+  "notes": ["旋转台初版建模为离散工位 indexing 设备。"],
+  "device_spec_id": "rotary_table_1",
+  "device_type": "rotary_table",
+  "display_name": "旋转台 1",
+  "asset": { "model_format": "glb", "model_key": "assets/models/rotary/rotary_table.glb" },
+  "params_schema": {
+    "rotate_speed_deg_s": { "type": "number", "default": 90, "min": 5, "max": 360 },
+    "station_count": { "type": "integer", "default": 2, "min": 2, "max": 12 }
+  },
+  "physical_interfaces": [
+    { "interface_id": "station_a", "kind": "material", "direction": "bidirectional", "node_name": "StationA", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [-0.35, 0, 0.6] },
+    { "interface_id": "station_b", "kind": "material", "direction": "bidirectional", "node_name": "StationB", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [0.35, 0, 0.6] }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Rotary Input" },
+    { "port_id": "flow_output", "direction": "output", "label": "Rotary Output" }
+  ],
+  "signal_ports": [
+    { "port_id": "rotate_to_station", "direction": "input", "value_type": "command" },
+    { "port_id": "at_station", "direction": "output", "value_type": "event" },
+    { "port_id": "occupied", "direction": "output", "value_type": "boolean" },
+    { "port_id": "rotating", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "station_a" },
+    { "process_port": "flow_output", "physical_interface": "station_b" }
+  ],
+  "transport_behaviors": [
+    { "behavior_id": "accept_material", "behavior_type": "material_handoff", "input_physical_interface": "station_a", "output_signals": ["occupied"] },
+    { "behavior_id": "rotate_to_station", "behavior_type": "rotary_motion", "input_signals": ["rotate_to_station"], "output_signals": ["rotating", "at_station", "done"] },
+    { "behavior_id": "release_material", "behavior_type": "material_handoff", "output_physical_interface": "station_b", "output_signals": ["occupied"] }
+  ],
+  "runtime_contract": { "fsm_states": ["idle", "occupied", "rotating", "at_station", "error"], "default_state": "idle", "resources": [{ "resource_id": "rotary_plate", "exclusive": true }], "capacity": { "max_active_materials": 2 } },
+  "type_specific_contract": {
+    "stations": [{ "station_id": "station_a", "angle_deg": 180 }, { "station_id": "station_b", "angle_deg": 0 }],
+    "rotation_axis": [0, 1, 0],
+    "indexing_policy": { "mode": "discrete", "speed_param": "rotate_speed_deg_s", "tolerance_deg": 1.0 }
+  }
+}

@@ -1,0 +1,16 @@
+﻿{
+  "schema_id": "lift_table_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Lift Table DeviceSpec 规范",
+  "description": "升降台设备本体规范，适用于不同高度接口之间的物料对接。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/lift_table/schema.json" },
+  "created_for": "图 7 中升降台设备建模",
+  "references": ["../common_device_spec.schema.json", "lift_table_1.json"],
+  "notes": ["升降台通过高度到位信号与上下游设备协作。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["height_levels", "lift_motion", "dock_policy"],
+  "required_behaviors": ["lift_to_level", "accept_material", "release_material"],
+  "required_signals": ["at_level", "moving", "done", "error"]
+}
+

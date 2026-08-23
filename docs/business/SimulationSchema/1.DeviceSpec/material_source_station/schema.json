@@ -1,0 +1,16 @@
+﻿{
+  "schema_id": "material_source_station_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Material Source Station DeviceSpec 规范",
+  "description": "物料生产/上料台设备本体规范，负责生成、提供或缓存待流转物料。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/material_source_station/schema.json" },
+  "created_for": "图 4 中物料来源/生产台建模",
+  "references": ["../common_device_spec.schema.json", "material_source_station_1.json"],
+  "notes": ["该设备强调物料来源，不等同于复杂加工中心。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["production_policy", "buffer", "output_material_spec"],
+  "required_behaviors": ["produce_material", "present_material"],
+  "required_signals": ["material_available", "empty", "done"]
+}
+

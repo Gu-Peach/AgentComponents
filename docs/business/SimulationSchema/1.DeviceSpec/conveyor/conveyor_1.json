@@ -1,0 +1,55 @@
+﻿{
+  "schema_id": "conveyor_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "传送带 1",
+  "description": "连续输送设备，负责将物料或物料载具从 entry 输送到 exit。",
+  "source": { "kind": "image_inferred", "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/conveyor_1.json" },
+  "created_for": "图 1 / 图 4 / 图 7 中传送带设备本体建模",
+  "references": ["schema.json", "../../../test/1.png", "../../../test/4.png", "../../../test/7.png"],
+  "notes": ["传送带通过 part_ready 通知下游设备物料到达出口。"],
+  "device_spec_id": "conveyor_1",
+  "device_type": "conveyor",
+  "display_name": "传送带 1",
+  "asset": { "model_format": "glb", "model_key": "assets/models/conveyor/conveyor.glb" },
+  "params_schema": {
+    "speed_mps": { "type": "number", "default": 0.4, "min": 0.05, "max": 2.0, "unit": "m/s" },
+    "capacity": { "type": "integer", "default": 3, "min": 1, "max": 20 }
+  },
+  "physical_interfaces": [
+    { "interface_id": "entry", "kind": "material", "direction": "input", "node_name": "EntryAnchor", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [-0.8, 0, 0.45], "local_forward": [-1, 0, 0] },
+    { "interface_id": "exit", "kind": "material", "direction": "output", "node_name": "ExitAnchor", "material_classes": ["workpiece", "workpiece_carrier"], "local_position": [0.8, 0, 0.45], "local_forward": [1, 0, 0] }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Input" },
+    { "port_id": "flow_output", "direction": "output", "label": "Output" }
+  ],
+  "signal_ports": [
+    { "port_id": "part_ready", "direction": "output", "value_type": "event" },
+    { "port_id": "blocked", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" },
+    { "port_id": "release_waiting_material", "direction": "input", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "entry" },
+    { "process_port": "flow_output", "physical_interface": "exit" }
+  ],
+  "transport_behaviors": [
+    { "behavior_id": "accept_material", "behavior_type": "material_transfer", "input_physical_interface": "entry", "output_signals": [], "preconditions": ["capacity_available == true"] },
+    { "behavior_id": "transport_to_exit", "behavior_type": "continuous_transport", "input_physical_interface": "entry", "output_physical_interface": "exit", "default_algorithm": "linear_conveyor_motion", "output_signals": ["part_ready", "done"] },
+    { "behavior_id": "release_material", "behavior_type": "handoff", "input_signals": ["release_waiting_material"], "output_physical_interface": "exit" }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle", "moving", "waiting_downstream", "blocked", "error"],
+    "default_state": "idle",
+    "resources": [{ "resource_id": "belt_surface", "exclusive": false }],
+    "capacity": { "max_active_materials": 3, "queue_id": "exit_queue" },
+    "error_policy": { "on_downstream_timeout": "emit_observation" }
+  },
+  "type_specific_contract": {
+    "conveyor_geometry": { "length_m": 1.6, "width_m": 0.35, "height_m": 0.45 },
+    "motion_model": { "type": "linear", "axis": [1, 0, 0], "speed_param": "speed_mps" },
+    "queue_policy": { "when_downstream_busy": "wait_at_exit", "release_on_signal": "release_waiting_material" }
+  }
+}
+

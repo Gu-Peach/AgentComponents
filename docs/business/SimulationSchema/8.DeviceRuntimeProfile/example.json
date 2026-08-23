@@ -1,0 +1,21 @@
+﻿{
+  "schema_id": "device_runtime_profile_example_robot_1_v0_1",
+  "schema_type": "DeviceRuntimeProfile",
+  "version": "0.1.0",
+  "name": "Robot 1 DeviceRuntimeProfile Example",
+  "description": "robot_1 在 part_ready 后可执行 pick_and_place 的运行画像示例。",
+  "source": { "kind": "computed_example", "from": ["../6.ExecutableSimGraph/example.json", "../7.RuntimeSnapshot/example.json"] },
+  "created_for": "设备运行画像示例",
+  "references": ["../1.DeviceSpec/robot_arm/robot_arm_1.json"],
+  "notes": ["Scheduler 消费 enabled_behaviors，不直接消费 LLM 文本。"],
+  "run_id": "run_figure_1_001",
+  "device_instance_id": "robot_1",
+  "current_state": "idle",
+  "enabled_behaviors": [
+    { "behavior_id": "pick_and_place", "action_node": "action_robot_pick", "reason": "part_ready and gripper available" }
+  ],
+  "waiting_behaviors": [],
+  "blocked_behaviors": [],
+  "executing_behavior": null,
+  "next_events": ["robot_1.busy", "robot_1.done"]
+}

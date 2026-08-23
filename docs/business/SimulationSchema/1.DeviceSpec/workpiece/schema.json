@@ -1,0 +1,16 @@
+﻿{
+  "schema_id": "workpiece_device_spec_schema_v0_1",
+  "schema_type": "DeviceTypeSchema",
+  "version": "0.1.0",
+  "name": "Workpiece DeviceSpec 规范",
+  "description": "物料/工件本体规范，作为被动对象参与抓取、放置、承载和运输。",
+  "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece/schema.json" },
+  "created_for": "图 1 中小件物料建模",
+  "references": ["../common_device_spec.schema.json", "workpiece_1.json"],
+  "notes": ["workpiece 通常不主动执行 transport behavior，但需要暴露可抓取/可放置约束。"],
+  "extends": "common_device_spec_schema_v0_1",
+  "required_type_specific_fields": ["material_class", "geometry", "grasping", "placement"],
+  "required_behaviors": [],
+  "required_signals": ["picked", "placed"]
+}
+

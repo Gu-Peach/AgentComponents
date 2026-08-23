@@ -1,0 +1,31 @@
+﻿{
+  "schema_id": "scene_document_example_figure_1_v0_1",
+  "schema_type": "SceneDocument",
+  "version": "0.1.0",
+  "name": "Figure 1 SceneDocument Example",
+  "description": "图 1 场景的最小事实示例：机械臂、传送带、物料载具与物料。",
+  "source": { "kind": "manual_example", "path": "docs/business/SimulationSchema/2.SceneDocument/example.json" },
+  "created_for": "场景事实示例",
+  "references": ["../1.DeviceSpec/robot_arm/robot_arm_1.json", "../1.DeviceSpec/conveyor/conveyor_1.json", "../1.DeviceSpec/workpiece_carrier/carrier_tray_1.json", "../../test/1.png"],
+  "notes": ["位姿为占位示例，后续由前端场景保存真实 transform。"],
+  "scene_id": "scene_figure_1",
+  "revision": 1,
+  "instances": [
+    { "instance_id": "robot_1", "spec_id": "robot_arm_1", "device_type": "robot_arm", "transform": { "position": [0, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} },
+    { "instance_id": "conveyor_1", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [-1.2, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} },
+    { "instance_id": "carrier_1", "spec_id": "carrier_tray_1", "device_type": "workpiece_carrier", "transform": { "position": [-2.2, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} }
+  ],
+  "materials": [
+    { "material_id": "part_001", "spec_id": "workpiece_1", "located_at": "carrier_1.slot_01" }
+  ],
+  "process_edges": [
+    { "edge_id": "proc_001", "source": "conveyor_1.flow_output", "target": "robot_1.flow_input", "edge_type": "material_flow" }
+  ],
+  "physical_edges": [
+    { "edge_id": "phys_001", "source": "conveyor_1.exit", "target": "robot_1.pick_area", "compiled_from": "proc_001" }
+  ],
+  "signal_edges": [
+    { "edge_id": "sig_001", "source": "conveyor_1.part_ready", "target": "robot_1.start_pick", "edge_type": "control_signal" }
+  ],
+  "runtime_config": { "deadlock_detection": true, "default_signal_timeout_s": 30 }
+}

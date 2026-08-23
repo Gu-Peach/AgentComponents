@@ -1,0 +1,22 @@
+﻿{
+  "schema_id": "device_spec_example_minimal_v0_1",
+  "schema_type": "DeviceSpec",
+  "version": "0.1.0",
+  "name": "Minimal DeviceSpec Example",
+  "description": "用于展示设备本体如何被场景引用的最小示例。",
+  "source": { "kind": "manual_example", "path": "docs/business/SimulationSchema/1.DeviceSpec/example.json" },
+  "created_for": "DeviceSpec 最小示例",
+  "references": ["schema.json", "common_device_spec.schema.json"],
+  "notes": ["真实设备示例按设备类型放在子目录中，例如 robot_arm/robot_arm_1.json、conveyor/conveyor_1.json。"],
+  "device_type": "generic_device",
+  "display_name": "Generic Device",
+  "asset": { "model_format": "glb", "model_key": "assets/models/generic_device.glb" },
+  "params_schema": {},
+  "physical_interfaces": [],
+  "process_ports": [],
+  "signal_ports": [],
+  "interface_bindings": [],
+  "transport_behaviors": [],
+  "runtime_contract": { "fsm_states": ["idle", "error"], "default_state": "idle" },
+  "type_specific_contract": {}
+}
