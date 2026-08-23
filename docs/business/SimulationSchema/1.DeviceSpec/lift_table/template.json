@@ -4,20 +4,120 @@
   "version": "0.1.0",
   "name": "升降台设备本体填写模板",
   "description": "用于新增升降台 DeviceSpec。",
-  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/lift_table/template.json" },
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/lift_table/template.json"
+  },
   "created_for": "lift_table 设备本体建模",
-  "references": ["../common_device_spec.schema.json", "schema.json", "lift_table_1.json"],
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "lift_table_1.json"
+  ],
   "notes": ["lower_dock/upper_dock/platform 是升降台最小核心接口。"],
   "device_spec_id": "lift_table_id_required",
   "device_type": "lift_table",
   "display_name": "升降台展示名_required",
-  "asset": { "model_format": "glb_optional", "model_key": "assets/models/lift/{file}.glb_optional" },
-  "params_schema": { "lift_speed_mps": { "type": "number", "default": "升降速度_required", "unit": "m/s" }, "max_height_m": { "type": "number", "default": "最大高度_required", "unit": "m" } },
-  "physical_interfaces": [{ "interface_id": "lower_dock", "kind": "material", "direction": "bidirectional", "node_name": "LowerDock_required", "material_classes": ["workpiece_required"] }, { "interface_id": "upper_dock", "kind": "material", "direction": "bidirectional", "node_name": "UpperDock_required", "material_classes": ["workpiece_required"] }, { "interface_id": "platform", "kind": "support", "direction": "bidirectional", "node_name": "LiftPlatform_required", "material_classes": ["workpiece_required"] }],
-  "process_ports": [{ "port_id": "flow_input", "direction": "input", "label": "Lift Input" }, { "port_id": "flow_output", "direction": "output", "label": "Lift Output" }],
-  "signal_ports": [{ "port_id": "move_to_level", "direction": "input", "value_type": "command" }, { "port_id": "at_level", "direction": "output", "value_type": "event" }, { "port_id": "moving", "direction": "output", "value_type": "boolean" }, { "port_id": "done", "direction": "output", "value_type": "event" }, { "port_id": "error", "direction": "output", "value_type": "event" }],
-  "interface_bindings": [{ "process_port": "flow_input", "physical_interface": "lower_dock" }, { "process_port": "flow_output", "physical_interface": "upper_dock" }],
-  "transport_behaviors": [{ "behavior_id": "accept_material", "behavior_type": "material_handoff", "input_physical_interface": "lower_dock", "output_physical_interface": "platform" }, { "behavior_id": "lift_to_level", "behavior_type": "vertical_motion", "input_signals": ["move_to_level"], "output_signals": ["moving", "at_level", "done"] }, { "behavior_id": "release_material", "behavior_type": "material_handoff", "input_physical_interface": "platform", "output_physical_interface": "upper_dock" }],
-  "runtime_contract": { "fsm_states": ["idle", "loading", "moving", "at_lower", "at_upper", "error"], "default_state": "idle", "resources": [{ "resource_id": "lift_platform", "exclusive": true }], "capacity": { "max_active_materials": 1 } },
-  "type_specific_contract": { "height_levels": [{ "level_id": "lower_required", "height_m": "高度_required" }, { "level_id": "upper_required", "height_m": "高度_required" }], "lift_motion": { "axis": [0, 1, 0], "speed_param": "lift_speed_mps" }, "dock_policy": { "requires_level_match": true, "tolerance_m": "对接容差_optional" } }
+  "asset": {
+    "model_format": "glb_optional",
+    "model_key": "assets/models/lift/{file}.glb_optional"
+  },
+  "params_schema": {
+    "lift_speed_mps": {
+      "type": "number",
+      "default": "升降速度_required",
+      "unit": "m/s"
+    },
+    "max_height_m": {
+      "type": "number",
+      "default": "最大高度_required",
+      "unit": "m"
+    }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "lower_dock",
+      "kind": "material",
+      "direction": "bidirectional",
+      "node_name": "LowerDock_required",
+      "material_classes": ["workpiece_required"]
+    },
+    {
+      "interface_id": "upper_dock",
+      "kind": "material",
+      "direction": "bidirectional",
+      "node_name": "UpperDock_required",
+      "material_classes": ["workpiece_required"]
+    },
+    {
+      "interface_id": "platform",
+      "kind": "support",
+      "direction": "bidirectional",
+      "node_name": "LiftPlatform_required",
+      "material_classes": ["workpiece_required"]
+    }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Lift Input" },
+    { "port_id": "flow_output", "direction": "output", "label": "Lift Output" }
+  ],
+  "signal_ports": [
+    {
+      "port_id": "move_to_level",
+      "direction": "input",
+      "value_type": "command"
+    },
+    { "port_id": "at_level", "direction": "output", "value_type": "event" },
+    { "port_id": "moving", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" },
+    { "port_id": "error", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "lower_dock" },
+    { "process_port": "flow_output", "physical_interface": "upper_dock" }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "accept_material",
+      "behavior_type": "material_handoff",
+      "input_physical_interface": "lower_dock",
+      "output_physical_interface": "platform"
+    },
+    {
+      "behavior_id": "lift_to_level",
+      "behavior_type": "vertical_motion",
+      "input_signals": ["move_to_level"],
+      "output_signals": ["moving", "at_level", "done"]
+    },
+    {
+      "behavior_id": "release_material",
+      "behavior_type": "material_handoff",
+      "input_physical_interface": "platform",
+      "output_physical_interface": "upper_dock"
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": [
+      "idle",
+      "loading",
+      "moving",
+      "at_lower",
+      "at_upper",
+      "error"
+    ],
+    "default_state": "idle",
+    "resources": [{ "resource_id": "lift_platform", "exclusive": true }],
+    "capacity": { "max_active_materials": 1 }
+  },
+  "type_specific_contract": {
+    "height_levels": [
+      { "level_id": "lower_required", "height_m": "高度_required" },
+      { "level_id": "upper_required", "height_m": "高度_required" }
+    ],
+    "lift_motion": { "axis": [0, 1, 0], "speed_param": "lift_speed_mps" },
+    "dock_policy": {
+      "requires_level_match": true,
+      "tolerance_m": "对接容差_optional"
+    }
+  }
 }
