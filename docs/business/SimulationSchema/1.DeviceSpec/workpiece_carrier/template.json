@@ -4,20 +4,90 @@
   "version": "0.1.0",
   "name": "物料载具 / 承载托盘设备本体填写模板",
   "description": "用于新增承载物料并参与运输的载具 DeviceSpec。",
-  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece_carrier/template.json" },
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece_carrier/template.json"
+  },
   "created_for": "workpiece_carrier 设备本体建模",
-  "references": ["../common_device_spec.schema.json", "schema.json", "carrier_tray_1.json"],
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "carrier_tray_1.json"
+  ],
   "notes": ["载具可表示托盘、载盘、夹具或移动承载板。"],
   "device_spec_id": "carrier_id_required",
   "device_type": "workpiece_carrier",
   "display_name": "物料载具展示名_required",
-  "asset": { "model_format": "glb_optional", "model_key": "assets/models/carrier/{file}.glb_optional" },
-  "params_schema": { "slot_count": { "type": "integer", "default": "槽位数量_required" } },
-  "physical_interfaces": [{ "interface_id": "load_surface", "kind": "support", "direction": "input", "node_name": "LoadSurface_optional", "material_classes": ["workpiece"] }, { "interface_id": "carrier_bottom", "kind": "support", "direction": "bidirectional", "node_name": "CarrierBottom_optional", "material_classes": ["workpiece_carrier"] }],
-  "process_ports": [{ "port_id": "flow_input", "direction": "input", "label": "Load" }, { "port_id": "flow_output", "direction": "output", "label": "Unload" }],
-  "signal_ports": [{ "port_id": "loaded", "direction": "output", "value_type": "event" }, { "port_id": "unloaded", "direction": "output", "value_type": "event" }],
-  "interface_bindings": [{ "process_port": "flow_input", "physical_interface": "load_surface" }, { "process_port": "flow_output", "physical_interface": "load_surface" }],
-  "transport_behaviors": [{ "behavior_id": "carry_material", "behavior_type": "passive_carry", "input_physical_interface": "load_surface", "output_signals": ["loaded"] }, { "behavior_id": "release_material", "behavior_type": "passive_release", "output_physical_interface": "load_surface", "output_signals": ["unloaded"] }],
-  "runtime_contract": { "fsm_states": ["empty", "loaded", "in_transport"], "default_state": "empty", "resources": [{ "resource_id": "carrier_slots", "exclusive": false }], "capacity": { "max_active_materials": "槽位数量_required" } },
-  "type_specific_contract": { "carrier_geometry": { "length_m": "长度_required", "width_m": "宽度_required", "height_m": "高度_optional" }, "slots": { "slot_count": "槽位数量_required", "layout": "grid|custom_required", "rows": "行数_optional", "columns": "列数_optional" }, "load_policy": { "accepted_material_classes": ["workpiece"], "allow_partial_load": "是否允许部分装载_optional" } }
+  "asset": {
+    "model_format": "glb_optional",
+    "model_key": "assets/models/carrier/{file}.glb_optional"
+  },
+  "params_schema": {
+    "slot_count": { "type": "integer", "default": "槽位数量_required" }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "load_surface",
+      "kind": "support",
+      "direction": "input",
+      "node_name": "LoadSurface_optional",
+      "material_classes": ["workpiece"]
+    },
+    {
+      "interface_id": "carrier_bottom",
+      "kind": "support",
+      "direction": "bidirectional",
+      "node_name": "CarrierBottom_optional",
+      "material_classes": ["workpiece_carrier"]
+    }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Load" },
+    { "port_id": "flow_output", "direction": "output", "label": "Unload" }
+  ],
+  "signal_ports": [
+    { "port_id": "loaded", "direction": "output", "value_type": "event" },
+    { "port_id": "unloaded", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "load_surface" },
+    { "process_port": "flow_output", "physical_interface": "load_surface" }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "carry_material",
+      "behavior_type": "passive_carry",
+      "input_physical_interface": "load_surface",
+      "output_signals": ["loaded"]
+    },
+    {
+      "behavior_id": "release_material",
+      "behavior_type": "passive_release",
+      "output_physical_interface": "load_surface",
+      "output_signals": ["unloaded"]
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["empty", "loaded", "in_transport"],
+    "default_state": "empty",
+    "resources": [{ "resource_id": "carrier_slots", "exclusive": false }],
+    "capacity": { "max_active_materials": "槽位数量_required" }
+  },
+  "type_specific_contract": {
+    "carrier_geometry": {
+      "length_m": "长度_required",
+      "width_m": "宽度_required",
+      "height_m": "高度_optional"
+    },
+    "slots": {
+      "slot_count": "槽位数量_required",
+      "layout": "grid|custom_required",
+      "rows": "行数_optional",
+      "columns": "列数_optional"
+    },
+    "load_policy": {
+      "accepted_material_classes": ["workpiece"],
+      "allow_partial_load": "是否允许部分装载_optional"
+    }
+  }
 }

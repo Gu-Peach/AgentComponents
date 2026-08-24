@@ -107,6 +107,7 @@ guard 可检查设备 FSM、物料位置、资源锁、信号值等运行条件�
 | `resource_locks` | 可执行图涉及的资源锁列表。 |
 
 资源锁用于避免同一设备资源被多个动作同时占用，例如 `robot_1.gripper`。
+意思是：只有 robot_1 的夹爪当前没有被占用，才能执行这个 pick 动作。
 
 ## 11. 失败处理 `failure_handlers`
 

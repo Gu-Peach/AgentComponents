@@ -4,20 +4,97 @@
   "version": "0.1.0",
   "name": "物料生产 / 上料台设备本体填写模板",
   "description": "用于新增物料来源工位 DeviceSpec。",
-  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/material_source_station/template.json" },
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/material_source_station/template.json"
+  },
   "created_for": "material_source_station 设备本体建模",
-  "references": ["../common_device_spec.schema.json", "schema.json", "material_source_station_1.json"],
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "material_source_station_1.json"
+  ],
   "notes": ["强调物料来源或上料，不默认建模复杂加工工艺。"],
   "device_spec_id": "material_source_station_id_required",
   "device_type": "material_source_station",
   "display_name": "物料来源工位展示名_required",
-  "asset": { "model_format": "glb_optional", "model_key": "assets/models/station/{file}.glb_optional" },
-  "params_schema": { "cycle_time_s": { "type": "number", "default": "生产节拍_required", "unit": "s" }, "buffer_capacity": { "type": "integer", "default": "缓存容量_required" } },
-  "physical_interfaces": [{ "interface_id": "output", "kind": "material", "direction": "output", "node_name": "OutputAnchor_required", "material_classes": ["workpiece"] }, { "interface_id": "buffer_area", "kind": "storage", "direction": "bidirectional", "node_name": "BufferArea_optional", "material_classes": ["workpiece"] }],
-  "process_ports": [{ "port_id": "flow_output", "direction": "output", "label": "Material Output" }],
-  "signal_ports": [{ "port_id": "material_available", "direction": "output", "value_type": "event" }, { "port_id": "empty", "direction": "output", "value_type": "boolean" }, { "port_id": "done", "direction": "output", "value_type": "event" }],
-  "interface_bindings": [{ "process_port": "flow_output", "physical_interface": "output" }],
-  "transport_behaviors": [{ "behavior_id": "produce_material", "behavior_type": "material_generation", "output_physical_interface": "buffer_area", "output_signals": ["material_available", "done"] }, { "behavior_id": "present_material", "behavior_type": "material_handoff", "input_physical_interface": "buffer_area", "output_physical_interface": "output", "output_signals": ["material_available"] }],
-  "runtime_contract": { "fsm_states": ["idle", "producing", "material_ready", "empty", "error"], "default_state": "idle", "resources": [{ "resource_id": "source_buffer", "exclusive": false }], "capacity": { "max_active_materials": "buffer_capacity_required" } },
-  "type_specific_contract": { "production_policy": { "mode": "on_demand|periodic|required", "cycle_time_param": "cycle_time_s" }, "buffer": { "capacity_param": "buffer_capacity", "release_policy": "after_pick|manual|required" }, "output_material_spec": "输出物料DeviceSpec_required" }
+  "asset": {
+    "model_format": "glb_optional",
+    "model_key": "assets/models/station/{file}.glb_optional"
+  },
+  "params_schema": {
+    "cycle_time_s": {
+      "type": "number",
+      "default": "生产节拍_required",
+      "unit": "s"
+    },
+    "buffer_capacity": { "type": "integer", "default": "缓存容量_required" }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "output",
+      "kind": "material",
+      "direction": "output",
+      "node_name": "OutputAnchor_required",
+      "material_classes": ["workpiece"]
+    },
+    {
+      "interface_id": "buffer_area",
+      "kind": "storage",
+      "direction": "bidirectional",
+      "node_name": "BufferArea_optional",
+      "material_classes": ["workpiece"]
+    }
+  ],
+  "process_ports": [
+    {
+      "port_id": "flow_output",
+      "direction": "output",
+      "label": "Material Output"
+    }
+  ],
+  "signal_ports": [
+    {
+      "port_id": "material_available",
+      "direction": "output",
+      "value_type": "event"
+    },
+    { "port_id": "empty", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_output", "physical_interface": "output" }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "produce_material",
+      "behavior_type": "material_generation",
+      "output_physical_interface": "buffer_area",
+      "output_signals": ["material_available", "done"]
+    },
+    {
+      "behavior_id": "present_material",
+      "behavior_type": "material_handoff",
+      "input_physical_interface": "buffer_area",
+      "output_physical_interface": "output",
+      "output_signals": ["material_available"]
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle", "producing", "material_ready", "empty", "error"],
+    "default_state": "idle",
+    "resources": [{ "resource_id": "source_buffer", "exclusive": false }],
+    "capacity": { "max_active_materials": "buffer_capacity_required" }
+  },
+  "type_specific_contract": {
+    "production_policy": {
+      "mode": "on_demand|periodic|required",
+      "cycle_time_param": "cycle_time_s"
+    },
+    "buffer": {
+      "capacity_param": "buffer_capacity",
+      "release_policy": "after_pick|manual|required"
+    },
+    "output_material_spec": "输出物料DeviceSpec_required"
+  }
 }

@@ -13,10 +13,10 @@
 
 因此，基于 Agent 的行为仿真可以先拆成两个建模问题：
 
-| 建模问题 | 关注对象 | 产物 |
-|---|---|---|
-| 工艺层行为建模 | 整个工艺场景如何运行，物料如何流转，设备之间如何协作，信号和状态如何传播。 | `SceneDocument`、`SceneTransportSchema`、`SignalBusSchema`、`SimPlan`、`ExecutableSimGraph` |
-| 设备层行为建模 | 单台设备为了参与上述工艺仿真，必须暴露哪些标准化能力和运行契约。 | `DeviceSpec`、`physical_interfaces`、`process_ports`、`signal_ports`、`transport_behaviors`、`runtime_contract` |
+| 建模问题       | 关注对象                                                                   | 产物                                                                                                            |
+| -------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 工艺层行为建模 | 整个工艺场景如何运行，物料如何流转，设备之间如何协作，信号和状态如何传播。 | `SceneDocument`、`SceneTransportSchema`、`SignalBusSchema`、`SimPlan`、`ExecutableSimGraph`                     |
+| 设备层行为建模 | 单台设备为了参与上述工艺仿真，必须暴露哪些标准化能力和运行契约。           | `DeviceSpec`、`physical_interfaces`、`process_ports`、`signal_ports`、`transport_behaviors`、`runtime_contract` |
 
 研究路径上，建议先从工艺层出发，整理一个工艺场景运行时需要表达的状态和关系：
 
@@ -35,10 +35,10 @@
 
 这形成了两条互补的 schema 推理路径：
 
-| 推理路径 | 出发点 | 推理方向 | 产物 | 作用 |
-|---|---|---|---|---|
-| 自顶向下的 schema 规范推理 | 场景级工艺仿真运行需要什么 | 从八大 schema 板块反推设备层 `DeviceSpec` 应如何规范 | 设备建模规范、接口规范、行为契约规范 | 服务论文方法论和系统 schema 设计。 |
-| 自底向上的实际 schema 推理 | 当前场景实际选用了哪些设备 | 从具体 `DeviceSpec` 编译生成场景级运行 schema | `SceneDocument`、`SceneTransportSchema`、`SignalBusSchema`、`ExecutableSimGraph` | 服务真实场景搭建、Agent 计划生成和 Runtime 执行。 |
+| 推理路径                   | 出发点                     | 推理方向                                             | 产物                                                                             | 作用                                              |
+| -------------------------- | -------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 自顶向下的 schema 规范推理 | 场景级工艺仿真运行需要什么 | 从八大 schema 板块反推设备层 `DeviceSpec` 应如何规范 | 设备建模规范、接口规范、行为契约规范                                             | 服务论文方法论和系统 schema 设计。                |
+| 自底向上的实际 schema 推理 | 当前场景实际选用了哪些设备 | 从具体 `DeviceSpec` 编译生成场景级运行 schema        | `SceneDocument`、`SceneTransportSchema`、`SignalBusSchema`、`ExecutableSimGraph` | 服务真实场景搭建、Agent 计划生成和 Runtime 执行。 |
 
 换句话说：
 
@@ -60,16 +60,16 @@
 
 当前建议拆成八个核心板块：
 
-| 板块 | 类型 | 归属 | 说明 |
-|---|---|---|---|
-| `DeviceSpec` | 设备级 schema | Postgres / 设备库 | 定义设备天生具备的参数、物理连接接口、流程口、信号口和 Transport / Flow 行为能力。 |
-| `SceneDocument` | 场景级事实 schema | Postgres / 场景文档 | 定义场景中有哪些设备实例，以及设备实例之间的 process、physical、signal 关系。 |
-| `SceneTransportSchema` | 场景级派生 schema | 可缓存 / 可重建 | 根据 `DeviceSpec + SceneDocument` 编译出当前场景中理论上可能发生的物料流转和 transport 行为拓扑。 |
-| `SignalBusSchema` | 信号级派生 schema | 可缓存 / 可重建 | 根据设备信号口、场景信号边和 `SimPlan` 编译出信号路由、等待规则、payload 约束和超时策略。 |
-| `SimPlan` | Agent 计划产物 | Postgres / Agent run | Agent 根据用户目标、场景和设备能力生成的本次仿真计划。 |
-| `ExecutableSimGraph` / `RuntimePlan` | 可执行计划 | Simulation Runtime 派生 | Runtime 将 `SimPlan` 编译成可执行描述，包括步骤前置条件、等待条件、资源锁、输入信号、输出信号、完成效果和失败策略。 |
-| `RuntimeSnapshot` | 运行时状态 | Redis / Runtime memory，关键事件落 Postgres | 保存当前 signal value、设备 FSM、物料位置、等待队列、资源锁、active action 和仿真时钟。 |
-| `DeviceRuntimeProfile` | 当前设备行为画像 | Runtime 派生 / 可推送前端 | 根据 `ExecutableSimGraph + RuntimeSnapshot` 实时计算某个设备实例当前可执行、等待、阻塞或正在执行哪些行为。 |
+| 板块                                 | 类型              | 归属                                        | 说明                                                                                                                     |
+| ------------------------------------ | ----------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `DeviceSpec`                         | 设备级 schema     | Postgres / 设备库                           | 定义设备天生具备的参数、物理连接接口、流程口、信号口和 Transport / Flow 行为能力。                                       |
+| `SceneDocument`                      | 场景级事实 schema | Postgres / 场景文档                         | 定义场景中有哪些设备实例，以及设备实例之间的 process、physical、signal 关系。                                            |
+| `SceneTransportSchema`               | 场景级派生 schema | 可缓存 / 可重建                             | 根据 `DeviceSpec + SceneDocument` 中的显式连接编译出当前场景中可用的物料流转和 transport 行为拓扑。                      |
+| `SignalBusSchema`                    | 信号级派生 schema | 可缓存 / 可重建                             | 根据设备信号口、场景信号边和 `SimPlan.signal_rules` 编译出本次运行实际启用的信号路由、等待规则、payload 约束和超时策略。 |
+| `SimPlan`                            | Agent 计划产物    | Postgres / Agent run                        | Agent 根据用户目标、场景和设备能力生成的本次仿真计划。                                                                   |
+| `ExecutableSimGraph` / `RuntimePlan` | 可执行计划        | Simulation Runtime 派生                     | Runtime 将 `SimPlan` 编译成可执行描述，包括步骤前置条件、等待条件、资源锁、输入信号、输出信号、完成效果和失败策略。      |
+| `RuntimeSnapshot`                    | 运行时状态        | Redis / Runtime memory，关键事件落 Postgres | 保存当前 signal value、设备 FSM、物料位置、等待队列、资源锁、active action 和仿真时钟。                                  |
+| `DeviceRuntimeProfile`               | 当前设备行为画像  | Runtime 派生 / 可推送前端                   | 根据 `ExecutableSimGraph + RuntimeSnapshot` 实时计算某个设备实例当前可执行、等待、阻塞或正在执行哪些行为。               |
 
 最重要的边界是：
 
@@ -78,6 +78,7 @@ DeviceSpec 描述“设备天生能做什么”；
 SceneDocument 描述“这个场景里有什么、怎么连”；
 SceneTransportSchema 描述“这个场景理论上能怎么流转”；
 SimPlan 描述“这次仿真计划要做什么”；
+SignalBusSchema 描述“这次计划实际启用哪些信号通讯规则”；
 ExecutableSimGraph 描述“这次计划如何被 Runtime 执行”；
 RuntimeSnapshot 描述“当前真实运行到什么状态”；
 DeviceRuntimeProfile 描述“这个设备此刻真的能做什么”。
@@ -86,23 +87,44 @@ DeviceRuntimeProfile 描述“这个设备此刻真的能做什么”。
 完整运行链路如下：
 
 ```text
+用户搭建显式连接场景 + 描述仿真目标
+  -> SceneDocument + 用户目标
+
+Agent / Backend Validator(DeviceSpec + SceneDocument + 用户目标)
+  -> SceneValidationReport
+  -> 若不合理：返回原因、影响和修复建议，暂停规划
+  -> 若合理：继续生成后续运行结构
+
 DeviceSpec + SceneDocument
   -> SceneTransportSchema
 
-DeviceSpec.signal_ports + SceneDocument.signal_edges + SimPlan
-  -> SignalBusSchema
-
-Agent(SceneDocument + DeviceSpec + 用户目标 + 可选 RuntimeSnapshot)
+Agent(DeviceSpec + SceneDocument + SceneTransportSchema + 用户目标 + 可选 RuntimeSnapshot)（这里的“可选 RuntimeSnapshot”意思是：不是每次生成 SimPlan 都需要运行时快照，只有在仿真已经开始或中途修改需求时才需要。）
   -> SimPlan
 
-Runtime(SimPlan + SceneTransportSchema + SignalBusSchema)
+DeviceSpec.signal_ports + SceneDocument.signal_edges + SimPlan.signal_rules
+  -> SignalBusSchema
+
+PlanCompiler(DeviceSpec + SceneDocument + SceneTransportSchema + SignalBusSchema + SimPlan)
   -> ExecutableSimGraph / RuntimePlan
 
-ExecutableSimGraph + RuntimeSnapshot
+Simulation Runtime(ExecutableSimGraph / RuntimePlan + SceneDocument.materials + DeviceSpec.runtime_contract)
+  -> 初始化 RuntimeSnapshot
+
+ExecutableSimGraph + 当前 RuntimeSnapshot
   -> DeviceRuntimeProfile
 
 Scheduler(DeviceRuntimeProfile)
-  -> 执行动作 / 发出信号 / 更新 RuntimeSnapshot / 推送事件
+  -> 选择 enabled behavior / 启动 action / 占用资源锁
+
+Simulation Runtime(action effects + SignalBus signal_event + 调度结果)
+  -> 更新 RuntimeSnapshot
+
+RuntimeSnapshot + DeviceRuntimeProfile
+  -> Redis 缓存 / WebSocket 推送 / 关键事件落 Postgres
+
+用户中途追加要求或 Runtime 产生异常 observation
+  -> Agent(DeviceSpec + SceneDocument + SceneTransportSchema + 当前 RuntimeSnapshot + 用户新目标)
+  -> 生成修订后的 SimPlan / RemainingSimPlan
 ```
 
 因此，`DeviceRuntimeProfile` 不是场景事实源，也不是长期保存的设备 schema。它是运行时动态视图，会随着 `RuntimeSnapshot` 的变化持续更新。真正的场景级可执行能力描述应命名为 `SceneTransportSchema`。
@@ -127,12 +149,12 @@ Scheduler(DeviceRuntimeProfile)
 
 四层概念在新框架中的位置如下：
 
-| 原四层概念 | 在新框架中的位置 | 主要 schema |
-|---|---|---|
-| `Interface / Connector` | 设备层定义连接能力，场景层定义连接事实。 | `DeviceSpec.physical_interfaces`、`DeviceSpec.process_ports`、`interface_bindings`、`SceneDocument.physical_edges` |
-| `Signal` | 设备层定义信号口，场景层定义信号关系，运行层维护实时信号状态。 | `DeviceSpec.signal_ports`、`SceneDocument.signal_edges`、`SignalBusSchema`、`RuntimeSnapshot.signal_values` |
-| `Process Flow` | 工艺层定义物料或产品的业务流转路径。 | `SceneDocument.process_edges`、`SimPlan.process_route` |
-| `Transport / Flow` | 设备层定义可执行行为能力，工艺层编译出可执行的物料流转拓扑。 | `DeviceSpec.transport_behaviors`、`SceneTransportSchema`、`ExecutableSimGraph`、`DeviceRuntimeProfile` |
+| 原四层概念              | 在新框架中的位置                                               | 主要 schema                                                                                                        |
+| ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `Interface / Connector` | 设备层定义连接能力，场景层定义连接事实。                       | `DeviceSpec.physical_interfaces`、`DeviceSpec.process_ports`、`interface_bindings`、`SceneDocument.physical_edges` |
+| `Signal`                | 设备层定义信号口，场景层定义信号关系，运行层维护实时信号状态。 | `DeviceSpec.signal_ports`、`SceneDocument.signal_edges`、`SignalBusSchema`、`RuntimeSnapshot.signal_values`        |
+| `Process Flow`          | 工艺层定义物料或产品的业务流转路径。                           | `SceneDocument.process_edges`、`SimPlan.process_route`                                                             |
+| `Transport / Flow`      | 设备层定义可执行行为能力，工艺层编译出可执行的物料流转拓扑。   | `DeviceSpec.transport_behaviors`、`SceneTransportSchema`、`ExecutableSimGraph`、`DeviceRuntimeProfile`             |
 
 因此，当前的“大 schema”不是单个 JSON，而是一组互相编译、互相约束的 schema 集合。它们共同回答工艺行为仿真的核心问题：
 
@@ -269,6 +291,23 @@ Runtime 当前运行到什么状态；
 
 `RuntimeSnapshot` 保存当前仿真状态，主要位于 Redis / Runtime memory，关键事件摘要落 Postgres。它不是长期场景事实。
 
+`RuntimeSnapshot` 由 Simulation Runtime 在执行 `ExecutableSimGraph / RuntimePlan` 的过程中初始化并持续更新。它不是 Agent 生成的，也不是用户手写的，而是 Runtime 根据可执行图、信号投递、调度结果、动作 effects、资源锁和物料位置变化维护出来的全局运行状态。
+
+首次启动仿真时，Runtime 会生成初始快照：
+
+```text
+run_id              来自本次 simulation run；
+clock               初始化为 0；
+device_fsm_states   来自各设备 DeviceSpec.runtime_contract.default_state；
+signal_values       来自默认信号值或初始化为空；
+material_locations  来自 SceneDocument.materials 的初始 located_at；
+wait_queues         根据设备 capacity / queue 规则初始化为空队列；
+resource_locks      根据 ExecutableSimGraph.resource_locks 初始化为未占用；
+active_actions      初始化为空。
+```
+
+运行过程中，每个 action 的 `on_start`、`on_complete`、`on_error` 等 effects 会持续更新 `RuntimeSnapshot`。例如动作开始时可以设置 `busy` 信号、加资源锁、写入 active action；动作完成时可以发出 `done` 信号、移动物料位置、释放资源锁并清理 active action。
+
 ```json
 {
   "run_id": "run_001",
@@ -283,6 +322,18 @@ Runtime 当前运行到什么状态；
 ```
 
 它回答：当前信号值是什么、设备处于什么状态、物料在哪里、谁在等待、哪些资源被占用、哪些动作正在执行。
+
+生成关系可以概括为：
+
+```text
+SceneDocument.materials
+DeviceSpec.runtime_contract.default_state
+ExecutableSimGraph.guards / effects / resource_locks
+SignalBusSchema.routes / wait_rules / timeout_rules
+Scheduler 执行动作结果
+  -> Simulation Runtime 初始化并持续更新
+  -> RuntimeSnapshot
+```
 
 ### 2.8 `DeviceRuntimeProfile`：设备当前行为画像
 
@@ -312,15 +363,15 @@ Runtime 当前运行到什么状态；
 
 无论设备类型如何，第一阶段都应尽量收敛到统一的设备行为接口模型：
 
-| 通用字段 | 作用 |
-|---|---|
-| `params_schema` | 定义速度、容量、负载、节拍等可配置参数。 |
-| `physical_interfaces` | 定义真实连接锚点，例如入口、出口、抓取区、放置区。 |
-| `process_ports` | 定义工艺流程口，例如 `flow_input`、`flow_output`。 |
-| `signal_ports` | 定义可接收或发出的运行时信号，例如 `busy`、`done`、`part_ready`。 |
-| `interface_bindings` | 定义流程口如何绑定到真实物理接口。 |
-| `transport_behaviors` | 定义设备可执行的物料流转行为能力。 |
-| `runtime_contract` | 定义 FSM 状态、资源、容量、错误状态和运行时约束。 |
+| 通用字段              | 作用                                                              |
+| --------------------- | ----------------------------------------------------------------- |
+| `params_schema`       | 定义速度、容量、负载、节拍等可配置参数。                          |
+| `physical_interfaces` | 定义真实连接锚点，例如入口、出口、抓取区、放置区。                |
+| `process_ports`       | 定义工艺流程口，例如 `flow_input`、`flow_output`。                |
+| `signal_ports`        | 定义可接收或发出的运行时信号，例如 `busy`、`done`、`part_ready`。 |
+| `interface_bindings`  | 定义流程口如何绑定到真实物理接口。                                |
+| `transport_behaviors` | 定义设备可执行的物料流转行为能力。                                |
+| `runtime_contract`    | 定义 FSM 状态、资源、容量、错误状态和运行时约束。                 |
 
 场景层只依赖这些通用字段做编排：它不需要提前知道机械臂和传送带内部运动算法完全不同，只需要知道它们有哪些接口、信号和行为能力。
 
@@ -328,12 +379,12 @@ Runtime 当前运行到什么状态；
 
 通用接口解决“能被编排”，特殊字段解决“如何真实仿真”。二者不能混。
 
-| 设备类型 | 通用接口表现 | 设备特殊性 |
-|---|---|---|
-| `conveyor` | 有 `entry`、`exit`、`flow_input`、`flow_output`、`part_ready`、`blocked`、`transport_to_exit`。 | 连续输送、速度、长度、容量、阻塞传播、物料队列。 |
-| `robot` | 有 `pick_area`、`place_area`、`flow_input`、`flow_output`、`start_pick`、`busy`、`done`、`pick_and_place`。 | 离散抓取、关节运动、TCP、工作空间、夹爪资源、路径规划。 |
-| `storage` | 有 `cell_input`、`cell_output`、`cell_available`、`stored`、`store_to_cell`。 | 库位分配、容量、预约、入库/出库策略。 |
-| `workpiece` | 有物料类型、尺寸、可抓取面、可放置面。 | 通常是被动对象，不主动执行 transport 行为。 |
+| 设备类型    | 通用接口表现                                                                                                | 设备特殊性                                              |
+| ----------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `conveyor`  | 有 `entry`、`exit`、`flow_input`、`flow_output`、`part_ready`、`blocked`、`transport_to_exit`。             | 连续输送、速度、长度、容量、阻塞传播、物料队列。        |
+| `robot`     | 有 `pick_area`、`place_area`、`flow_input`、`flow_output`、`start_pick`、`busy`、`done`、`pick_and_place`。 | 离散抓取、关节运动、TCP、工作空间、夹爪资源、路径规划。 |
+| `storage`   | 有 `cell_input`、`cell_output`、`cell_available`、`stored`、`store_to_cell`。                               | 库位分配、容量、预约、入库/出库策略。                   |
+| `workpiece` | 有物料类型、尺寸、可抓取面、可放置面。                                                                      | 通常是被动对象，不主动执行 transport 行为。             |
 
 因此设备建模规范应采用“通用 envelope + type-specific behavior”的形式：
 
@@ -361,42 +412,59 @@ Runtime 当前运行到什么状态；
 
 ## 4. 工艺仿真编译链路
 
-完整编译链路可以理解为从“设备能力”到“场景工艺”，再到“运行时调度”的逐层收束：
+完整编译链路可以理解为从“设备能力”和“显式场景事实”出发，先校验连接合理性，再生成计划、信号规则和可执行图，最后进入运行时调度。当前阶段只处理用户显式连接，隐式连接推断作为后续能力补充。
 
 ```text
 1. 设备层建模
    定义不同设备类型的 DeviceSpec，包括通用接口和特殊行为能力。
 
 2. 场景搭建
-   用户在三维场景和流程画布中选择设备、摆放设备、连接流程口、确认信号或物理关系。
+   用户在三维场景和流程画布中选择设备、摆放设备、显式连接流程口、确认物理关系和信号关系。
 
 3. 场景事实保存
    系统保存 SceneDocument，包括 instances、process_edges、physical_edges、signal_edges。
 
-4. 场景行为编译
-   Runtime / Backend 根据 DeviceSpec + SceneDocument 编译 SceneTransportSchema。
+4. 场景连接校验
+   Agent / Backend Validator 根据 DeviceSpec + SceneDocument + 用户目标校验连接是否合理。
+   如果不合理，返回引用错误、方向错误、类型不兼容、不可达路径、缺失信号或资源冲突等原因，并给出修复建议。
+   如果合理，继续后续编译和规划。
 
-5. Agent 生成计划
-   Agent 根据用户目标、场景结构和设备能力生成 SimPlan。
+5. 场景行为编译
+   Backend 根据 DeviceSpec + SceneDocument 编译 SceneTransportSchema，得到本场景可用的 transport nodes、transport edges 和 behavior bindings。
 
-6. 信号规则编译
-   Runtime 根据 signal_ports、signal_edges 和 SimPlan 编译 SignalBusSchema。
+6. Agent 生成计划
+   Agent 根据 DeviceSpec、SceneDocument、SceneTransportSchema 和用户目标生成 SimPlan。
 
-7. 可执行图编译
-   Runtime 将 SimPlan + SceneTransportSchema + SignalBusSchema 编译为 ExecutableSimGraph。
+7. 信号规则编译
+   Backend / Runtime 根据 DeviceSpec.signal_ports、SceneDocument.signal_edges 和 SimPlan.signal_rules 编译 SignalBusSchema。
+   SceneDocument.signal_edges 表示场景中已有的显式信号连接；SimPlan.signal_rules 表示本次计划实际使用的信号规则；SignalBusSchema.routes 表示运行时实际启用的信号路由。
 
-8. 实时调度执行
+8. 可执行图编译
+   PlanCompiler / Runtime 将 DeviceSpec、SceneDocument、SceneTransportSchema、SignalBusSchema 和 SimPlan 编译为 ExecutableSimGraph / RuntimePlan。
+
+9. 实时调度执行
    Scheduler 根据 RuntimeSnapshot 计算 DeviceRuntimeProfile，并执行 enabled behavior。
+
+10. 运行时状态更新
+    Simulation Runtime 根据 action effects、SignalBus 投递结果、物料位置变化、设备 FSM 变化、等待队列和资源锁变化持续更新 RuntimeSnapshot。
+
+11. 状态推送与观测
+    RuntimeSnapshot 和 DeviceRuntimeProfile 可缓存到 Redis，并通过 WebSocket 推送给前端；关键低频事件可写入 Postgres 事件表，供审计、回放、异常诊断和 Agent 重规划使用。
 ```
 
 这个链路的关键点是：
 
 ```text
+Agent 先校验场景连接，再生成 SimPlan；
 Agent 不直接驱动设备；
-Agent 生成 SimPlan；
-Runtime 编译可执行图；
+SimPlan 先于本次运行的 SignalBusSchema 完成；
+SceneDocument.signal_edges 是场景事实，SimPlan.signal_rules 是本次计划选择；
+SignalBusSchema.routes 是 Runtime 实际启用的信号路由；
+PlanCompiler / Runtime 编译可执行图；
 Scheduler 消费 DeviceRuntimeProfile；
-SignalBus 和 RuntimeSnapshot 承担实时状态变化。
+SignalBus 投递 signal_event；
+RuntimeSnapshot 由 Simulation Runtime 初始化并持续更新；
+RuntimeSnapshot 是运行状态快照，不是 Agent 计划产物，也不是 SceneDocument 场景事实。
 ```
 
 ---
@@ -487,7 +555,10 @@ SignalBus 和 RuntimeSnapshot 承担实时状态变化。
     "kinematics": { "model": "abstract_robot_arm" },
     "workspace": { "shape": "sphere", "radius_m": 1.2 },
     "gripper": { "supported_material_classes": ["box"], "max_payload_kg": 5.0 },
-    "motion_profile": { "default_move_type": "pick_place", "collision_check": false }
+    "motion_profile": {
+      "default_move_type": "pick_place",
+      "collision_check": false
+    }
   }
 }
 ```

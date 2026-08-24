@@ -10,11 +10,14 @@
   "notes": ["该状态适合 Redis 存储，关键事件摘要另行落 Postgres。"],
   "run_id": "run_figure_1_001",
   "clock": 12.5,
-  "signal_values": { "conveyor_1.part_ready": true, "robot_1.busy": false, "robot_1.done": false },
+  "signal_values": {
+    "conveyor_1.part_ready": true,
+    "robot_1.busy": false,
+    "robot_1.done": false
+  },
   "device_fsm_states": { "conveyor_1": "idle", "robot_1": "idle" },
   "material_locations": { "part_001": "conveyor_1.exit" },
   "wait_queues": { "conveyor_1.exit_queue": [] },
   "resource_locks": { "robot_1.gripper": null },
   "active_actions": {}
 }
-

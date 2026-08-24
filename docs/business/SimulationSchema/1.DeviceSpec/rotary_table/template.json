@@ -4,20 +4,107 @@
   "version": "0.1.0",
   "name": "旋转台设备本体填写模板",
   "description": "用于新增多工位旋转台 DeviceSpec。",
-  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/rotary_table/template.json" },
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/rotary_table/template.json"
+  },
   "created_for": "rotary_table 设备本体建模",
-  "references": ["../common_device_spec.schema.json", "schema.json", "rotary_table_1.json"],
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "rotary_table_1.json"
+  ],
   "notes": ["旋转台默认按离散工位 indexing 建模。"],
   "device_spec_id": "rotary_table_id_required",
   "device_type": "rotary_table",
   "display_name": "旋转台展示名_required",
-  "asset": { "model_format": "glb_optional", "model_key": "assets/models/rotary/{file}.glb_optional" },
-  "params_schema": { "rotate_speed_deg_s": { "type": "number", "default": "旋转速度_required", "unit": "deg/s" }, "station_count": { "type": "integer", "default": "工位数_required" } },
-  "physical_interfaces": [{ "interface_id": "station_a", "kind": "material", "direction": "bidirectional", "node_name": "StationA_required", "material_classes": ["workpiece_required"] }, { "interface_id": "station_b", "kind": "material", "direction": "bidirectional", "node_name": "StationB_required", "material_classes": ["workpiece_required"] }],
-  "process_ports": [{ "port_id": "flow_input", "direction": "input", "label": "Rotary Input" }, { "port_id": "flow_output", "direction": "output", "label": "Rotary Output" }],
-  "signal_ports": [{ "port_id": "rotate_to_station", "direction": "input", "value_type": "command" }, { "port_id": "at_station", "direction": "output", "value_type": "event" }, { "port_id": "occupied", "direction": "output", "value_type": "boolean" }, { "port_id": "rotating", "direction": "output", "value_type": "boolean" }, { "port_id": "done", "direction": "output", "value_type": "event" }],
-  "interface_bindings": [{ "process_port": "flow_input", "physical_interface": "station_a" }, { "process_port": "flow_output", "physical_interface": "station_b" }],
-  "transport_behaviors": [{ "behavior_id": "accept_material", "behavior_type": "material_handoff", "input_physical_interface": "station_a", "output_signals": ["occupied"] }, { "behavior_id": "rotate_to_station", "behavior_type": "rotary_motion", "input_signals": ["rotate_to_station"], "output_signals": ["rotating", "at_station", "done"] }, { "behavior_id": "release_material", "behavior_type": "material_handoff", "output_physical_interface": "station_b", "output_signals": ["occupied"] }],
-  "runtime_contract": { "fsm_states": ["idle", "occupied", "rotating", "at_station", "error"], "default_state": "idle", "resources": [{ "resource_id": "rotary_plate", "exclusive": true }], "capacity": { "max_active_materials": "工位容量_required" } },
-  "type_specific_contract": { "stations": [{ "station_id": "station_a_required", "angle_deg": "角度_required" }, { "station_id": "station_b_required", "angle_deg": "角度_required" }], "rotation_axis": [0, 1, 0], "indexing_policy": { "mode": "discrete", "speed_param": "rotate_speed_deg_s", "tolerance_deg": "角度容差_optional" } }
+  "asset": {
+    "model_format": "glb_optional",
+    "model_key": "assets/models/rotary/{file}.glb_optional"
+  },
+  "params_schema": {
+    "rotate_speed_deg_s": {
+      "type": "number",
+      "default": "旋转速度_required",
+      "unit": "deg/s"
+    },
+    "station_count": { "type": "integer", "default": "工位数_required" }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "station_a",
+      "kind": "material",
+      "direction": "bidirectional",
+      "node_name": "StationA_required",
+      "material_classes": ["workpiece_required"]
+    },
+    {
+      "interface_id": "station_b",
+      "kind": "material",
+      "direction": "bidirectional",
+      "node_name": "StationB_required",
+      "material_classes": ["workpiece_required"]
+    }
+  ],
+  "process_ports": [
+    { "port_id": "flow_input", "direction": "input", "label": "Rotary Input" },
+    {
+      "port_id": "flow_output",
+      "direction": "output",
+      "label": "Rotary Output"
+    }
+  ],
+  "signal_ports": [
+    {
+      "port_id": "rotate_to_station",
+      "direction": "input",
+      "value_type": "command"
+    },
+    { "port_id": "at_station", "direction": "output", "value_type": "event" },
+    { "port_id": "occupied", "direction": "output", "value_type": "boolean" },
+    { "port_id": "rotating", "direction": "output", "value_type": "boolean" },
+    { "port_id": "done", "direction": "output", "value_type": "event" }
+  ],
+  "interface_bindings": [
+    { "process_port": "flow_input", "physical_interface": "station_a" },
+    { "process_port": "flow_output", "physical_interface": "station_b" }
+  ],
+  "transport_behaviors": [
+    {
+      "behavior_id": "accept_material",
+      "behavior_type": "material_handoff",
+      "input_physical_interface": "station_a",
+      "output_signals": ["occupied"]
+    },
+    {
+      "behavior_id": "rotate_to_station",
+      "behavior_type": "rotary_motion",
+      "input_signals": ["rotate_to_station"],
+      "output_signals": ["rotating", "at_station", "done"]
+    },
+    {
+      "behavior_id": "release_material",
+      "behavior_type": "material_handoff",
+      "output_physical_interface": "station_b",
+      "output_signals": ["occupied"]
+    }
+  ],
+  "runtime_contract": {
+    "fsm_states": ["idle", "occupied", "rotating", "at_station", "error"],
+    "default_state": "idle",
+    "resources": [{ "resource_id": "rotary_plate", "exclusive": true }],
+    "capacity": { "max_active_materials": "工位容量_required" }
+  },
+  "type_specific_contract": {
+    "stations": [
+      { "station_id": "station_a_required", "angle_deg": "角度_required" },
+      { "station_id": "station_b_required", "angle_deg": "角度_required" }
+    ],
+    "rotation_axis": [0, 1, 0],
+    "indexing_policy": {
+      "mode": "discrete",
+      "speed_param": "rotate_speed_deg_s",
+      "tolerance_deg": "角度容差_optional"
+    }
+  }
 }
