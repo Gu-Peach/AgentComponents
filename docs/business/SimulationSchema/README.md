@@ -48,6 +48,7 @@
 |---|---|
 | [`device_data_structure.md`](device_data_structure.md) | 工艺行为仿真大 schema、设备层行为建模规范、八个核心板块与运行编译链路。 |
 | [`common_schema_contract.json`](common_schema_contract.json) | 所有 JSON 文件共享的通用元信息规范。 |
+| [`demo/pallet_sorting_line/`](demo/pallet_sorting_line/) | 基于 `docs/business/test/1.png` 的托盘分拣线全链路 demo，展示从显式连接场景到 Runtime 动态视图的完整数据传递过程。 |
 
 ---
 

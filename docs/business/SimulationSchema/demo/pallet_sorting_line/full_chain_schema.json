@@ -1,0 +1,1490 @@
+{
+  "schema_id": "pallet_sorting_line_full_chain_demo_v0_1",
+  "schema_type": "FullSimulationChainDemo",
+  "version": "0.1.0",
+  "name": "Pallet Sorting Line Full Chain Demo",
+  "description": "基于 docs/business/test/1.png 的托盘分拣场景全链路行为仿真 schema：一个托盘承载多个物料，经主传送带运到分拣位，由两个机械臂分拣到两条目标传送带。",
+  "source": {
+    "kind": "image_inferred_demo",
+    "path": "docs/business/test/1.png"
+  },
+  "created_for": "展示 DeviceSpec、SceneDocument、SceneTransportSchema、SimPlan、SignalBusSchema、ExecutableSimGraph、RuntimeSnapshot、DeviceRuntimeProfile 之间的数据传递链路。",
+  "references": [
+    "docs/business/SimulationSchema/device_data_structure.md",
+    "docs/business/SimulationSchema/1.DeviceSpec/conveyor/conveyor_1.json",
+    "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/robot_arm_1.json",
+    "docs/business/SimulationSchema/1.DeviceSpec/workpiece/workpiece_1.json",
+    "docs/business/SimulationSchema/1.DeviceSpec/workpiece_carrier/carrier_tray_1.json"
+  ],
+  "notes": [
+    "当前 demo 只使用显式连接，不做隐式空间拓扑推断。",
+    "SceneTransportSchema 由 DeviceSpec + SceneDocument 编译生成，Agent 不直接生成该结构。",
+    "Agent 在场景连接校验通过后，基于 SceneTransportSchema 和用户目标生成 SimPlan。",
+    "SignalBusSchema 是本次运行的信号通讯契约，不保存实时信号值；实时值写入 RuntimeSnapshot.signal_values，并通过 signal_event 传递。",
+    "DeviceRuntimeProfile 是由 ExecutableSimGraph + RuntimeSnapshot 计算出的动态视图，供 Scheduler、前端和 Agent observation 消费。"
+  ],
+  "user_goal": {
+    "goal_id": "goal_sort_pallet_parts_v0_1",
+    "natural_language": "主传送带先将装有 12 个物料的托盘运到中央分拣位；两个机械臂协同分拣托盘上的物料，左侧 6 个物料送到上方目标传送带，右侧 6 个物料送到下方目标传送带。",
+    "assumptions": [
+      "托盘初始位于主传送带入口侧。",
+      "托盘到达中央分拣位后停止，等待两个机械臂分拣。",
+      "robot_1 负责 part_001 至 part_006，robot_2 负责 part_007 至 part_012。",
+      "上方目标传送带收集 A 类物料，下方目标传送带收集 B 类物料。",
+      "每个机械臂一次只抓取一个物料，夹爪资源互斥。"
+    ]
+  },
+  "device_specs_used": [
+    {
+      "device_spec_id": "conveyor_1",
+      "device_type": "conveyor",
+      "used_by_instances": ["main_conveyor_1", "upper_out_conveyor_1", "lower_out_conveyor_1"],
+      "required_fields": ["physical_interfaces", "process_ports", "signal_ports", "transport_behaviors", "runtime_contract"]
+    },
+    {
+      "device_spec_id": "robot_arm_1",
+      "device_type": "robot_arm",
+      "used_by_instances": ["robot_1", "robot_2"],
+      "required_fields": ["physical_interfaces", "process_ports", "signal_ports", "transport_behaviors", "runtime_contract"]
+    },
+    {
+      "device_spec_id": "carrier_tray_1",
+      "device_type": "workpiece_carrier",
+      "used_by_instances": ["pallet_1"],
+      "required_fields": ["physical_interfaces", "process_ports", "signal_ports", "transport_behaviors", "runtime_contract"]
+    },
+    {
+      "device_spec_id": "workpiece_1",
+      "device_type": "workpiece",
+      "used_by_instances": [
+        "part_001",
+        "part_002",
+        "part_003",
+        "part_004",
+        "part_005",
+        "part_006",
+        "part_007",
+        "part_008",
+        "part_009",
+        "part_010",
+        "part_011",
+        "part_012"
+      ],
+      "required_fields": ["physical_interfaces", "signal_ports", "runtime_contract"]
+    }
+  ],
+  "scene_document": {
+    "schema_id": "scene_document_pallet_sorting_line_v0_1",
+    "schema_type": "SceneDocument",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line SceneDocument",
+    "description": "显式场景事实：主传送带、两个机械臂、两条输出传送带、托盘和 12 个物料。",
+    "source": {
+      "kind": "image_inferred_demo",
+      "path": "docs/business/test/1.png"
+    },
+    "created_for": "作为后续连接校验、SceneTransportSchema 编译和 SimPlan 生成的事实输入。",
+    "references": [
+      "conveyor_1",
+      "robot_arm_1",
+      "carrier_tray_1",
+      "workpiece_1"
+    ],
+    "notes": [
+      "坐标仅用于 demo 表达相对布局，不代表图片精确测量。",
+      "process_edges、physical_edges、signal_edges 均为用户显式连接或前端确认后的场景事实。"
+    ],
+    "scene_id": "scene_pallet_sorting_line_001",
+    "revision": 1,
+    "instances": [
+      {
+        "instance_id": "main_conveyor_1",
+        "spec_id": "conveyor_1",
+        "device_type": "conveyor",
+        "name": "主传送带",
+        "transform": {
+          "position": [0, 0, 0],
+          "rotation_euler": [0, 0, 0],
+          "scale": [1, 1, 1]
+        },
+        "params": {
+          "speed_mps": 0.25,
+          "stop_at": "main_conveyor_1.sorting_stop"
+        },
+        "visible": true,
+        "locked": false
+      },
+      {
+        "instance_id": "upper_out_conveyor_1",
+        "spec_id": "conveyor_1",
+        "device_type": "conveyor",
+        "name": "上方目标传送带",
+        "transform": {
+          "position": [1.7, 0, 0.6],
+          "rotation_euler": [0, 0, 0],
+          "scale": [0.75, 1, 1]
+        },
+        "params": {
+          "speed_mps": 0.2,
+          "accepted_class": "A"
+        },
+        "visible": true,
+        "locked": false
+      },
+      {
+        "instance_id": "lower_out_conveyor_1",
+        "spec_id": "conveyor_1",
+        "device_type": "conveyor",
+        "name": "下方目标传送带",
+        "transform": {
+          "position": [1.7, 0, -0.6],
+          "rotation_euler": [0, 0, 0],
+          "scale": [0.75, 1, 1]
+        },
+        "params": {
+          "speed_mps": 0.2,
+          "accepted_class": "B"
+        },
+        "visible": true,
+        "locked": false
+      },
+      {
+        "instance_id": "robot_1",
+        "spec_id": "robot_arm_1",
+        "device_type": "robot_arm",
+        "name": "上方分拣机械臂",
+        "transform": {
+          "position": [0.6, 0, 0.35],
+          "rotation_euler": [0, 0, 0],
+          "scale": [1, 1, 1]
+        },
+        "params": {
+          "speed_mps": 0.5,
+          "payload_kg": 5
+        },
+        "visible": true,
+        "locked": false
+      },
+      {
+        "instance_id": "robot_2",
+        "spec_id": "robot_arm_1",
+        "device_type": "robot_arm",
+        "name": "下方分拣机械臂",
+        "transform": {
+          "position": [0.6, 0, -0.25],
+          "rotation_euler": [0, 0, 0],
+          "scale": [1, 1, 1]
+        },
+        "params": {
+          "speed_mps": 0.5,
+          "payload_kg": 5
+        },
+        "visible": true,
+        "locked": false
+      },
+      {
+        "instance_id": "pallet_1",
+        "spec_id": "carrier_tray_1",
+        "device_type": "workpiece_carrier",
+        "name": "承载托盘",
+        "transform": {
+          "position": [-1.2, 0, 0],
+          "rotation_euler": [0, 0, 0],
+          "scale": [1, 1, 1]
+        },
+        "params": {
+          "slot_count": 12
+        },
+        "visible": true,
+        "locked": false
+      }
+    ],
+    "materials": [
+      {
+        "material_id": "part_001",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_01"
+      },
+      {
+        "material_id": "part_002",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_02"
+      },
+      {
+        "material_id": "part_003",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_03"
+      },
+      {
+        "material_id": "part_004",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_04"
+      },
+      {
+        "material_id": "part_005",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_05"
+      },
+      {
+        "material_id": "part_006",
+        "spec_id": "workpiece_1",
+        "class": "A",
+        "located_at": "pallet_1.slot_06"
+      },
+      {
+        "material_id": "part_007",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_07"
+      },
+      {
+        "material_id": "part_008",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_08"
+      },
+      {
+        "material_id": "part_009",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_09"
+      },
+      {
+        "material_id": "part_010",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_10"
+      },
+      {
+        "material_id": "part_011",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_11"
+      },
+      {
+        "material_id": "part_012",
+        "spec_id": "workpiece_1",
+        "class": "B",
+        "located_at": "pallet_1.slot_12"
+      }
+    ],
+    "process_edges": [
+      {
+        "edge_id": "proc_main_to_robot_1",
+        "source": "main_conveyor_1.flow_output",
+        "target": "robot_1.flow_input",
+        "edge_type": "material_flow",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "proc_main_to_robot_2",
+        "source": "main_conveyor_1.flow_output",
+        "target": "robot_2.flow_input",
+        "edge_type": "material_flow",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "proc_robot_1_to_upper_out",
+        "source": "robot_1.flow_output",
+        "target": "upper_out_conveyor_1.flow_input",
+        "edge_type": "material_flow",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "proc_robot_2_to_lower_out",
+        "source": "robot_2.flow_output",
+        "target": "lower_out_conveyor_1.flow_input",
+        "edge_type": "material_flow",
+        "status": "confirmed"
+      }
+    ],
+    "physical_edges": [
+      {
+        "edge_id": "phys_main_exit_to_robot_1_pick",
+        "source": "main_conveyor_1.exit",
+        "target": "robot_1.pick_area",
+        "edge_type": "material_transfer",
+        "compiled_from": "proc_main_to_robot_1",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "phys_main_exit_to_robot_2_pick",
+        "source": "main_conveyor_1.exit",
+        "target": "robot_2.pick_area",
+        "edge_type": "material_transfer",
+        "compiled_from": "proc_main_to_robot_2",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "phys_robot_1_place_to_upper_entry",
+        "source": "robot_1.place_area",
+        "target": "upper_out_conveyor_1.entry",
+        "edge_type": "material_transfer",
+        "compiled_from": "proc_robot_1_to_upper_out",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "phys_robot_2_place_to_lower_entry",
+        "source": "robot_2.place_area",
+        "target": "lower_out_conveyor_1.entry",
+        "edge_type": "material_transfer",
+        "compiled_from": "proc_robot_2_to_lower_out",
+        "status": "confirmed"
+      }
+    ],
+    "signal_edges": [
+      {
+        "edge_id": "sig_main_pallet_ready_to_robot_1_start",
+        "source": "main_conveyor_1.part_ready",
+        "target": "robot_1.start_pick",
+        "edge_type": "control_signal",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "sig_main_pallet_ready_to_robot_2_start",
+        "source": "main_conveyor_1.part_ready",
+        "target": "robot_2.start_pick",
+        "edge_type": "control_signal",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "sig_robot_1_done_to_upper_release",
+        "source": "robot_1.done",
+        "target": "upper_out_conveyor_1.release_waiting_material",
+        "edge_type": "control_signal",
+        "status": "confirmed"
+      },
+      {
+        "edge_id": "sig_robot_2_done_to_lower_release",
+        "source": "robot_2.done",
+        "target": "lower_out_conveyor_1.release_waiting_material",
+        "edge_type": "control_signal",
+        "status": "confirmed"
+      }
+    ],
+    "runtime_config": {
+      "deadlock_detection": true,
+      "default_signal_timeout_s": 30,
+      "default_sim_duration_s": 300,
+      "profile_push_interval_s": 0.2
+    }
+  },
+  "scene_validation_report": {
+    "schema_id": "scene_validation_report_pallet_sorting_line_v0_1",
+    "schema_type": "SceneValidationReport",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line Scene Validation Report",
+    "description": "Agent / Backend Validator 在规划前对显式连接场景的校验结果。",
+    "source": {
+      "kind": "validator_output",
+      "from": ["scene_document", "device_specs_used", "user_goal"]
+    },
+    "created_for": "决定是否允许继续编译 SceneTransportSchema 和生成 SimPlan。",
+    "references": ["scene_document_pallet_sorting_line_v0_1"],
+    "notes": [
+      "当前 demo 校验通过，因此继续后续链路。",
+      "如果任何 confirmed edge 引用不存在的端口，或方向/物料类型不兼容，应停止规划并返回修复建议。"
+    ],
+    "status": "passed",
+    "checks": [
+      {
+        "check_id": "instance_exists",
+        "status": "passed",
+        "message": "所有 edge 引用的 device instance 均存在于 SceneDocument.instances。"
+      },
+      {
+        "check_id": "spec_exists",
+        "status": "passed",
+        "message": "所有 instance.spec_id 均能解析到设备库中的 DeviceSpec。"
+      },
+      {
+        "check_id": "process_port_direction",
+        "status": "passed",
+        "message": "process_edges 的 source 均为 flow_output，target 均为 flow_input。"
+      },
+      {
+        "check_id": "physical_interface_compatibility",
+        "status": "passed",
+        "message": "physical_edges 的 material_classes 与方向兼容。"
+      },
+      {
+        "check_id": "signal_port_direction",
+        "status": "passed",
+        "message": "signal_edges 的 source 为 output 信号，target 为 input 信号。"
+      },
+      {
+        "check_id": "goal_reachability",
+        "status": "passed",
+        "message": "托盘到达主传送带出口后，robot_1 可到达 upper_out_conveyor_1.entry，robot_2 可到达 lower_out_conveyor_1.entry。"
+      }
+    ],
+    "blocking_errors": [],
+    "warnings": [
+      {
+        "warning_id": "shared_pick_area",
+        "message": "robot_1 和 robot_2 均从 main_conveyor_1.exit 取料，需要在 Runtime 中通过托盘 slot 分配和机械臂资源锁避免冲突。",
+        "recommendation": "在 SimPlan 中显式分配 part_001~part_006 给 robot_1，part_007~part_012 给 robot_2。"
+      }
+    ],
+    "recommendations": [
+      "生成 SimPlan 时，将主传送带运输托盘作为前置步骤。",
+      "托盘到达 sorting_stop 后再并行启动两个机械臂分拣。",
+      "将两个机械臂的 gripper 资源分别加锁，主传送带出口等待队列绑定到托盘 slots。"
+    ]
+  },
+  "scene_transport_schema": {
+    "schema_id": "scene_transport_schema_pallet_sorting_line_v0_1",
+    "schema_type": "SceneTransportSchema",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line SceneTransportSchema",
+    "description": "由 DeviceSpec + SceneDocument 编译得到的场景物料流转拓扑。",
+    "source": {
+      "kind": "compiled_schema",
+      "compiled_from": ["device_specs_used", "scene_document"]
+    },
+    "created_for": "提供 Agent 生成 SimPlan 时可选择的物料流转路径和行为绑定。",
+    "references": ["scene_document_pallet_sorting_line_v0_1"],
+    "notes": [
+      "该结构描述场景可流转能力，不等同于本次用户目标下的执行计划。",
+      "Agent 后续从该拓扑中选择路径，生成 SimPlan。"
+    ],
+    "scene_id": "scene_pallet_sorting_line_001",
+    "scene_revision": 1,
+    "transport_nodes": [
+      {
+        "node_id": "main_conveyor_1.entry",
+        "instance_id": "main_conveyor_1",
+        "interface_id": "entry",
+        "material_classes": ["workpiece_carrier"]
+      },
+      {
+        "node_id": "main_conveyor_1.exit",
+        "instance_id": "main_conveyor_1",
+        "interface_id": "exit",
+        "material_classes": ["workpiece_carrier", "workpiece"]
+      },
+      {
+        "node_id": "robot_1.pick_area",
+        "instance_id": "robot_1",
+        "interface_id": "pick_area",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "robot_1.place_area",
+        "instance_id": "robot_1",
+        "interface_id": "place_area",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "robot_2.pick_area",
+        "instance_id": "robot_2",
+        "interface_id": "pick_area",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "robot_2.place_area",
+        "instance_id": "robot_2",
+        "interface_id": "place_area",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "upper_out_conveyor_1.entry",
+        "instance_id": "upper_out_conveyor_1",
+        "interface_id": "entry",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "upper_out_conveyor_1.exit",
+        "instance_id": "upper_out_conveyor_1",
+        "interface_id": "exit",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "lower_out_conveyor_1.entry",
+        "instance_id": "lower_out_conveyor_1",
+        "interface_id": "entry",
+        "material_classes": ["workpiece"]
+      },
+      {
+        "node_id": "lower_out_conveyor_1.exit",
+        "instance_id": "lower_out_conveyor_1",
+        "interface_id": "exit",
+        "material_classes": ["workpiece"]
+      }
+    ],
+    "transport_edges": [
+      {
+        "edge_id": "transport_pallet_to_sorting_stop",
+        "from": "main_conveyor_1.entry",
+        "to": "main_conveyor_1.exit",
+        "edge_type": "internal_transport",
+        "behavior_id": "main_conveyor_1.transport_to_exit",
+        "required_signals": []
+      },
+      {
+        "edge_id": "transport_main_to_robot_1",
+        "from": "main_conveyor_1.exit",
+        "to": "robot_1.pick_area",
+        "process_edge": "proc_main_to_robot_1",
+        "physical_edge": "phys_main_exit_to_robot_1_pick",
+        "required_signals": ["main_conveyor_1.part_ready", "robot_1.start_pick"]
+      },
+      {
+        "edge_id": "transport_main_to_robot_2",
+        "from": "main_conveyor_1.exit",
+        "to": "robot_2.pick_area",
+        "process_edge": "proc_main_to_robot_2",
+        "physical_edge": "phys_main_exit_to_robot_2_pick",
+        "required_signals": ["main_conveyor_1.part_ready", "robot_2.start_pick"]
+      },
+      {
+        "edge_id": "transport_robot_1_to_upper_out",
+        "from": "robot_1.place_area",
+        "to": "upper_out_conveyor_1.entry",
+        "process_edge": "proc_robot_1_to_upper_out",
+        "physical_edge": "phys_robot_1_place_to_upper_entry",
+        "required_signals": ["robot_1.done", "upper_out_conveyor_1.release_waiting_material"]
+      },
+      {
+        "edge_id": "transport_robot_2_to_lower_out",
+        "from": "robot_2.place_area",
+        "to": "lower_out_conveyor_1.entry",
+        "process_edge": "proc_robot_2_to_lower_out",
+        "physical_edge": "phys_robot_2_place_to_lower_entry",
+        "required_signals": ["robot_2.done", "lower_out_conveyor_1.release_waiting_material"]
+      },
+      {
+        "edge_id": "transport_upper_entry_to_exit",
+        "from": "upper_out_conveyor_1.entry",
+        "to": "upper_out_conveyor_1.exit",
+        "edge_type": "internal_transport",
+        "behavior_id": "upper_out_conveyor_1.transport_to_exit",
+        "required_signals": []
+      },
+      {
+        "edge_id": "transport_lower_entry_to_exit",
+        "from": "lower_out_conveyor_1.entry",
+        "to": "lower_out_conveyor_1.exit",
+        "edge_type": "internal_transport",
+        "behavior_id": "lower_out_conveyor_1.transport_to_exit",
+        "required_signals": []
+      }
+    ],
+    "behavior_bindings": [
+      {
+        "binding_id": "bind_main_transport_pallet",
+        "instance_id": "main_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "input_interface": "entry",
+        "output_interface": "exit"
+      },
+      {
+        "binding_id": "bind_robot_1_sort_a",
+        "instance_id": "robot_1",
+        "behavior_id": "pick_and_place",
+        "input_interface": "pick_area",
+        "output_interface": "place_area"
+      },
+      {
+        "binding_id": "bind_robot_2_sort_b",
+        "instance_id": "robot_2",
+        "behavior_id": "pick_and_place",
+        "input_interface": "pick_area",
+        "output_interface": "place_area"
+      },
+      {
+        "binding_id": "bind_upper_out_transport",
+        "instance_id": "upper_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "input_interface": "entry",
+        "output_interface": "exit"
+      },
+      {
+        "binding_id": "bind_lower_out_transport",
+        "instance_id": "lower_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "input_interface": "entry",
+        "output_interface": "exit"
+      }
+    ],
+    "diagnostics": []
+  },
+  "sim_plan": {
+    "schema_id": "sim_plan_pallet_sorting_line_v0_1",
+    "schema_type": "SimPlan",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line SimPlan",
+    "description": "Agent 根据用户目标和 SceneTransportSchema 生成的本次仿真计划。",
+    "source": {
+      "kind": "agent_generated_plan",
+      "agent_run_id": "agent_run_pallet_sorting_line_001",
+      "from": ["user_goal", "scene_document", "scene_transport_schema", "scene_validation_report"]
+    },
+    "created_for": "表达本次仿真的目标、设备选择、工艺路线、步骤、信号规则和成功条件。",
+    "references": [
+      "scene_document_pallet_sorting_line_v0_1",
+      "scene_transport_schema_pallet_sorting_line_v0_1"
+    ],
+    "notes": [
+      "SimPlan 是计划层，不直接执行设备动作。",
+      "PlanCompiler 会把本计划编译为 ExecutableSimGraph。"
+    ],
+    "goal": "transport pallet_1 to main_conveyor_1.exit, then sort part_001~part_006 to upper_out_conveyor_1 and part_007~part_012 to lower_out_conveyor_1",
+    "selected_devices": [
+      "main_conveyor_1",
+      "robot_1",
+      "robot_2",
+      "upper_out_conveyor_1",
+      "lower_out_conveyor_1"
+    ],
+    "process_route": [
+      "main_conveyor_1",
+      "robot_1",
+      "upper_out_conveyor_1",
+      "main_conveyor_1",
+      "robot_2",
+      "lower_out_conveyor_1"
+    ],
+    "transport_steps": [
+      {
+        "step_id": "step_001_transport_pallet",
+        "instance_id": "main_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "inputs": ["pallet_1"],
+        "outputs": ["main_conveyor_1.part_ready"],
+        "effects": ["material_at(pallet_1, main_conveyor_1.exit)"]
+      },
+      {
+        "step_id": "step_010_robot_1_sort_a_batch",
+        "instance_id": "robot_1",
+        "behavior_id": "pick_and_place",
+        "depends_on": ["step_001_transport_pallet"],
+        "trigger": "main_conveyor_1.part_ready",
+        "batch": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"],
+        "from": "pallet_1.slots_01_06",
+        "to": "upper_out_conveyor_1.entry",
+        "outputs": ["robot_1.busy", "robot_1.done"]
+      },
+      {
+        "step_id": "step_020_robot_2_sort_b_batch",
+        "instance_id": "robot_2",
+        "behavior_id": "pick_and_place",
+        "depends_on": ["step_001_transport_pallet"],
+        "trigger": "main_conveyor_1.part_ready",
+        "batch": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"],
+        "from": "pallet_1.slots_07_12",
+        "to": "lower_out_conveyor_1.entry",
+        "outputs": ["robot_2.busy", "robot_2.done"]
+      },
+      {
+        "step_id": "step_030_upper_out_transport",
+        "instance_id": "upper_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "depends_on": ["step_010_robot_1_sort_a_batch"],
+        "trigger": "robot_1.done",
+        "inputs": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"],
+        "outputs": ["upper_out_conveyor_1.done"]
+      },
+      {
+        "step_id": "step_040_lower_out_transport",
+        "instance_id": "lower_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "depends_on": ["step_020_robot_2_sort_b_batch"],
+        "trigger": "robot_2.done",
+        "inputs": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"],
+        "outputs": ["lower_out_conveyor_1.done"]
+      }
+    ],
+    "signal_rules": [
+      {
+        "rule_id": "sig_rule_main_ready_to_robot_1",
+        "source": "main_conveyor_1.part_ready",
+        "target": "robot_1.start_pick",
+        "payload": {
+          "carrier_id": "pallet_1",
+          "material_ids": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"]
+        }
+      },
+      {
+        "rule_id": "sig_rule_main_ready_to_robot_2",
+        "source": "main_conveyor_1.part_ready",
+        "target": "robot_2.start_pick",
+        "payload": {
+          "carrier_id": "pallet_1",
+          "material_ids": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"]
+        }
+      },
+      {
+        "rule_id": "sig_rule_robot_1_done_to_upper_release",
+        "source": "robot_1.done",
+        "target": "upper_out_conveyor_1.release_waiting_material"
+      },
+      {
+        "rule_id": "sig_rule_robot_2_done_to_lower_release",
+        "source": "robot_2.done",
+        "target": "lower_out_conveyor_1.release_waiting_material"
+      }
+    ],
+    "success_criteria": [
+      "material_at(part_001, upper_out_conveyor_1.exit)",
+      "material_at(part_002, upper_out_conveyor_1.exit)",
+      "material_at(part_003, upper_out_conveyor_1.exit)",
+      "material_at(part_004, upper_out_conveyor_1.exit)",
+      "material_at(part_005, upper_out_conveyor_1.exit)",
+      "material_at(part_006, upper_out_conveyor_1.exit)",
+      "material_at(part_007, lower_out_conveyor_1.exit)",
+      "material_at(part_008, lower_out_conveyor_1.exit)",
+      "material_at(part_009, lower_out_conveyor_1.exit)",
+      "material_at(part_010, lower_out_conveyor_1.exit)",
+      "material_at(part_011, lower_out_conveyor_1.exit)",
+      "material_at(part_012, lower_out_conveyor_1.exit)",
+      "robot_1.done == true",
+      "robot_2.done == true"
+    ],
+    "interrupt_policy": {
+      "on_user_interrupt": "pause_and_replan_remaining",
+      "on_deadlock": "emit_observation",
+      "on_signal_timeout": "emit_observation"
+    }
+  },
+  "signal_bus_schema": {
+    "schema_id": "signal_bus_schema_pallet_sorting_line_v0_1",
+    "schema_type": "SignalBusSchema",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line SignalBusSchema",
+    "description": "由 DeviceSpec.signal_ports + SceneDocument.signal_edges + SimPlan.signal_rules 编译得到的本次运行信号通讯契约。",
+    "source": {
+      "kind": "compiled_schema",
+      "compiled_from": ["device_specs_used.signal_ports", "scene_document.signal_edges", "sim_plan.signal_rules"]
+    },
+    "created_for": "定义本次运行实际启用的信号路由、payload 格式、等待规则和超时策略。",
+    "references": [
+      "scene_document_pallet_sorting_line_v0_1",
+      "sim_plan_pallet_sorting_line_v0_1"
+    ],
+    "notes": [
+      "SignalBusSchema 是通讯规则，不保存实时 signal value。",
+      "实时 signal value 存在 RuntimeSnapshot.signal_values，实时投递由 signal_event 表达。"
+    ],
+    "routes": [
+      {
+        "route_id": "route_main_ready_to_robot_1",
+        "source_signal": "main_conveyor_1.part_ready",
+        "target_signal": "robot_1.start_pick",
+        "payload_schema": "payload_sort_batch",
+        "delivery": "at_least_once",
+        "enabled_by_plan_rule": "sig_rule_main_ready_to_robot_1"
+      },
+      {
+        "route_id": "route_main_ready_to_robot_2",
+        "source_signal": "main_conveyor_1.part_ready",
+        "target_signal": "robot_2.start_pick",
+        "payload_schema": "payload_sort_batch",
+        "delivery": "at_least_once",
+        "enabled_by_plan_rule": "sig_rule_main_ready_to_robot_2"
+      },
+      {
+        "route_id": "route_robot_1_done_to_upper_release",
+        "source_signal": "robot_1.done",
+        "target_signal": "upper_out_conveyor_1.release_waiting_material",
+        "payload_schema": "payload_material_batch_done",
+        "delivery": "at_least_once",
+        "enabled_by_plan_rule": "sig_rule_robot_1_done_to_upper_release"
+      },
+      {
+        "route_id": "route_robot_2_done_to_lower_release",
+        "source_signal": "robot_2.done",
+        "target_signal": "lower_out_conveyor_1.release_waiting_material",
+        "payload_schema": "payload_material_batch_done",
+        "delivery": "at_least_once",
+        "enabled_by_plan_rule": "sig_rule_robot_2_done_to_lower_release"
+      }
+    ],
+    "wait_rules": [
+      {
+        "rule_id": "wait_robot_1_gripper",
+        "condition": "robot_1.busy == true",
+        "waiting_location": "main_conveyor_1.exit",
+        "queue_id": "main_conveyor_1.exit_queue.robot_1",
+        "release_on": "robot_1.done"
+      },
+      {
+        "rule_id": "wait_robot_2_gripper",
+        "condition": "robot_2.busy == true",
+        "waiting_location": "main_conveyor_1.exit",
+        "queue_id": "main_conveyor_1.exit_queue.robot_2",
+        "release_on": "robot_2.done"
+      },
+      {
+        "rule_id": "wait_upper_out_capacity",
+        "condition": "upper_out_conveyor_1.blocked == true",
+        "waiting_location": "robot_1.place_area",
+        "queue_id": "upper_out_conveyor_1.entry_queue",
+        "release_on": "upper_out_conveyor_1.release_waiting_material"
+      },
+      {
+        "rule_id": "wait_lower_out_capacity",
+        "condition": "lower_out_conveyor_1.blocked == true",
+        "waiting_location": "robot_2.place_area",
+        "queue_id": "lower_out_conveyor_1.entry_queue",
+        "release_on": "lower_out_conveyor_1.release_waiting_material"
+      }
+    ],
+    "payload_schemas": {
+      "payload_sort_batch": {
+        "carrier_id": "string",
+        "material_ids": "string[]",
+        "target_conveyor": "string",
+        "timestamp": "number"
+      },
+      "payload_material_batch_done": {
+        "material_ids": "string[]",
+        "source_instance_id": "string",
+        "target_instance_id": "string",
+        "timestamp": "number"
+      }
+    },
+    "timeout_rules": [
+      {
+        "rule_id": "timeout_robot_1_start_pick",
+        "target": "robot_1.start_pick",
+        "timeout_s": 30,
+        "on_timeout": "emit_observation"
+      },
+      {
+        "rule_id": "timeout_robot_2_start_pick",
+        "target": "robot_2.start_pick",
+        "timeout_s": 30,
+        "on_timeout": "emit_observation"
+      },
+      {
+        "rule_id": "timeout_upper_release",
+        "target": "upper_out_conveyor_1.release_waiting_material",
+        "timeout_s": 20,
+        "on_timeout": "emit_observation"
+      },
+      {
+        "rule_id": "timeout_lower_release",
+        "target": "lower_out_conveyor_1.release_waiting_material",
+        "timeout_s": 20,
+        "on_timeout": "emit_observation"
+      }
+    ]
+  },
+  "executable_sim_graph": {
+    "schema_id": "executable_sim_graph_pallet_sorting_line_v0_1",
+    "schema_type": "ExecutableSimGraph",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line ExecutableSimGraph",
+    "description": "PlanCompiler 将 SimPlan、SceneTransportSchema 和 SignalBusSchema 编译成 Runtime 可执行图。",
+    "source": {
+      "kind": "compiled_runtime_plan",
+      "compiled_from": ["scene_document", "scene_transport_schema", "sim_plan", "signal_bus_schema"]
+    },
+    "created_for": "供 Simulation Runtime 初始化、ProfileBuilder 计算动态视图、Scheduler 调度执行。",
+    "references": [
+      "sim_plan_pallet_sorting_line_v0_1",
+      "signal_bus_schema_pallet_sorting_line_v0_1"
+    ],
+    "notes": [
+      "ExecutableSimGraph 是静态可执行规则，不保存当前运行状态。",
+      "当前状态由 RuntimeSnapshot 保存，调度视图由 DeviceRuntimeProfile 计算。"
+    ],
+    "runtime_plan_id": "runtime_plan_pallet_sorting_line_001",
+    "action_nodes": [
+      {
+        "node_id": "action_transport_pallet_to_sorting_stop",
+        "instance_id": "main_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "algorithm": "linear_conveyor_motion",
+        "material_scope": ["pallet_1"]
+      },
+      {
+        "node_id": "action_robot_1_sort_a_batch",
+        "instance_id": "robot_1",
+        "behavior_id": "pick_and_place",
+        "algorithm": "robot_pick_place_batch",
+        "material_scope": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"]
+      },
+      {
+        "node_id": "action_robot_2_sort_b_batch",
+        "instance_id": "robot_2",
+        "behavior_id": "pick_and_place",
+        "algorithm": "robot_pick_place_batch",
+        "material_scope": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"]
+      },
+      {
+        "node_id": "action_upper_out_transport_batch",
+        "instance_id": "upper_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "algorithm": "linear_conveyor_motion_batch",
+        "material_scope": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"]
+      },
+      {
+        "node_id": "action_lower_out_transport_batch",
+        "instance_id": "lower_out_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "algorithm": "linear_conveyor_motion_batch",
+        "material_scope": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"]
+      }
+    ],
+    "dependencies": [
+      {
+        "from": "action_transport_pallet_to_sorting_stop",
+        "to": "action_robot_1_sort_a_batch",
+        "type": "signal_dependency",
+        "signal": "main_conveyor_1.part_ready"
+      },
+      {
+        "from": "action_transport_pallet_to_sorting_stop",
+        "to": "action_robot_2_sort_b_batch",
+        "type": "signal_dependency",
+        "signal": "main_conveyor_1.part_ready"
+      },
+      {
+        "from": "action_robot_1_sort_a_batch",
+        "to": "action_upper_out_transport_batch",
+        "type": "signal_dependency",
+        "signal": "robot_1.done"
+      },
+      {
+        "from": "action_robot_2_sort_b_batch",
+        "to": "action_lower_out_transport_batch",
+        "type": "signal_dependency",
+        "signal": "robot_2.done"
+      }
+    ],
+    "guards": [
+      {
+        "node_id": "action_transport_pallet_to_sorting_stop",
+        "conditions": [
+          "material_at(pallet_1, main_conveyor_1.entry)",
+          "main_conveyor_1.fsm_state == idle",
+          "resource(main_conveyor_1.belt_surface).available == true"
+        ]
+      },
+      {
+        "node_id": "action_robot_1_sort_a_batch",
+        "conditions": [
+          "material_at(pallet_1, main_conveyor_1.exit)",
+          "robot_1.fsm_state == idle",
+          "resource(robot_1.gripper).locked_by == null",
+          "upper_out_conveyor_1.blocked == false"
+        ]
+      },
+      {
+        "node_id": "action_robot_2_sort_b_batch",
+        "conditions": [
+          "material_at(pallet_1, main_conveyor_1.exit)",
+          "robot_2.fsm_state == idle",
+          "resource(robot_2.gripper).locked_by == null",
+          "lower_out_conveyor_1.blocked == false"
+        ]
+      },
+      {
+        "node_id": "action_upper_out_transport_batch",
+        "conditions": [
+          "all_materials_at([part_001,part_002,part_003,part_004,part_005,part_006], upper_out_conveyor_1.entry)",
+          "upper_out_conveyor_1.fsm_state != blocked"
+        ]
+      },
+      {
+        "node_id": "action_lower_out_transport_batch",
+        "conditions": [
+          "all_materials_at([part_007,part_008,part_009,part_010,part_011,part_012], lower_out_conveyor_1.entry)",
+          "lower_out_conveyor_1.fsm_state != blocked"
+        ]
+      }
+    ],
+    "resource_locks": [
+      "main_conveyor_1.belt_surface",
+      "robot_1.robot_arm",
+      "robot_1.gripper",
+      "robot_2.robot_arm",
+      "robot_2.gripper",
+      "upper_out_conveyor_1.belt_surface",
+      "lower_out_conveyor_1.belt_surface"
+    ],
+    "effects": [
+      {
+        "node_id": "action_transport_pallet_to_sorting_stop",
+        "on_start": [
+          "set main_conveyor_1.fsm_state = moving",
+          "lock main_conveyor_1.belt_surface"
+        ],
+        "on_complete": [
+          "move pallet_1 to main_conveyor_1.exit",
+          "emit main_conveyor_1.part_ready",
+          "set main_conveyor_1.fsm_state = waiting_downstream",
+          "unlock main_conveyor_1.belt_surface"
+        ]
+      },
+      {
+        "node_id": "action_robot_1_sort_a_batch",
+        "on_start": [
+          "set robot_1.busy = true",
+          "set robot_1.fsm_state = busy",
+          "lock robot_1.robot_arm",
+          "lock robot_1.gripper"
+        ],
+        "on_complete": [
+          "move part_001 to upper_out_conveyor_1.entry",
+          "move part_002 to upper_out_conveyor_1.entry",
+          "move part_003 to upper_out_conveyor_1.entry",
+          "move part_004 to upper_out_conveyor_1.entry",
+          "move part_005 to upper_out_conveyor_1.entry",
+          "move part_006 to upper_out_conveyor_1.entry",
+          "emit robot_1.done",
+          "set robot_1.busy = false",
+          "set robot_1.fsm_state = idle",
+          "unlock robot_1.gripper",
+          "unlock robot_1.robot_arm"
+        ]
+      },
+      {
+        "node_id": "action_robot_2_sort_b_batch",
+        "on_start": [
+          "set robot_2.busy = true",
+          "set robot_2.fsm_state = busy",
+          "lock robot_2.robot_arm",
+          "lock robot_2.gripper"
+        ],
+        "on_complete": [
+          "move part_007 to lower_out_conveyor_1.entry",
+          "move part_008 to lower_out_conveyor_1.entry",
+          "move part_009 to lower_out_conveyor_1.entry",
+          "move part_010 to lower_out_conveyor_1.entry",
+          "move part_011 to lower_out_conveyor_1.entry",
+          "move part_012 to lower_out_conveyor_1.entry",
+          "emit robot_2.done",
+          "set robot_2.busy = false",
+          "set robot_2.fsm_state = idle",
+          "unlock robot_2.gripper",
+          "unlock robot_2.robot_arm"
+        ]
+      },
+      {
+        "node_id": "action_upper_out_transport_batch",
+        "on_start": [
+          "set upper_out_conveyor_1.fsm_state = moving",
+          "lock upper_out_conveyor_1.belt_surface"
+        ],
+        "on_complete": [
+          "move part_001 to upper_out_conveyor_1.exit",
+          "move part_002 to upper_out_conveyor_1.exit",
+          "move part_003 to upper_out_conveyor_1.exit",
+          "move part_004 to upper_out_conveyor_1.exit",
+          "move part_005 to upper_out_conveyor_1.exit",
+          "move part_006 to upper_out_conveyor_1.exit",
+          "emit upper_out_conveyor_1.done",
+          "set upper_out_conveyor_1.fsm_state = idle",
+          "unlock upper_out_conveyor_1.belt_surface"
+        ]
+      },
+      {
+        "node_id": "action_lower_out_transport_batch",
+        "on_start": [
+          "set lower_out_conveyor_1.fsm_state = moving",
+          "lock lower_out_conveyor_1.belt_surface"
+        ],
+        "on_complete": [
+          "move part_007 to lower_out_conveyor_1.exit",
+          "move part_008 to lower_out_conveyor_1.exit",
+          "move part_009 to lower_out_conveyor_1.exit",
+          "move part_010 to lower_out_conveyor_1.exit",
+          "move part_011 to lower_out_conveyor_1.exit",
+          "move part_012 to lower_out_conveyor_1.exit",
+          "emit lower_out_conveyor_1.done",
+          "set lower_out_conveyor_1.fsm_state = idle",
+          "unlock lower_out_conveyor_1.belt_surface"
+        ]
+      }
+    ],
+    "failure_handlers": [
+      {
+        "condition": "timeout(robot_1.start_pick)",
+        "handler": "emit_observation"
+      },
+      {
+        "condition": "timeout(robot_2.start_pick)",
+        "handler": "emit_observation"
+      },
+      {
+        "condition": "resource_conflict(robot_1.gripper, robot_2.gripper, main_conveyor_1.exit)",
+        "handler": "pause_and_request_replan"
+      }
+    ],
+    "replan_triggers": [
+      "deadlock_detected",
+      "user_interrupt",
+      "timeout",
+      "resource_conflict",
+      "output_conveyor_blocked"
+    ]
+  },
+  "runtime_snapshot_initial": {
+    "schema_id": "runtime_snapshot_initial_pallet_sorting_line_v0_1",
+    "schema_type": "RuntimeSnapshot",
+    "version": "0.1.0",
+    "name": "Initial RuntimeSnapshot for Pallet Sorting Line",
+    "description": "Simulation Runtime 启动 run 时基于 ExecutableSimGraph、SceneDocument.materials 和 DeviceSpec.runtime_contract 初始化的状态快照。",
+    "source": {
+      "kind": "runtime_initialized_snapshot",
+      "run_id": "run_pallet_sorting_line_001",
+      "from": ["executable_sim_graph", "scene_document.materials", "device_specs_used.runtime_contract"]
+    },
+    "created_for": "作为仿真运行循环的初始状态事实源。",
+    "references": ["runtime_plan_pallet_sorting_line_001"],
+    "notes": [
+      "RuntimeSnapshot 是原始状态事实，不负责解释。",
+      "DeviceRuntimeProfile 会基于该快照计算每台设备的 enabled/waiting/blocked/executing。"
+    ],
+    "run_id": "run_pallet_sorting_line_001",
+    "clock": 0,
+    "signal_values": {
+      "main_conveyor_1.part_ready": false,
+      "main_conveyor_1.blocked": false,
+      "robot_1.busy": false,
+      "robot_1.done": false,
+      "robot_2.busy": false,
+      "robot_2.done": false,
+      "upper_out_conveyor_1.blocked": false,
+      "upper_out_conveyor_1.done": false,
+      "lower_out_conveyor_1.blocked": false,
+      "lower_out_conveyor_1.done": false
+    },
+    "device_fsm_states": {
+      "main_conveyor_1": "idle",
+      "robot_1": "idle",
+      "robot_2": "idle",
+      "upper_out_conveyor_1": "idle",
+      "lower_out_conveyor_1": "idle",
+      "pallet_1": "loaded"
+    },
+    "material_locations": {
+      "pallet_1": "main_conveyor_1.entry",
+      "part_001": "pallet_1.slot_01",
+      "part_002": "pallet_1.slot_02",
+      "part_003": "pallet_1.slot_03",
+      "part_004": "pallet_1.slot_04",
+      "part_005": "pallet_1.slot_05",
+      "part_006": "pallet_1.slot_06",
+      "part_007": "pallet_1.slot_07",
+      "part_008": "pallet_1.slot_08",
+      "part_009": "pallet_1.slot_09",
+      "part_010": "pallet_1.slot_10",
+      "part_011": "pallet_1.slot_11",
+      "part_012": "pallet_1.slot_12"
+    },
+    "wait_queues": {
+      "main_conveyor_1.exit_queue.robot_1": [],
+      "main_conveyor_1.exit_queue.robot_2": [],
+      "upper_out_conveyor_1.entry_queue": [],
+      "lower_out_conveyor_1.entry_queue": []
+    },
+    "resource_locks": {
+      "main_conveyor_1.belt_surface": null,
+      "robot_1.robot_arm": null,
+      "robot_1.gripper": null,
+      "robot_2.robot_arm": null,
+      "robot_2.gripper": null,
+      "upper_out_conveyor_1.belt_surface": null,
+      "lower_out_conveyor_1.belt_surface": null
+    },
+    "active_actions": {}
+  },
+  "runtime_snapshot_after_pallet_arrival": {
+    "schema_id": "runtime_snapshot_after_pallet_arrival_v0_1",
+    "schema_type": "RuntimeSnapshot",
+    "version": "0.1.0",
+    "name": "RuntimeSnapshot After Pallet Arrival",
+    "description": "主传送带已将托盘运到分拣位并发出 part_ready 后的状态快照。",
+    "source": {
+      "kind": "runtime_updated_snapshot",
+      "run_id": "run_pallet_sorting_line_001",
+      "from": ["action_transport_pallet_to_sorting_stop.effects", "signal_bus_schema.routes"]
+    },
+    "created_for": "展示 RuntimeSnapshot 更新后如何驱动 DeviceRuntimeProfile 重新计算。",
+    "references": ["runtime_snapshot_initial_pallet_sorting_line_v0_1"],
+    "notes": [
+      "该快照是运行循环中的一个时刻，用于示例 DeviceRuntimeProfile。"
+    ],
+    "run_id": "run_pallet_sorting_line_001",
+    "clock": 8.5,
+    "signal_values": {
+      "main_conveyor_1.part_ready": true,
+      "main_conveyor_1.blocked": false,
+      "robot_1.start_pick": true,
+      "robot_1.busy": false,
+      "robot_1.done": false,
+      "robot_2.start_pick": true,
+      "robot_2.busy": false,
+      "robot_2.done": false,
+      "upper_out_conveyor_1.blocked": false,
+      "lower_out_conveyor_1.blocked": false
+    },
+    "device_fsm_states": {
+      "main_conveyor_1": "waiting_downstream",
+      "robot_1": "idle",
+      "robot_2": "idle",
+      "upper_out_conveyor_1": "idle",
+      "lower_out_conveyor_1": "idle",
+      "pallet_1": "loaded"
+    },
+    "material_locations": {
+      "pallet_1": "main_conveyor_1.exit",
+      "part_001": "pallet_1.slot_01",
+      "part_002": "pallet_1.slot_02",
+      "part_003": "pallet_1.slot_03",
+      "part_004": "pallet_1.slot_04",
+      "part_005": "pallet_1.slot_05",
+      "part_006": "pallet_1.slot_06",
+      "part_007": "pallet_1.slot_07",
+      "part_008": "pallet_1.slot_08",
+      "part_009": "pallet_1.slot_09",
+      "part_010": "pallet_1.slot_10",
+      "part_011": "pallet_1.slot_11",
+      "part_012": "pallet_1.slot_12"
+    },
+    "wait_queues": {
+      "main_conveyor_1.exit_queue.robot_1": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"],
+      "main_conveyor_1.exit_queue.robot_2": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"],
+      "upper_out_conveyor_1.entry_queue": [],
+      "lower_out_conveyor_1.entry_queue": []
+    },
+    "resource_locks": {
+      "main_conveyor_1.belt_surface": null,
+      "robot_1.robot_arm": null,
+      "robot_1.gripper": null,
+      "robot_2.robot_arm": null,
+      "robot_2.gripper": null,
+      "upper_out_conveyor_1.belt_surface": null,
+      "lower_out_conveyor_1.belt_surface": null
+    },
+    "active_actions": {}
+  },
+  "device_runtime_profiles_after_pallet_arrival": [
+    {
+      "schema_id": "device_runtime_profile_robot_1_after_pallet_arrival_v0_1",
+      "schema_type": "DeviceRuntimeProfile",
+      "version": "0.1.0",
+      "name": "Robot 1 DeviceRuntimeProfile After Pallet Arrival",
+      "description": "robot_1 在托盘到达后可执行 A 类物料分拣的动态视图。",
+      "source": {
+        "kind": "computed_runtime_profile",
+        "from": ["executable_sim_graph", "runtime_snapshot_after_pallet_arrival"]
+      },
+      "created_for": "供 Scheduler、前端和 Agent observation 消费。",
+      "references": ["robot_arm_1", "action_robot_1_sort_a_batch"],
+      "notes": [
+        "DeviceRuntimeProfile 是语义化行为视图，不替代 RuntimeSnapshot。"
+      ],
+      "run_id": "run_pallet_sorting_line_001",
+      "device_instance_id": "robot_1",
+      "current_state": "idle",
+      "enabled_behaviors": [
+        {
+          "behavior_id": "pick_and_place",
+          "action_node": "action_robot_1_sort_a_batch",
+          "reason": "main_conveyor_1.part_ready == true, robot_1.gripper is unlocked, upper_out_conveyor_1 is not blocked"
+        }
+      ],
+      "waiting_behaviors": [],
+      "blocked_behaviors": [],
+      "executing_behavior": null,
+      "next_events": ["robot_1.busy", "robot_1.done"]
+    },
+    {
+      "schema_id": "device_runtime_profile_robot_2_after_pallet_arrival_v0_1",
+      "schema_type": "DeviceRuntimeProfile",
+      "version": "0.1.0",
+      "name": "Robot 2 DeviceRuntimeProfile After Pallet Arrival",
+      "description": "robot_2 在托盘到达后可执行 B 类物料分拣的动态视图。",
+      "source": {
+        "kind": "computed_runtime_profile",
+        "from": ["executable_sim_graph", "runtime_snapshot_after_pallet_arrival"]
+      },
+      "created_for": "供 Scheduler、前端和 Agent observation 消费。",
+      "references": ["robot_arm_1", "action_robot_2_sort_b_batch"],
+      "notes": [
+        "Scheduler 消费 enabled_behaviors 后启动 action_robot_2_sort_b_batch。"
+      ],
+      "run_id": "run_pallet_sorting_line_001",
+      "device_instance_id": "robot_2",
+      "current_state": "idle",
+      "enabled_behaviors": [
+        {
+          "behavior_id": "pick_and_place",
+          "action_node": "action_robot_2_sort_b_batch",
+          "reason": "main_conveyor_1.part_ready == true, robot_2.gripper is unlocked, lower_out_conveyor_1 is not blocked"
+        }
+      ],
+      "waiting_behaviors": [],
+      "blocked_behaviors": [],
+      "executing_behavior": null,
+      "next_events": ["robot_2.busy", "robot_2.done"]
+    },
+    {
+      "schema_id": "device_runtime_profile_upper_out_after_pallet_arrival_v0_1",
+      "schema_type": "DeviceRuntimeProfile",
+      "version": "0.1.0",
+      "name": "Upper Output Conveyor Profile After Pallet Arrival",
+      "description": "上方目标传送带在 robot_1 尚未放料前处于等待状态。",
+      "source": {
+        "kind": "computed_runtime_profile",
+        "from": ["executable_sim_graph", "runtime_snapshot_after_pallet_arrival"]
+      },
+      "created_for": "展示 waiting behavior。",
+      "references": ["conveyor_1", "action_upper_out_transport_batch"],
+      "notes": [],
+      "run_id": "run_pallet_sorting_line_001",
+      "device_instance_id": "upper_out_conveyor_1",
+      "current_state": "idle",
+      "enabled_behaviors": [],
+      "waiting_behaviors": [
+        {
+          "behavior_id": "transport_to_exit",
+          "action_node": "action_upper_out_transport_batch",
+          "reason": "waiting for robot_1.done and A-class materials at upper_out_conveyor_1.entry"
+        }
+      ],
+      "blocked_behaviors": [],
+      "executing_behavior": null,
+      "next_events": ["upper_out_conveyor_1.done"]
+    },
+    {
+      "schema_id": "device_runtime_profile_lower_out_after_pallet_arrival_v0_1",
+      "schema_type": "DeviceRuntimeProfile",
+      "version": "0.1.0",
+      "name": "Lower Output Conveyor Profile After Pallet Arrival",
+      "description": "下方目标传送带在 robot_2 尚未放料前处于等待状态。",
+      "source": {
+        "kind": "computed_runtime_profile",
+        "from": ["executable_sim_graph", "runtime_snapshot_after_pallet_arrival"]
+      },
+      "created_for": "展示 waiting behavior。",
+      "references": ["conveyor_1", "action_lower_out_transport_batch"],
+      "notes": [],
+      "run_id": "run_pallet_sorting_line_001",
+      "device_instance_id": "lower_out_conveyor_1",
+      "current_state": "idle",
+      "enabled_behaviors": [],
+      "waiting_behaviors": [
+        {
+          "behavior_id": "transport_to_exit",
+          "action_node": "action_lower_out_transport_batch",
+          "reason": "waiting for robot_2.done and B-class materials at lower_out_conveyor_1.entry"
+        }
+      ],
+      "blocked_behaviors": [],
+      "executing_behavior": null,
+      "next_events": ["lower_out_conveyor_1.done"]
+    }
+  ],
+  "runtime_event_examples": [
+    {
+      "type": "signal_event",
+      "run_id": "run_pallet_sorting_line_001",
+      "sim_time": 8.5,
+      "source": "main_conveyor_1.part_ready",
+      "target": "robot_1.start_pick",
+      "payload": {
+        "carrier_id": "pallet_1",
+        "material_ids": ["part_001", "part_002", "part_003", "part_004", "part_005", "part_006"],
+        "target_conveyor": "upper_out_conveyor_1"
+      }
+    },
+    {
+      "type": "signal_event",
+      "run_id": "run_pallet_sorting_line_001",
+      "sim_time": 8.5,
+      "source": "main_conveyor_1.part_ready",
+      "target": "robot_2.start_pick",
+      "payload": {
+        "carrier_id": "pallet_1",
+        "material_ids": ["part_007", "part_008", "part_009", "part_010", "part_011", "part_012"],
+        "target_conveyor": "lower_out_conveyor_1"
+      }
+    }
+  ],
+  "data_flow_trace": [
+    {
+      "step": 1,
+      "name": "SceneDocument",
+      "producer": "前端场景编辑器 / 用户显式连接",
+      "input": ["DeviceSpec", "用户摆放和连线操作"],
+      "output": "scene_document",
+      "consumer": ["Scene Validator", "SceneTransport Compiler", "Agent Planner"]
+    },
+    {
+      "step": 2,
+      "name": "SceneValidationReport",
+      "producer": "Agent / Backend Validator",
+      "input": ["DeviceSpec", "SceneDocument", "用户目标"],
+      "output": "scene_validation_report",
+      "consumer": ["Agent Planner"],
+      "gate": "status 必须为 passed 才继续规划"
+    },
+    {
+      "step": 3,
+      "name": "SceneTransportSchema",
+      "producer": "Backend Compiler",
+      "input": ["DeviceSpec", "SceneDocument"],
+      "output": "scene_transport_schema",
+      "consumer": ["Agent Planner", "PlanCompiler"]
+    },
+    {
+      "step": 4,
+      "name": "SimPlan",
+      "producer": "Agent Planner",
+      "input": ["DeviceSpec", "SceneDocument", "SceneTransportSchema", "用户目标"],
+      "output": "sim_plan",
+      "consumer": ["Signal Compiler", "PlanCompiler"]
+    },
+    {
+      "step": 5,
+      "name": "SignalBusSchema",
+      "producer": "Signal Compiler",
+      "input": ["DeviceSpec.signal_ports", "SceneDocument.signal_edges", "SimPlan.signal_rules"],
+      "output": "signal_bus_schema",
+      "consumer": ["PlanCompiler", "SignalBusRuntime"]
+    },
+    {
+      "step": 6,
+      "name": "ExecutableSimGraph / RuntimePlan",
+      "producer": "PlanCompiler",
+      "input": ["DeviceSpec", "SceneDocument", "SceneTransportSchema", "SignalBusSchema", "SimPlan"],
+      "output": "executable_sim_graph",
+      "consumer": ["Simulation Runtime", "ProfileBuilder"]
+    },
+    {
+      "step": 7,
+      "name": "RuntimeSnapshot",
+      "producer": "Simulation Runtime / SnapshotManager",
+      "input": ["ExecutableSimGraph", "SceneDocument.materials", "DeviceSpec.runtime_contract", "action effects", "signal_event"],
+      "output": "runtime_snapshot_initial / runtime_snapshot_after_pallet_arrival",
+      "consumer": ["ProfileBuilder", "恢复/回放/审计"]
+    },
+    {
+      "step": 8,
+      "name": "DeviceRuntimeProfile",
+      "producer": "ProfileBuilder",
+      "input": ["ExecutableSimGraph", "RuntimeSnapshot"],
+      "output": "device_runtime_profiles_after_pallet_arrival",
+      "consumer": ["Scheduler", "前端", "Agent observation"]
+    },
+    {
+      "step": 9,
+      "name": "Runtime events",
+      "producer": "SignalBusRuntime / ActionExecutor / EffectApplier",
+      "input": ["SignalBusSchema", "ExecutableSimGraph.effects", "Scheduler decision"],
+      "output": ["signal_event", "material_event", "device_state_event"],
+      "consumer": ["RuntimeSnapshot", "Redis Streams", "WebSocket", "Postgres event log"]
+    }
+  ]
+}

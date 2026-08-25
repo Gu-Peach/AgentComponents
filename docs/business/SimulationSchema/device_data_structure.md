@@ -84,6 +84,15 @@ RuntimeSnapshot 描述“当前真实运行到什么状态”；
 DeviceRuntimeProfile 描述“这个设备此刻真的能做什么”。
 ```
 
+其中 `RuntimeSnapshot` 和 `DeviceRuntimeProfile` 的边界需要特别区分：
+
+```text
+RuntimeSnapshot 是运行时状态事实 / 原始快照 / checkpoint，负责记录“现在真实状态是什么”；
+DeviceRuntimeProfile 是基于 RuntimeSnapshot 计算出的语义化行为视图，负责把状态解释成 Scheduler、前端和 Agent 可消费的信息。
+```
+
+也就是说，`RuntimeSnapshot` 不负责解释，`DeviceRuntimeProfile` 才是实际向调度器、前端展示和 Agent observation 传递的行为信息层。但 `DeviceRuntimeProfile` 不替代 `RuntimeSnapshot`：恢复、回放、精确状态计算和资源锁判断仍以 `RuntimeSnapshot` 为底层事实源。
+
 完整运行链路如下：
 
 ```text
@@ -338,6 +347,20 @@ Scheduler 执行动作结果
 ### 2.8 `DeviceRuntimeProfile`：设备当前行为画像
 
 `DeviceRuntimeProfile` 是由 `ExecutableSimGraph + RuntimeSnapshot` 实时计算出来的设备级动态视图。它不是设备源数据，也不是场景事实。
+
+它的定位是运行时状态解释层：`RuntimeSnapshot` 只保存 signal value、FSM、物料位置、等待队列、资源锁和 active actions 等原始状态；`DeviceRuntimeProfile` 则把这些原始状态结合 `ExecutableSimGraph` 的 guards、dependencies、effects 和 resource requirements，计算成某台设备当前的 `enabled`、`waiting`、`blocked`、`executing` 行为集合。
+
+因此，实际传递给 Scheduler、前端和 Agent 的通常应是 `DeviceRuntimeProfile`，而不是直接把底层 `RuntimeSnapshot` 暴露给它们：
+
+```text
+RuntimeSnapshot
+  -> 状态事实源 / checkpoint / 恢复与回放依据
+
+DeviceRuntimeProfile
+  -> Scheduler 选择 enabled behavior
+  -> 前端展示执行、等待、阻塞原因
+  -> Agent 作为 observation 解释状态或重规划
+```
 
 ```json
 {
