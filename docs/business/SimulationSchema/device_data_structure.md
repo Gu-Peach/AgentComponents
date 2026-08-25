@@ -119,6 +119,7 @@ PlanCompiler(DeviceSpec + SceneDocument + SceneTransportSchema + SignalBusSchema
 Simulation Runtime(ExecutableSimGraph / RuntimePlan + SceneDocument.materials + DeviceSpec.runtime_contract)
   -> 初始化 RuntimeSnapshot
 
+仿真运行循环：
 ExecutableSimGraph + 当前 RuntimeSnapshot
   -> DeviceRuntimeProfile
 
@@ -128,6 +129,7 @@ Scheduler(DeviceRuntimeProfile)
 Simulation Runtime(action effects + SignalBus signal_event + 调度结果)
   -> 更新 RuntimeSnapshot
 
+更新后的 RuntimeSnapshot
 RuntimeSnapshot + DeviceRuntimeProfile
   -> Redis 缓存 / WebSocket 推送 / 关键事件落 Postgres
 
