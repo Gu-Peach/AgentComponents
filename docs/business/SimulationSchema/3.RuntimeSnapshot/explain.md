@@ -1,17 +1,17 @@
 # RuntimeSnapshot 字段说明
 
-本文用于解释 `7.RuntimeSnapshot/schema.json` 与 `example.json` 中每个板块和字段的含义。`RuntimeSnapshot` 是仿真运行时状态快照，用于记录当前信号值、设备状态、物料位置、等待队列、资源锁和正在执行的动作。
+本文用于解释 `3.RuntimeSnapshot/schema.json` 与 `example.json` 中每个板块和字段的含义。`RuntimeSnapshot` 是仿真运行时状态快照，用于记录当前信号值、设备状态、物料位置、等待队列、资源锁和正在执行的动作。
 
 ## 1. schema 定位
 
 `RuntimeSnapshot` 是运行时状态视图，通常存储在 Runtime memory / Redis 中。它不是长期事实库；关键事件摘要应通过事件日志或审计表落库，从而支持恢复和诊断。
 
 ```text
-ExecutableSimGraph 执行动作
-  + SignalBus 信号事件
+Runtime 执行 SceneBehaviorGraph
+  + SignalBusRuntime 信号事件
   + Scheduler 资源调度
   -> RuntimeSnapshot
-  -> DeviceRuntimeProfile / 前端事件 / Agent observation
+  -> Scheduler 下一轮调度 / 前端事件 / Runtime observation
 ```
 
 ## 2. `schema.json` 规范字段
@@ -26,7 +26,7 @@ ExecutableSimGraph 执行动作
 | `source.kind` | 规范来源类型。 |
 | `source.path` | 规范文件路径。 |
 | `created_for` | 服务目标，即仿真运行时状态管理。 |
-| `references` | 依赖的通用规范和可执行图规范。 |
+| `references` | 依赖的通用规范和 SceneBehaviorGraph 规范。 |
 | `notes` | 存储边界说明。 |
 | `required_sections` | 必须包含的一级字段。 |
 
@@ -51,14 +51,14 @@ ExecutableSimGraph 执行动作
 | `schema_type` | 示例类型，实际快照使用 `RuntimeSnapshot`。 |
 | `source.kind` | 来源类型，`runtime_example` 表示运行时示例。 |
 | `source.run_id` | 该快照所属 run。 |
-| `references` | 快照引用的可执行图。 |
+| `references` | 快照引用的 SceneBehaviorGraph 或运行记录。 |
 | `notes` | 存储和落库策略说明。 |
 
 ## 5. 运行 ID `run_id`
 
 | 字段 | 含义 |
 | --- | --- |
-| `run_id` | 当前仿真运行 ID，用于关联 SimPlan、ExecutableSimGraph、事件日志和前端订阅。 |
+| `run_id` | 当前仿真运行 ID，用于关联 SceneBehaviorGraph、事件日志和前端订阅。 |
 
 ## 6. 仿真时钟 `clock`
 
@@ -106,7 +106,7 @@ ExecutableSimGraph 执行动作
 
 ## 10. 等待队列 `wait_queues`
 
-`wait_queues` 保存运行时等待关系，通常由 `SignalBusSchema.wait_rules` 和设备状态共同维护。
+`wait_queues` 保存运行时等待关系，通常由 `SceneBehaviorGraph.event_bus`、策略规则和设备状态共同维护。
 
 | Key 格式 | 含义 |
 | --- | --- |
@@ -139,13 +139,12 @@ ExecutableSimGraph 执行动作
 ## 13. 下游使用方式
 
 ```text
-DeviceRuntimeProfile 读取 RuntimeSnapshot
+Scheduler 读取 RuntimeSnapshot
   -> 判断某个设备 enabled / waiting / blocked / executing
 
-Agent 在异常或打断时读取 RuntimeSnapshot
-  -> 基于当前真实状态重规划剩余动作
+ObservationEmitter 读取 RuntimeSnapshot
+  -> 判断 deadlock / overload / resource_conflict 等异常观测
 
 前端读取 RuntimeSnapshot 或事件流
   -> 展示设备状态、物料位置、等待队列和动画进度
 ```
-

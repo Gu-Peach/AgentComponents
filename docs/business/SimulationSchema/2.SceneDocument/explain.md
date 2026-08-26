@@ -9,7 +9,7 @@
 ```text
 DeviceSpec        定义可被引用的设备本体
 SceneDocument     引入设备本体成为场景实例，并保存连接关系
-SceneTransportSchema / SignalBusSchema  基于 SceneDocument 编译派生
+SceneBehaviorGraph  基于 SceneDocument 和 DeviceSpec 生成场景行为图
 ```
 
 ## 2. `schema.json` 规范字段
@@ -118,7 +118,7 @@ SceneTransportSchema / SignalBusSchema  基于 SceneDocument 编译派生
 | `target` | 目标信号端口。 |
 | `edge_type` | 信号边类型，例如 `control_signal`。 |
 
-`signal_edges` 只定义静态连接关系，实际信号值和等待队列由 `SignalBusSchema` 与 `RuntimeSnapshot` 管理。
+`signal_edges` 只定义静态连接关系；本场景实际启用哪些事件、如何路由和触发行为，由 `SceneBehaviorGraph.event_bus` 与 `behavior_rules` 描述。运行时信号值和等待队列由 `RuntimeSnapshot` 保存。
 
 ## 11. 运行配置 `runtime_config`
 
@@ -133,10 +133,10 @@ SceneTransportSchema / SignalBusSchema  基于 SceneDocument 编译派生
 SceneDocument.instances + DeviceSpec
   -> 校验设备接口、信号口和行为能力
 
-SceneDocument.process_edges + interface_bindings
-  -> 编译 physical_edges / SceneTransportSchema
+SceneDocument.process_edges / physical_edges / signal_edges + DeviceSpec
+  -> Agent 生成 SceneBehaviorGraph
 
-SceneDocument.signal_edges + SimPlan.signal_rules
-  -> 编译 SignalBusSchema
+SceneBehaviorGraph + RuntimeSnapshot
+  -> Runtime 调度行为、投递事件并更新状态
 ```
 

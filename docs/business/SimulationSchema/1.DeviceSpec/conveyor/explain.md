@@ -286,7 +286,7 @@
 
 | 字段                        | 含义                                                        |
 | --------------------------- | ----------------------------------------------------------- |
-| `behavior_id`               | 行为 ID，用于 SimPlan、ExecutableSimGraph 和 Runtime 引用。 |
+| `behavior_id`               | 行为 ID，用于 SceneBehaviorGraph 和 Runtime 引用。 |
 | `behavior_type`             | 行为类型，用于运行时选择执行逻辑。                          |
 | `input_physical_interface`  | 行为读取物料的输入物理接口。                                |
 | `output_physical_interface` | 行为输出物料的物理接口。                                    |
@@ -322,7 +322,7 @@
 }
 ```
 
-`runtime_contract` 描述传送带在仿真运行时需要遵守的状态、资源、容量和异常处理规则。它主要服务 Runtime、Scheduler、DeviceFSM 和 DeviceRuntimeProfile。
+`runtime_contract` 描述传送带在仿真运行时需要遵守的状态、资源、容量和异常处理规则。它主要服务 Runtime、Scheduler、DeviceFSM 和 Runtime 临时调度视图。
 
 ### 12.1 状态机字段
 

@@ -1,0 +1,33 @@
+{
+  "schema_id": "scene_behavior_graph_schema_contract_v0_2",
+  "schema_type": "SceneBehaviorGraphSchemaContract",
+  "version": "0.2.0",
+  "name": "SceneBehaviorGraph 场景行为图规范",
+  "description": "Agent 基于 DeviceSpec、SceneDocument 和用户目标生成的场景行为建模结果，描述模块、事件总线、状态变量、行为触发、状态迁移、策略和完成条件。",
+  "source": {
+    "kind": "manual_design",
+    "path": "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json"
+  },
+  "created_for": "基于 Agent 的场景行为仿真建模基线。",
+  "references": [
+    "../common_schema_contract.json",
+    "../1.DeviceSpec/schema.json",
+    "../2.SceneDocument/schema.json"
+  ],
+  "notes": [
+    "SceneBehaviorGraph 是当前 v0.2 基线的一等建模结果。",
+    "它替代旧拆分链路中的多个中间产物，作为当前唯一持久化场景行为建模结果。",
+    "SignalBusRuntime 是 Runtime 内部模块，执行 event_bus 中定义的事件投递规则。"
+  ],
+  "required_sections": [
+    "goal",
+    "modules",
+    "event_bus",
+    "state_model",
+    "behavior_rules",
+    "state_transition_rules",
+    "policies",
+    "completion_conditions",
+    "failure_observations"
+  ]
+}

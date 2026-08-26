@@ -1,12 +1,14 @@
-# 7. RuntimeSnapshot
+# 3. RuntimeSnapshot
+
+> 当前主链路请参考 `../README.md`、`../device_data_structure.md` 和 `../4.SceneBehaviorGraph/`。
 
 `RuntimeSnapshot` 是仿真运行时状态快照，主要存储在 Redis / Runtime memory，关键事件摘要落 Postgres。
 
 ## 职责
 
 - 保存当前信号值、设备 FSM、物料位置、等待队列、资源锁和活动动作。
-- 支撑暂停、恢复、重规划和诊断。
-- 为 `DeviceRuntimeProfile` 提供实时状态输入。
+- 支撑 Runtime 调度、恢复、诊断和前端实时展示。
+- 为 `Scheduler`、`SignalBusRuntime`、`SnapshotManager` 提供实时状态事实。
 
 ## 输入与输出
 
@@ -14,7 +16,7 @@
 |---|---|
 | 上游输入 | Runtime 执行动作、SignalBus 事件、Scheduler 状态变化。 |
 | 输出 | 当前运行状态快照。 |
-| 下游消费者 | DeviceRuntimeProfile、Agent observation、前端事件流。 |
+| 下游消费者 | Scheduler、SignalBusRuntime、SnapshotManager、ObservationEmitter、前端事件流。 |
 
 ## Key 含义
 
@@ -29,7 +31,7 @@
 | `description` | 快照用途说明。 |
 | `source` | 快照来源，通常是 Runtime run。 |
 | `created_for` | 该快照服务的运行、恢复或诊断目标。 |
-| `references` | 引用的可执行图、计划或场景。 |
+| `references` | 引用的 SceneBehaviorGraph、场景或运行记录。 |
 | `notes` | 存储边界和恢复策略说明。 |
 
 ### 运行时状态字段

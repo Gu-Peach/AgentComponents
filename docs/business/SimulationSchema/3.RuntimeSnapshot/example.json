@@ -1,0 +1,39 @@
+{
+  "schema_id": "runtime_snapshot_example_figure_1_v0_1",
+  "schema_type": "RuntimeSnapshot",
+  "version": "0.1.0",
+  "name": "Figure 1 RuntimeSnapshot Example",
+  "description": "机械臂等待传送带物料到达时的运行时状态示例。",
+  "source": {
+    "kind": "runtime_example",
+    "run_id": "run_figure_1_001"
+  },
+  "created_for": "运行时状态快照示例",
+  "references": [
+    "../4.SceneBehaviorGraph/example.json"
+  ],
+  "notes": [
+    "该状态适合 Redis 存储，关键事件摘要另行落 Postgres。"
+  ],
+  "run_id": "run_figure_1_001",
+  "clock": 12.5,
+  "signal_values": {
+    "conveyor_1.part_ready": true,
+    "robot_1.busy": false,
+    "robot_1.done": false
+  },
+  "device_fsm_states": {
+    "conveyor_1": "idle",
+    "robot_1": "idle"
+  },
+  "material_locations": {
+    "part_001": "conveyor_1.exit"
+  },
+  "wait_queues": {
+    "conveyor_1.exit_queue": []
+  },
+  "resource_locks": {
+    "robot_1.gripper": null
+  },
+  "active_actions": {}
+}

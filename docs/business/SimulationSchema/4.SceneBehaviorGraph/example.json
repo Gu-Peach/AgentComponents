@@ -1,0 +1,85 @@
+{
+  "schema_id": "scene_behavior_graph_example_minimal_v0_2",
+  "schema_type": "SceneBehaviorGraph",
+  "version": "0.2.0",
+  "name": "SceneBehaviorGraph Minimal Example",
+  "description": "最小示例：托盘到位后触发机械臂分拣，使用场景事件总线和 RuntimeSnapshot 状态变量驱动行为。",
+  "source": {
+    "kind": "manual_example",
+    "path": "docs/business/SimulationSchema/4.SceneBehaviorGraph/example.json"
+  },
+  "created_for": "展示 SceneBehaviorGraph 的基础结构。",
+  "references": [
+    "schema.json",
+    "../1.DeviceSpec/schema.json",
+    "../2.SceneDocument/schema.json"
+  ],
+  "notes": [
+    "完整托盘分拣线示例见 demo/pallet_sorting_line/full_chain_schema.json。"
+  ],
+  "goal": {
+    "natural_language": "托盘到位后，由空闲机械臂持续抓取物料并放到出料传送带。",
+    "assumptions": ["只处理基线运行，不处理用户中途改需求。"]
+  },
+  "modules": [
+    {
+      "module_id": "pallet_transport",
+      "mode": "one_shot",
+      "devices": ["main_conveyor_1"],
+      "start_event": "runtime.sim_start",
+      "complete_event": "main_conveyor_1.pallet_ready"
+    },
+    {
+      "module_id": "robot_sorting",
+      "mode": "parallel_continuous",
+      "devices": ["robot_1", "robot_2"],
+      "start_event": "main_conveyor_1.pallet_ready",
+      "stop_condition": "workpiece_pool.empty == true"
+    }
+  ],
+  "event_bus": {
+    "events": [
+      { "event_id": "runtime.sim_start", "kind": "global", "payload_schema": {} },
+      { "event_id": "main_conveyor_1.pallet_ready", "kind": "device", "payload_schema": { "carrier_id": "string" } },
+      { "event_id": "global.workpiece_claimed", "kind": "global", "payload_schema": { "material_id": "string", "robot_id": "string" } }
+    ],
+    "routes": [
+      { "from": "runtime.sim_start", "to": "main_conveyor_1.start_transport" },
+      { "from": "main_conveyor_1.pallet_ready", "to": "robot_sorting.enable" }
+    ]
+  },
+  "state_model": {
+    "workpiece_pool": { "source": "pallet_1.slots", "claim_policy": "first_idle_robot_claim_next_available" },
+    "device_states": {},
+    "signal_values": {},
+    "resource_locks": {},
+    "active_actions": {}
+  },
+  "behavior_rules": [
+    {
+      "rule_id": "start_main_conveyor",
+      "when_event": "runtime.sim_start",
+      "if": ["main_conveyor_1.state == idle"],
+      "then_start_behavior": { "instance_id": "main_conveyor_1", "behavior_id": "transport_to_exit" }
+    }
+  ],
+  "state_transition_rules": [
+    {
+      "rule_id": "main_conveyor_complete",
+      "on_behavior_complete": "main_conveyor_1.transport_to_exit",
+      "effects": ["move pallet_1 to main_conveyor_1.exit", "emit main_conveyor_1.pallet_ready"]
+    }
+  ],
+  "policies": {
+    "claim_workpiece": {
+      "type": "shared_pool_claim",
+      "source_pool": "workpiece_pool",
+      "workers": ["robot_1", "robot_2"],
+      "mutual_exclusion": true
+    }
+  },
+  "completion_conditions": ["workpiece_pool.empty == true", "active_actions.empty == true"],
+  "failure_observations": [
+    { "observation_id": "deadlock_detected", "condition": "no_enabled_behavior and active_actions.empty == false" }
+  ]
+}

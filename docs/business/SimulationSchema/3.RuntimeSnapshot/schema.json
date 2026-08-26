@@ -1,0 +1,29 @@
+{
+  "schema_id": "runtime_snapshot_schema_contract_v0_1",
+  "schema_type": "RuntimeSnapshotSchemaContract",
+  "version": "0.1.0",
+  "name": "RuntimeSnapshot 运行时快照规范",
+  "description": "定义仿真运行时的信号值、设备状态、物料位置、等待队列、资源锁和活动动作。",
+  "source": {
+    "kind": "manual_design",
+    "path": "docs/business/SimulationSchema/3.RuntimeSnapshot/schema.json"
+  },
+  "created_for": "仿真运行时状态管理",
+  "references": [
+    "../common_schema_contract.json",
+    "../4.SceneBehaviorGraph/schema.json"
+  ],
+  "notes": [
+    "RuntimeSnapshot 不是长期事实库，Redis 状态必须能被 checkpoint 或事件日志解释。"
+  ],
+  "required_sections": [
+    "run_id",
+    "clock",
+    "signal_values",
+    "device_fsm_states",
+    "material_locations",
+    "wait_queues",
+    "resource_locks",
+    "active_actions"
+  ]
+}

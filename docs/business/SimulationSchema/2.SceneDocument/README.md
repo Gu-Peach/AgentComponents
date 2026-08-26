@@ -6,7 +6,7 @@
 
 - 保存场景实例、位姿、参数覆盖和物料实例。
 - 保存 `process_edges`、`physical_edges`、`signal_edges` 三类场景关系。
-- 作为 `SceneTransportSchema` 和 `SignalBusSchema` 的事实源。
+- 作为 `SceneBehaviorGraph` 的场景事实输入。
 
 ## 输入与输出
 
@@ -14,7 +14,7 @@
 |---|---|
 | 上游输入 | 用户搭建场景、选择 DeviceSpec、连接流程口/物理口/信号口。 |
 | 输出 | 场景事实文档。 |
-| 下游消费者 | SceneTransportSchema、SignalBusSchema、Agent、Runtime。 |
+| 下游消费者 | SceneBehaviorGraph、Agent、Runtime。 |
 
 ## Key 含义
 

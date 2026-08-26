@@ -6,7 +6,7 @@
 
 - 作为设备库中的标准设备本体定义。
 - 为 `SceneDocument.instances` 提供可实例化引用。
-- 为 `SceneTransportSchema`、`SignalBusSchema`、`SimPlan` 和 Runtime 编译提供设备能力约束。
+- 为 `SceneBehaviorGraph` 的 Agent 建模和 Runtime 执行提供设备能力约束。
 
 ## 输入与输出
 
@@ -14,7 +14,7 @@
 |---|---|
 | 上游输入 | 设备几何资产、驱动器约束、接口定义、行为能力定义。 |
 | 输出 | 可被场景引用的设备本体 JSON。 |
-| 下游消费者 | SceneDocument、SceneTransportSchema、SignalBusSchema、Agent、Runtime。 |
+| 下游消费者 | SceneDocument、SceneBehaviorGraph、Agent、Runtime。 |
 
 ## 文件说明
 
@@ -72,7 +72,7 @@
 ```text
 schema.json
   = DeviceSpec 目录/板块级规范
-  = 说明 DeviceSpec 作为八大 schema 板块之一，整体负责什么、包含哪些 section、服务哪些下游环节。
+  = 说明 DeviceSpec 作为当前基线设备能力板块，整体负责什么、包含哪些 section、服务哪些下游环节。
 
 common_device_spec.schema.json
   = 具体设备本体的通用基类规范
@@ -83,7 +83,7 @@ common_device_spec.schema.json
 
 | 文件 | 关注对象 | 回答的问题 | 类比 |
 |---|---|---|---|
-| `schema.json` | `DeviceSpec` 这个 schema 板块 | DeviceSpec 这个环节负责什么？它有哪些 section？它和 SceneDocument / SceneTransportSchema / Agent / Runtime 是什么关系？ | DeviceSpec 板块说明书 |
+| `schema.json` | `DeviceSpec` 这个 schema 板块 | DeviceSpec 这个环节负责什么？它有哪些 section？它和 SceneDocument / SceneBehaviorGraph / Agent / Runtime 是什么关系？ | DeviceSpec 板块说明书 |
 | `common_device_spec.schema.json` | 每一个具体设备本体 JSON | 所有设备文件都必须有哪些字段？哪些字段是通用的？哪些字段允许被设备类型扩展？ | 设备本体基类 / 设备 JSON 通用模板 |
 
 层级关系如下：
@@ -93,7 +93,7 @@ common_device_spec.schema.json
   所有 JSON 都要遵守的元信息规范
 
 schema.json
-  DeviceSpec 作为八大 schema 板块之一的模块规范
+  DeviceSpec 作为当前基线设备能力板块的模块规范
 
 common_device_spec.schema.json
   所有具体设备本体的通用结构规范

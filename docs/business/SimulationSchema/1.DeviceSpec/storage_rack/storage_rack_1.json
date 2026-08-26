@@ -7,7 +7,7 @@
   "source": { "kind": "image_inferred", "path": "docs/business/SimulationSchema/1.DeviceSpec/storage_rack/storage_rack_1.json" },
   "created_for": "图 7 中存储柜/货架设备建模",
   "references": ["schema.json", "../../../test/7.png"],
-  "notes": ["初版作为静态存储资源建模，库位选择由 SimPlan 或 Runtime 完成。"],
+  "notes": ["初版作为静态存储资源建模，库位选择由 SceneBehaviorGraph 策略或 Runtime 完成。"],
   "device_spec_id": "storage_rack_1",
   "device_type": "storage_rack",
   "display_name": "存储柜 / 货架 1",
