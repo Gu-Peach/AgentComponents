@@ -251,4 +251,4 @@ robot_2 抓 part_007 ~ part_012。
 - `SceneBehaviorGraph` 转成正式 JSON Schema / Zod。
 - Runtime 如何从 `SceneBehaviorGraph` 初始化 `RuntimeSnapshot`。
 - `SignalBusRuntime` 的事件投递和 backpressure 策略执行规则。
-- Agent 生成 `SceneBehaviorGraph` 的节点、工具、校验器和可解释报告详见 `agent_scene_behavior_graph_design.md`。
+- Agent 生成 `SceneBehaviorGraph` 的提示词、校验器和可解释报告。
