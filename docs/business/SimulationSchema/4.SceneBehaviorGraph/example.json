@@ -19,37 +19,120 @@
   ],
   "goal": {
     "natural_language": "托盘到位后，由空闲机械臂持续抓取物料并放到出料传送带。",
-    "assumptions": ["只处理基线运行，不处理用户中途改需求。"]
+    "assumptions": [
+      "只处理基线运行，不处理用户中途改需求。"
+    ]
   },
   "modules": [
     {
       "module_id": "pallet_transport",
       "mode": "one_shot",
-      "devices": ["main_conveyor_1"],
+      "devices": [
+        "main_conveyor_1"
+      ],
       "start_event": "runtime.sim_start",
       "complete_event": "main_conveyor_1.pallet_ready"
     },
     {
       "module_id": "robot_sorting",
       "mode": "parallel_continuous",
-      "devices": ["robot_1", "robot_2"],
+      "devices": [
+        "robot_1",
+        "robot_2"
+      ],
       "start_event": "main_conveyor_1.pallet_ready",
       "stop_condition": "workpiece_pool.empty == true"
     }
   ],
   "event_bus": {
     "events": [
-      { "event_id": "runtime.sim_start", "kind": "global", "payload_schema": {} },
-      { "event_id": "main_conveyor_1.pallet_ready", "kind": "device", "payload_schema": { "carrier_id": "string" } },
-      { "event_id": "global.workpiece_claimed", "kind": "global", "payload_schema": { "material_id": "string", "robot_id": "string" } }
+      {
+        "event_id": "runtime.sim_start",
+        "kind": "global_event",
+        "payload_schema": {}
+      },
+      {
+        "event_id": "main_conveyor_1.pallet_ready",
+        "kind": "device_signal",
+        "payload_schema": {
+          "carrier_id": "string"
+        }
+      },
+      {
+        "event_id": "robot.pick_request",
+        "kind": "global_event",
+        "payload_schema": {
+          "robot_id": "string"
+        }
+      },
+      {
+        "event_id": "global.workpiece_claimed",
+        "kind": "global_event",
+        "payload_schema": {
+          "material_id": "string",
+          "robot_id": "string"
+        }
+      }
     ],
+    "topics": [
+      {
+        "topic_id": "robot_sorting",
+        "description": "托盘到位后广播给所有分拣机器人候选规则。",
+        "delivery": "broadcast"
+      }
+    ],
+    "subscriptions": {
+      "robot_sorting": [
+        {
+          "subscriber_type": "rule",
+          "subscriber_id": "idle_robot_claims_workpiece",
+          "message_event_id": "robot.pick_request",
+          "filter": "device_states.robot_1 == idle",
+          "payload_template": {
+            "robot_id": "robot_1"
+          }
+        },
+        {
+          "subscriber_type": "rule",
+          "subscriber_id": "idle_robot_claims_workpiece",
+          "message_event_id": "robot.pick_request",
+          "filter": "device_states.robot_2 == idle",
+          "payload_template": {
+            "robot_id": "robot_2"
+          }
+        }
+      ]
+    },
     "routes": [
-      { "from": "runtime.sim_start", "to": "main_conveyor_1.start_transport" },
-      { "from": "main_conveyor_1.pallet_ready", "to": "robot_sorting.enable" }
+      {
+        "route_id": "route_sim_start_to_start_main_conveyor_rule",
+        "from": "runtime.sim_start",
+        "to": {
+          "type": "rule",
+          "id": "start_main_conveyor"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_pallet_ready_to_robot_sorting_topic",
+        "from": "main_conveyor_1.pallet_ready",
+        "to": {
+          "type": "topic",
+          "id": "robot_sorting"
+        },
+        "delivery": "broadcast",
+        "target_resolver": {
+          "type": "subscription",
+          "path": "event_bus.subscriptions.robot_sorting"
+        }
+      }
     ]
   },
   "state_model": {
-    "workpiece_pool": { "source": "pallet_1.slots", "claim_policy": "first_idle_robot_claim_next_available" },
+    "workpiece_pool": {
+      "source": "pallet_1.slots",
+      "claim_policy": "first_idle_robot_claim_next_available"
+    },
     "device_states": {},
     "signal_values": {},
     "resource_locks": {},
@@ -58,28 +141,109 @@
   "behavior_rules": [
     {
       "rule_id": "start_main_conveyor",
-      "when_event": "runtime.sim_start",
-      "if": ["main_conveyor_1.state == idle"],
-      "then_start_behavior": { "instance_id": "main_conveyor_1", "behavior_id": "transport_to_exit" }
+      "module_id": "pallet_transport",
+      "description": "仿真开始且主传送带空闲时，启动托盘运输行为。",
+      "trigger": {
+        "type": "event",
+        "event_id": "runtime.sim_start"
+      },
+      "guard": {
+        "all": [
+          "device_states.main_conveyor_1 == idle"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "deterministic_priority",
+        "inputs": {
+          "priority": 1
+        }
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "main_conveyor_1",
+        "behavior_id": "transport_to_exit",
+        "payload": {
+          "carrier_id": "pallet_1"
+        }
+      }
+    },
+    {
+      "rule_id": "idle_robot_claims_workpiece",
+      "module_id": "robot_sorting",
+      "description": "机械臂空闲且工件池非空时，通过共享工件池策略 claim 一个物料并启动抓取。",
+      "trigger": {
+        "type": "event",
+        "event_id": "robot.pick_request"
+      },
+      "guard": {
+        "all": [
+          "workpiece_pool.empty == false",
+          "device_states[trigger.payload.robot_id] == idle"
+        ],
+        "any": [],
+        "none": [
+          "all_output_conveyors.blocked == true"
+        ]
+      },
+      "policy": {
+        "policy_id": "claim_workpiece",
+        "inputs": {
+          "robot_id": "trigger.payload.robot_id",
+          "source_pool": "workpiece_pool"
+        },
+        "bind_outputs_to": {
+          "robot_id": "action.instance_id",
+          "material_id": "action.payload.material_id"
+        }
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "policy.robot_id",
+        "behavior_id": "pick_and_place",
+        "payload": {
+          "material_id": "policy.material_id"
+        }
+      }
     }
   ],
   "state_transition_rules": [
     {
       "rule_id": "main_conveyor_complete",
       "on_behavior_complete": "main_conveyor_1.transport_to_exit",
-      "effects": ["move pallet_1 to main_conveyor_1.exit", "emit main_conveyor_1.pallet_ready"]
+      "effects": [
+        "move pallet_1 to main_conveyor_1.exit",
+        "emit main_conveyor_1.pallet_ready"
+      ]
     }
   ],
   "policies": {
     "claim_workpiece": {
       "type": "shared_pool_claim",
       "source_pool": "workpiece_pool",
-      "workers": ["robot_1", "robot_2"],
+      "workers": [
+        "robot_1",
+        "robot_2"
+      ],
       "mutual_exclusion": true
+    },
+    "deterministic_priority": {
+      "type": "deterministic_priority",
+      "order": [
+        "start_main_conveyor",
+        "idle_robot_claims_workpiece"
+      ]
     }
   },
-  "completion_conditions": ["workpiece_pool.empty == true", "active_actions.empty == true"],
+  "completion_conditions": [
+    "workpiece_pool.empty == true",
+    "active_actions.empty == true"
+  ],
   "failure_observations": [
-    { "observation_id": "deadlock_detected", "condition": "no_enabled_behavior and active_actions.empty == false" }
+    {
+      "observation_id": "deadlock_detected",
+      "condition": "no_enabled_behavior and active_actions.empty == false"
+    }
   ]
 }

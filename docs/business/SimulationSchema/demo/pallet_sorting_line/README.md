@@ -195,7 +195,8 @@ backpressure
 
 ```text
 1. runtime.sim_start
-   -> main_conveyor_1.start_transport
+   -> route to rule:start_pallet_transport
+   -> action start main_conveyor_1.transport_to_exit
 
 2. main_conveyor_1.transport_to_exit start
    -> main_conveyor_1 moving，锁住 belt_surface
@@ -205,12 +206,13 @@ backpressure
    -> emit main_conveyor_1.pallet_ready
 
 4. main_conveyor_1.pallet_ready
-   -> enable parallel_robot_sorting
+   -> route to topic:robot_pick_request
+   -> Scheduler 唤醒分拣相关 behavior_rules
 
 5. robot_1 / robot_2 idle
    -> emit robot.pick_request
 
-6. policies.claim_workpiece
+6. claim_workpiece policy
    -> 从 workpiece_pool 原子 claim 一个物料
    -> emit global.workpiece_claimed
 
@@ -231,7 +233,7 @@ backpressure
 
 11. completion_conditions 全部满足
    -> emit global.sorting_done
-   -> runtime.complete_run
+   -> route to runtime:CompletionChecker
 ```
 
 ---

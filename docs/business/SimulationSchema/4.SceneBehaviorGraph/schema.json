@@ -29,5 +29,116 @@
     "policies",
     "completion_conditions",
     "failure_observations"
-  ]
+  ],
+  "behavior_rule_contract": {
+    "description": "behavior_rules 必须显式区分 trigger、guard、policy 和 action，供 Runtime Scheduler 解释执行。",
+    "required_fields": [
+      "rule_id",
+      "module_id",
+      "trigger",
+      "guard",
+      "action"
+    ],
+    "optional_fields": [
+      "description",
+      "policy"
+    ],
+    "field_semantics": {
+      "trigger": "规则唤醒条件，例如事件到达、状态变化、scheduler tick 或策略结果。",
+      "guard": "规则执行前必须满足的状态条件，通常包含 all / any / none 三类表达式。",
+      "policy": "动态决策引用，指向 policies 中定义的策略及其输入输出绑定。",
+      "action": "通过 trigger、guard 和 policy 后执行的动作，例如 start_behavior、emit_event、start_or_continue_behavior 或 update_state。"
+    }
+  },
+  "policy_type_catalog": {
+    "description": "当前 v0.2 基线建议优先支持的策略类型。",
+    "types": [
+      "deterministic_priority",
+      "shared_pool_claim",
+      "load_balancing",
+      "capacity_threshold",
+      "resource_lock",
+      "queue_wait",
+      "deadlock_detection",
+      "timeout_retry"
+    ]
+  },
+  "event_bus_event_contract": {
+    "description": "event_bus.events 注册本场景所有可能出现的事件和信号，供 SignalBusRuntime 校验、路由和记录。",
+    "required_fields": [
+      "event_id",
+      "kind",
+      "payload_schema"
+    ],
+    "recommended_fields": [
+      "source",
+      "description",
+      "retention"
+    ],
+    "kind_values": {
+      "global_event": "场景级事件，不隶属于某个设备信号口，例如 runtime.sim_start、global.sorting_done。",
+      "device_signal": "设备实例发出或接收的信号，必须能被 DeviceSpec.signal_ports 或 runtime_contract 解释。",
+      "control_event": "Runtime、Scheduler 或策略对设备/规则发出的控制类事件，例如 robot.pause_pick。",
+      "observation": "Runtime 观测到的异常、风险或诊断事件，例如 observation.deadlock_detected。"
+    },
+    "payload_schema": "事件 payload 的结构契约，用于事件校验、规则引用、目标解析和前端解释。",
+    "retention_values": {
+      "latest_value": "只保留最新值，适合设备状态类信号。",
+      "event_log": "追加到事件日志，适合关键业务事件。",
+      "checkpoint_only": "只在 checkpoint 或摘要中保存，适合高频事件。"
+    }
+  },
+  "event_bus_topic_contract": {
+    "description": "event_bus.topics 定义广播主题，event_bus.subscriptions 定义 topic 消息的消费者；topic 本身不是事件，也不是行为规则。",
+    "topic_required_fields": [
+      "topic_id"
+    ],
+    "topic_recommended_fields": [
+      "description",
+      "delivery"
+    ],
+    "subscription_format": {
+      "subscriptions": {
+        "topic_id": [
+          {
+            "subscriber_type": "rule | module | device | runtime",
+            "subscriber_id": "subscriber_id",
+            "message_event_id": "event_id_delivered_to_this_subscriber",
+            "filter": "optional_state_or_event_expression",
+            "payload_template": {}
+          }
+        ]
+      }
+    },
+    "semantics": "当 routes[].to.type == topic 时，SignalBusRuntime 查找 subscriptions[topic_id]，为每个订阅者生成一次投递；message_event_id 表示该订阅者收到的事件 ID，如果省略则默认沿用原始 route.from 事件。"
+  },
+  "event_bus_route_contract": {
+    "description": "event_bus.routes 表达事件到消费者的投递规则，不表达事件到事件的转换。",
+    "required_fields": [
+      "route_id",
+      "from",
+      "to",
+      "delivery"
+    ],
+    "target_format": {
+      "to": {
+        "type": "rule | topic | module | device | runtime",
+        "id": "target_id"
+      }
+    },
+    "delivery_values": {
+      "direct": "定向投递给一个明确消费者，例如某条 rule。",
+      "broadcast": "广播到 topic 或一组订阅者。",
+      "internal": "投递给 Runtime 内部模块，例如 CompletionChecker 或 ObservationEmitter。"
+    },
+    "target_resolver": {
+      "description": "可选字段，用于从 payload、binding 或 subscription 中解析实际目标实例。",
+      "types": [
+        "static",
+        "payload_field",
+        "binding",
+        "subscription"
+      ]
+    }
+  }
 }

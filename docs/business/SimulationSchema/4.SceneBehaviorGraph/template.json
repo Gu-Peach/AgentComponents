@@ -1,0 +1,140 @@
+{
+  "schema_id": "scene_behavior_graph_template_v0_2",
+  "schema_type": "SceneBehaviorGraphTemplate",
+  "version": "0.2.0",
+  "name": "SceneBehaviorGraph Template",
+  "description": "SceneBehaviorGraph 的推荐填写模板，显式区分 trigger、guard、policy 和 action。",
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/4.SceneBehaviorGraph/template.json"
+  },
+  "created_for": "指导 Agent 生成可被 Runtime Scheduler 执行的场景行为图。",
+  "references": [
+    "schema.json",
+    "../1.DeviceSpec/schema.json",
+    "../2.SceneDocument/schema.json",
+    "../3.RuntimeSnapshot/schema.json"
+  ],
+  "notes": [
+    "trigger 定义规则何时被唤醒。",
+    "guard 定义规则被唤醒后是否允许执行。",
+    "policy 定义存在动态选择或冲突时如何决策。",
+    "action 定义通过校验和决策后要启动行为、投递事件或更新状态。"
+  ],
+  "goal": {
+    "natural_language": "用户对本次仿真的目标描述。",
+    "assumptions": []
+  },
+  "modules": [
+    {
+      "module_id": "module_id",
+      "mode": "one_shot | sequential | parallel_continuous | continuous",
+      "devices": [],
+      "start_event": "event_id",
+      "complete_event": "event_id",
+      "stop_condition": "state_expression"
+    }
+  ],
+  "event_bus": {
+    "events": [
+      {
+        "event_id": "event_id",
+        "kind": "global_event | device_signal | control_event | observation",
+        "source": "instance_id | runtime | scheduler | policy",
+        "description": "事件语义说明。",
+        "payload_schema": {},
+        "retention": "latest_value | event_log | checkpoint_only"
+      }
+    ],
+    "topics": [
+      {
+        "topic_id": "topic_id",
+        "description": "广播主题说明。",
+        "delivery": "broadcast"
+      }
+    ],
+    "subscriptions": {
+      "topic_id": [
+        {
+          "subscriber_type": "rule | module | device | runtime",
+          "subscriber_id": "subscriber_id",
+          "message_event_id": "event_id_delivered_to_this_subscriber",
+          "filter": "optional_state_or_event_expression",
+          "payload_template": {}
+        }
+      ]
+    },
+    "routes": [
+      {
+        "route_id": "route_id",
+        "from": "event_id",
+        "to": {
+          "type": "rule | topic | module | device | runtime",
+          "id": "target_id"
+        },
+        "delivery": "direct | broadcast | internal",
+        "target_resolver": {
+          "type": "static | payload_field | binding | subscription",
+          "path": "optional_payload_or_binding_path"
+        }
+      }
+    ]
+  },
+  "state_model": {
+    "device_states": {},
+    "signal_values": {},
+    "resource_locks": {},
+    "active_actions": {},
+    "domain_state_variables": {}
+  },
+  "behavior_rules": [
+    {
+      "rule_id": "rule_id",
+      "module_id": "module_id",
+      "description": "规则用途说明。",
+      "trigger": {
+        "type": "event | state_change | scheduler_tick | policy_result",
+        "event_id": "event_id",
+        "state": "state_expression"
+      },
+      "guard": {
+        "all": [
+          "state_expression"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "policy_defined_in_policies",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior | emit_event | start_or_continue_behavior | update_state",
+        "instance_id": "instance_id_or_expression",
+        "behavior_id": "behavior_id_from_DeviceSpec",
+        "event_id": "event_id",
+        "payload": {}
+      }
+    }
+  ],
+  "state_transition_rules": [
+    {
+      "rule_id": "transition_rule_id",
+      "trigger": {
+        "type": "behavior_started | behavior_completed | behavior_failed | event",
+        "behavior_ref": "instance_id.behavior_id",
+        "event_id": "event_id"
+      },
+      "effects": []
+    }
+  ],
+  "policies": {
+    "policy_id": {
+      "type": "deterministic_priority | shared_pool_claim | load_balancing | capacity_threshold | resource_lock | queue_wait | deadlock_detection | timeout_retry",
+      "params": {}
+    }
+  },
+  "completion_conditions": [],
+  "failure_observations": []
+}

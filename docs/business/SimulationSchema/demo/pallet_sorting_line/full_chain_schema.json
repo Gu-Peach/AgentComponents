@@ -1206,19 +1206,12 @@
       "events": [
         {
           "event_id": "runtime.sim_start",
-          "kind": "global",
+          "kind": "global_event",
           "payload_schema": {}
         },
         {
-          "event_id": "main_conveyor_1.start_transport",
-          "kind": "control",
-          "payload_schema": {
-            "carrier_id": "string"
-          }
-        },
-        {
           "event_id": "main_conveyor_1.pallet_ready",
-          "kind": "device",
+          "kind": "device_signal",
           "payload_schema": {
             "carrier_id": "string",
             "location": "string"
@@ -1226,14 +1219,14 @@
         },
         {
           "event_id": "robot.pick_request",
-          "kind": "global",
+          "kind": "global_event",
           "payload_schema": {
             "robot_id": "string"
           }
         },
         {
           "event_id": "global.workpiece_claimed",
-          "kind": "global",
+          "kind": "global_event",
           "payload_schema": {
             "robot_id": "string",
             "material_id": "string",
@@ -1242,7 +1235,7 @@
         },
         {
           "event_id": "robot.pick_done",
-          "kind": "device",
+          "kind": "device_signal",
           "payload_schema": {
             "robot_id": "string",
             "material_id": "string",
@@ -1251,7 +1244,7 @@
         },
         {
           "event_id": "output_conveyor.material_arrived",
-          "kind": "device",
+          "kind": "device_signal",
           "payload_schema": {
             "conveyor_id": "string",
             "material_id": "string"
@@ -1259,7 +1252,7 @@
         },
         {
           "event_id": "output_conveyor.blocked",
-          "kind": "device",
+          "kind": "device_signal",
           "payload_schema": {
             "conveyor_id": "string",
             "current_load": "integer",
@@ -1268,7 +1261,7 @@
         },
         {
           "event_id": "output_conveyor.capacity_available",
-          "kind": "device",
+          "kind": "device_signal",
           "payload_schema": {
             "conveyor_id": "string",
             "current_load": "integer",
@@ -1277,7 +1270,7 @@
         },
         {
           "event_id": "robot.pause_pick",
-          "kind": "control",
+          "kind": "control_event",
           "payload_schema": {
             "robot_id": "string",
             "reason": "string"
@@ -1285,59 +1278,148 @@
         },
         {
           "event_id": "robot.resume_pick",
-          "kind": "control",
+          "kind": "control_event",
           "payload_schema": {
             "robot_id": "string"
           }
         },
         {
           "event_id": "global.sorting_done",
-          "kind": "global",
+          "kind": "global_event",
           "payload_schema": {
             "scene_id": "string"
           }
         }
       ],
-      "routes": [
+      "topics": [
         {
-          "from": "runtime.sim_start",
-          "to": "main_conveyor_1.start_transport",
-          "delivery": "direct"
-        },
-        {
-          "from": "main_conveyor_1.pallet_ready",
-          "to": "parallel_robot_sorting.enable",
+          "topic_id": "robot_pick_request",
+          "description": "托盘到位后广播给所有可参与分拣的机械臂候选规则。",
           "delivery": "broadcast"
         },
         {
-          "from": "robot.pick_request",
-          "to": "policies.claim_workpiece",
-          "delivery": "runtime_internal"
+          "topic_id": "backpressure",
+          "description": "出料传送带容量变化后广播给受影响机械臂的暂停或恢复规则。",
+          "delivery": "broadcast"
+        }
+      ],
+      "subscriptions": {
+        "robot_pick_request": [
+          {
+            "subscriber_type": "rule",
+            "subscriber_id": "idle_robot_requests_workpiece",
+            "message_event_id": "robot.pick_request",
+            "filter": "device_states.robot_1 == idle",
+            "payload_template": {
+              "robot_id": "robot_1"
+            }
+          },
+          {
+            "subscriber_type": "rule",
+            "subscriber_id": "idle_robot_requests_workpiece",
+            "message_event_id": "robot.pick_request",
+            "filter": "device_states.robot_2 == idle",
+            "payload_template": {
+              "robot_id": "robot_2"
+            }
+          }
+        ],
+        "backpressure": [
+          {
+            "subscriber_type": "rule",
+            "subscriber_id": "blocked_conveyor_pauses_robot",
+            "message_event_id": "output_conveyor.blocked",
+            "filter": "event.event_id == output_conveyor.blocked",
+            "payload_template": "source_event.payload"
+          },
+          {
+            "subscriber_type": "rule",
+            "subscriber_id": "capacity_available_resumes_robot",
+            "message_event_id": "output_conveyor.capacity_available",
+            "filter": "event.event_id == output_conveyor.capacity_available",
+            "payload_template": "source_event.payload"
+          }
+        ]
+      },
+      "routes": [
+        {
+          "route_id": "route_sim_start_to_start_pallet_transport_rule",
+          "from": "runtime.sim_start",
+          "to": {
+            "type": "rule",
+            "id": "start_pallet_transport"
+          },
+          "delivery": "direct"
         },
         {
+          "route_id": "route_pallet_ready_to_robot_pick_topic",
+          "from": "main_conveyor_1.pallet_ready",
+          "to": {
+            "type": "topic",
+            "id": "robot_pick_request"
+          },
+          "delivery": "broadcast",
+          "target_resolver": {
+            "type": "subscription",
+            "path": "event_bus.subscriptions.robot_pick_request"
+          }
+        },
+        {
+          "route_id": "route_workpiece_claimed_to_pick_rule",
           "from": "global.workpiece_claimed",
-          "to": "robot.start_pick",
-          "delivery": "targeted_by_payload.robot_id"
+          "to": {
+            "type": "rule",
+            "id": "claimed_workpiece_starts_pick"
+          },
+          "delivery": "direct"
         },
         {
+          "route_id": "route_pick_done_to_material_arrival_rule",
           "from": "robot.pick_done",
-          "to": "output_conveyor.material_arrived",
-          "delivery": "targeted_by_payload.target_conveyor"
+          "to": {
+            "type": "rule",
+            "id": "output_conveyor_runs_when_material_arrives"
+          },
+          "delivery": "direct",
+          "target_resolver": {
+            "type": "payload_field",
+            "path": "payload.target_conveyor"
+          }
         },
         {
+          "route_id": "route_blocked_to_backpressure_topic",
           "from": "output_conveyor.blocked",
-          "to": "robot.pause_pick",
-          "delivery": "targeted_by_backpressure_binding"
+          "to": {
+            "type": "topic",
+            "id": "backpressure"
+          },
+          "delivery": "broadcast",
+          "target_resolver": {
+            "type": "subscription",
+            "path": "event_bus.subscriptions.backpressure"
+          }
         },
         {
+          "route_id": "route_capacity_available_to_backpressure_topic",
           "from": "output_conveyor.capacity_available",
-          "to": "robot.resume_pick",
-          "delivery": "targeted_by_backpressure_binding"
+          "to": {
+            "type": "topic",
+            "id": "backpressure"
+          },
+          "delivery": "broadcast",
+          "target_resolver": {
+            "type": "subscription",
+            "path": "event_bus.subscriptions.backpressure"
+          }
         },
         {
+          "route_id": "route_sorting_done_to_completion_checker",
           "from": "global.sorting_done",
-          "to": "runtime.complete_run",
-          "delivery": "runtime_internal"
+          "to": {
+            "type": "runtime",
+            "id": "CompletionChecker"
+          },
+          "delivery": "internal"
         }
       ],
       "backpressure_bindings": [
@@ -1416,12 +1498,27 @@
       {
         "rule_id": "start_pallet_transport",
         "module_id": "pallet_transport",
-        "when_event": "runtime.sim_start",
-        "if": [
+        "description": "仿真开始后，如果主传送带空闲且托盘位于入口，则启动托盘运输。",
+        "trigger": {
+          "type": "event",
+          "event_id": "runtime.sim_start"
+        },
+        "guard": {
+          "all": [
           "device_states.main_conveyor_1 == idle",
           "material_at(pallet_1, main_conveyor_1.entry)"
         ],
-        "then_start_behavior": {
+          "any": [],
+          "none": []
+        },
+        "policy": {
+          "policy_id": "deterministic_priority",
+          "inputs": {
+            "priority": 1
+          }
+        },
+        "action": {
+          "type": "start_behavior",
           "instance_id": "main_conveyor_1",
           "behavior_id": "transport_to_exit",
           "payload": {
@@ -1432,67 +1529,171 @@
       {
         "rule_id": "idle_robot_requests_workpiece",
         "module_id": "parallel_robot_sorting",
-        "when_state": "robot.state == idle",
-        "if": [
+        "description": "托盘到位或机械臂恢复后，空闲机械臂请求从共享工件池 claim 物料。",
+        "trigger": {
+          "type": "event",
+          "event_id": "robot.pick_request"
+        },
+        "guard": {
+          "all": [
           "workpiece_pool.pallet_1.remaining_parts.empty == false",
-          "target_conveyors.blocked_for_robot(robot.id) == false",
-          "resource(robot.gripper).locked_by == null"
+            "device_states[trigger.payload.robot_id] == idle",
+            "target_conveyors.blocked_for_robot(trigger.payload.robot_id) == false",
+            "resource(trigger.payload.robot_id.gripper).locked_by == null"
         ],
-        "then_emit": {
-          "event_id": "robot.pick_request",
+          "any": [],
+          "none": []
+        },
+        "policy": {
+          "policy_id": "claim_workpiece",
+          "inputs": {
+            "robot_id": "trigger.payload.robot_id",
+            "source_pool": "workpiece_pool.pallet_1.remaining_parts"
+          },
+          "bind_outputs_to": {
+            "material_id": "action.payload.material_id"
+          }
+        },
+        "action": {
+          "type": "emit_event",
+          "event_id": "global.workpiece_claimed",
           "payload": {
-            "robot_id": "${robot.id}"
+            "robot_id": "trigger.payload.robot_id",
+            "material_id": "policy.material_id"
           }
         }
       },
       {
         "rule_id": "claimed_workpiece_starts_pick",
         "module_id": "parallel_robot_sorting",
-        "when_event": "global.workpiece_claimed",
-        "if": [
-          "payload.robot_id.state == idle",
-          "payload.material_id.claimed_by == payload.robot_id"
+        "description": "物料 claim 成功后，对应机械臂启动 pick_and_place 行为。",
+        "trigger": {
+          "type": "event",
+          "event_id": "global.workpiece_claimed"
+        },
+        "guard": {
+          "all": [
+            "device_states[trigger.payload.robot_id] == idle",
+            "material_claims[trigger.payload.material_id].claimed_by == trigger.payload.robot_id"
         ],
-        "then_start_behavior": {
-          "instance_id": "${payload.robot_id}",
+          "any": [],
+          "none": [
+            "target_conveyors.blocked_for_robot(trigger.payload.robot_id) == true"
+          ]
+        },
+        "policy": {
+          "policy_id": "target_conveyor_selection",
+          "inputs": {
+            "robot_id": "trigger.payload.robot_id",
+            "material_id": "trigger.payload.material_id"
+          },
+          "bind_outputs_to": {
+            "target_conveyor_id": "action.payload.target_conveyor_id"
+          }
+        },
+        "action": {
+          "type": "start_behavior",
+          "instance_id": "trigger.payload.robot_id",
           "behavior_id": "pick_and_place",
           "payload": {
-            "material_id": "${payload.material_id}"
+            "material_id": "trigger.payload.material_id",
+            "target_conveyor_id": "policy.target_conveyor_id"
           }
         }
       },
       {
         "rule_id": "output_conveyor_runs_when_material_arrives",
         "module_id": "output_conveying",
-        "when_event": "output_conveyor.material_arrived",
-        "if": [
-          "payload.conveyor_id.state in [idle, moving]",
-          "conveyor_loads[payload.conveyor_id].current_load > 0"
+        "description": "物料到达出料传送带后，目标传送带启动或保持持续运输。",
+        "trigger": {
+          "type": "event",
+          "event_id": "output_conveyor.material_arrived"
+        },
+        "guard": {
+          "all": [
+            "device_states[trigger.payload.conveyor_id] in [idle, moving]",
+            "conveyor_loads[trigger.payload.conveyor_id].current_load > 0"
         ],
-        "then_start_or_continue_behavior": {
-          "instance_id": "${payload.conveyor_id}",
+          "any": [],
+          "none": []
+        },
+        "policy": {
+          "policy_id": "backpressure",
+          "inputs": {
+            "conveyor_id": "trigger.payload.conveyor_id"
+          }
+        },
+        "action": {
+          "type": "start_or_continue_behavior",
+          "instance_id": "trigger.payload.conveyor_id",
           "behavior_id": "transport_to_exit"
         }
       },
       {
         "rule_id": "blocked_conveyor_pauses_robot",
         "module_id": "parallel_robot_sorting",
-        "when_event": "output_conveyor.blocked",
-        "then_emit": {
+        "description": "出料传送带 blocked 后，暂停绑定到该传送带的机械臂后续抓取。",
+        "trigger": {
+          "type": "event",
+          "event_id": "output_conveyor.blocked"
+        },
+        "guard": {
+          "all": [
+            "conveyor_loads[trigger.payload.conveyor_id].blocked == true"
+          ],
+          "any": [],
+          "none": []
+        },
+        "policy": {
+          "policy_id": "backpressure",
+          "inputs": {
+            "conveyor_id": "trigger.payload.conveyor_id"
+          },
+          "bind_outputs_to": {
+            "target_robots": "action.target"
+          }
+        },
+        "action": {
+          "type": "emit_event",
           "event_id": "robot.pause_pick",
-          "target": "robots_bound_to_conveyor(payload.conveyor_id)",
+          "target": "policy.target_robots",
           "payload": {
-            "reason": "target_conveyor_blocked"
+            "reason": "target_conveyor_blocked",
+            "conveyor_id": "trigger.payload.conveyor_id"
           }
         }
       },
       {
         "rule_id": "capacity_available_resumes_robot",
         "module_id": "parallel_robot_sorting",
-        "when_event": "output_conveyor.capacity_available",
-        "then_emit": {
+        "description": "出料传送带容量恢复后，恢复绑定机械臂的后续抓取。",
+        "trigger": {
+          "type": "event",
+          "event_id": "output_conveyor.capacity_available"
+        },
+        "guard": {
+          "all": [
+            "conveyor_loads[trigger.payload.conveyor_id].blocked == false"
+          ],
+          "any": [],
+          "none": []
+        },
+        "policy": {
+          "policy_id": "backpressure",
+          "inputs": {
+            "conveyor_id": "trigger.payload.conveyor_id"
+          },
+          "bind_outputs_to": {
+            "target_robots": "action.target"
+          }
+        },
+        "action": {
+          "type": "emit_event",
           "event_id": "robot.resume_pick",
-          "target": "robots_bound_to_conveyor(payload.conveyor_id)"
+          "target": "policy.target_robots",
+          "payload": {
+            "conveyor_id": "trigger.payload.conveyor_id"
+          }
         }
       }
     ],
@@ -1519,7 +1720,7 @@
         "rule_id": "claim_workpiece",
         "on_event": "robot.pick_request",
         "effects": [
-          "policies.claim_workpiece atomically removes next available material from workpiece_pool",
+          "PolicyLibrary.claim_workpiece atomically removes next available material from workpiece_pool",
           "set material_claims[material_id] = robot_id",
           "emit global.workpiece_claimed"
         ]
@@ -1602,6 +1803,18 @@
         "blocked_when": "current_load >= max_capacity",
         "resume_when": "current_load <= resume_threshold",
         "pause_strategy": "pause_before_next_pick"
+      },
+      "deterministic_priority": {
+        "type": "deterministic_priority",
+        "order": [
+          "start_pallet_transport",
+          "idle_robot_requests_workpiece",
+          "claimed_workpiece_starts_pick",
+          "output_conveyor_runs_when_material_arrives",
+          "blocked_conveyor_pauses_robot",
+          "capacity_available_resumes_robot"
+        ],
+        "tie_breaker": "rule_id_lexicographic"
       }
     },
     "completion_conditions": [

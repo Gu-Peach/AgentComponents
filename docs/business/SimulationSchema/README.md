@@ -29,7 +29,7 @@
 | 文档 | 内容 |
 |---|---|
 | [`device_data_structure.md`](device_data_structure.md) | 当前 v0.2 基线：`DeviceSpec + SceneDocument -> SceneBehaviorGraph -> RuntimeSnapshot`。 |
-| [`agent_scene_behavior_graph_design.md`](agent_scene_behavior_graph_design.md) | Agent 生成 `SceneBehaviorGraph` 的技术方案、Runtime 调度方案、存储方案和学术创新点。 |
+| [`../../design/agent_scene_behavior_graph_design.md`](../../design/agent_scene_behavior_graph_design.md) | Agent 生成 `SceneBehaviorGraph` 的技术方案、Runtime 调度方案、存储方案和学术创新点。 |
 | [`common_schema_contract.json`](common_schema_contract.json) | 所有 JSON 文件共享的通用元信息规范。 |
 | [`4.SceneBehaviorGraph/`](4.SceneBehaviorGraph/) | Agent 生成的场景行为图规范与示例。 |
 | [`demo/pallet_sorting_line/`](demo/pallet_sorting_line/) | 基于 `docs/business/test/1.png` 的托盘分拣线 demo，展示共享工件池、backpressure 与事件驱动运行。 |
