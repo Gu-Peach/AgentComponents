@@ -12,4 +12,5 @@
 
 | 文档 | 内容 |
 |---|---|
+| [`agent_design.md`](agent_design.md) | 基于 LangGraph 的 `SceneBehaviorGraph` Agent 专项设计，包含 State、Model Node、Tool Node、Capabilities、Subgraphs 和最终图结构。 |
 | [`agent_scene_behavior_graph_design.md`](agent_scene_behavior_graph_design.md) | Agent 生成 `SceneBehaviorGraph` 的技术方案、Runtime 调度方案、存储方案和学术创新点。 |

@@ -1,0 +1,7 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "scene_behavior_agent": "./scene_behavior_agent/graph/app.py:graph"
+  },
+  "env": ".env"
+}

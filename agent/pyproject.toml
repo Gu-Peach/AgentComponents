@@ -1,0 +1,13 @@
+[project]
+name = "scene-behavior-agent"
+version = "0.1.0"
+description = "LangGraph-style agent for generating SceneBehaviorGraph artifacts."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+langgraph = ["langgraph>=0.2.0"]
+
+[tool.pytest.ini_options]
+pythonpath = [".."]
+testpaths = ["scene_behavior_agent/tests"]
