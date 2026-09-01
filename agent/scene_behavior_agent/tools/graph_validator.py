@@ -39,11 +39,102 @@ class GraphValidator:
         instance_index = scene_facts.get("instance_index", {})
         behavior_index = device_capabilities.get("behavior_index", {})
 
+        self._validate_conveyor_specs(device_capabilities, issues)
+        self._validate_conveyor_state_model(graph, scene_facts, issues)
+        self._validate_conveyor_policies(graph, scene_facts, issues)
+        self._validate_conveyor_behavior_rules(graph, scene_facts, issues)
         self._validate_event_bus(event_bus, event_ids, topic_ids, subscriptions, issues)
         self._validate_rules(graph, event_ids, subscriptions, rule_ids, instance_index, behavior_index, scene_facts, issues)
         self._validate_transitions(graph, event_ids, issues)
 
         return {"valid": not any(issue["severity"] == "error" for issue in issues), "issues": issues}
+
+    @staticmethod
+    def _validate_conveyor_specs(device_capabilities: dict[str, Any], issues: list[ValidationIssue]) -> None:
+        specs = device_capabilities.get("specs", {})
+        for spec_id, spec in specs.items():
+            if spec.get("device_type") != "conveyor":
+                continue
+            stop_point_model = spec.get("type_specific_contract", {}).get("stop_point_model")
+            if not stop_point_model:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "missing_conveyor_stop_point_model",
+                        "message": f"Conveyor DeviceSpec {spec_id} must define type_specific_contract.stop_point_model",
+                        "path": f"device_capabilities.specs.{spec_id}.type_specific_contract.stop_point_model",
+                    }
+                )
+
+    @staticmethod
+    def _validate_conveyor_state_model(graph: dict[str, Any], scene_facts: dict[str, Any], issues: list[ValidationIssue]) -> None:
+        conveyors = [instance for instance in scene_facts.get("instances", []) if instance.get("device_type") == "conveyor"]
+        if not conveyors:
+            return
+        state_model = graph.get("state_model", {})
+        required_sections = ["conveyor_stop_points", "conveyor_occupancy", "conveyor_queues", "conveyor_loads"]
+        for section in required_sections:
+            if section not in state_model:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "missing_conveyor_state_model",
+                        "message": f"SceneBehaviorGraph.state_model must include {section} when conveyors are present",
+                        "path": f"state_model.{section}",
+                    }
+                )
+                continue
+            for conveyor in conveyors:
+                conveyor_id = conveyor.get("instance_id")
+                if conveyor_id and conveyor_id not in state_model.get(section, {}):
+                    issues.append(
+                        {
+                            "severity": "warning",
+                            "code": "missing_conveyor_state_entry",
+                            "message": f"State model section {section} has no entry for conveyor {conveyor_id}",
+                            "path": f"state_model.{section}.{conveyor_id}",
+                        }
+                    )
+
+    @staticmethod
+    def _validate_conveyor_policies(graph: dict[str, Any], scene_facts: dict[str, Any], issues: list[ValidationIssue]) -> None:
+        if not any(instance.get("device_type") == "conveyor" for instance in scene_facts.get("instances", [])):
+            return
+        policies = graph.get("policies", {})
+        policy_types = {policy.get("type") for policy in policies.values() if isinstance(policy, dict)}
+        for policy_type in ["queue_wait", "capacity_threshold", "nearest_available_stop_point", "downstream_release"]:
+            if policy_type not in policy_types:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "missing_conveyor_policy",
+                        "message": f"Conveyor behavior graph must define a {policy_type} policy",
+                        "path": "policies",
+                    }
+                )
+
+    @staticmethod
+    def _validate_conveyor_behavior_rules(graph: dict[str, Any], scene_facts: dict[str, Any], issues: list[ValidationIssue]) -> None:
+        if not any(instance.get("device_type") == "conveyor" for instance in scene_facts.get("instances", [])):
+            return
+        required_rule_ids = {
+            "accept_material_to_first_available_stop_point",
+            "advance_material_to_next_stop_point",
+            "wait_when_next_stop_point_occupied",
+            "release_material_when_downstream_available",
+            "emit_blocked_when_no_stop_point_available",
+            "emit_capacity_available_when_stop_point_released",
+        }
+        rule_ids = {rule.get("rule_id") for rule in graph.get("behavior_rules", []) if rule.get("rule_id")}
+        for rule_id in sorted(required_rule_ids - rule_ids):
+            issues.append(
+                {
+                    "severity": "error",
+                    "code": "missing_conveyor_behavior_rule",
+                    "message": f"Conveyor behavior graph must define rule {rule_id}",
+                    "path": f"behavior_rules.{rule_id}",
+                }
+            )
 
     def validate_connections(self, scene_facts: dict[str, Any], device_capabilities: dict[str, Any]) -> ValidationReport:
         issues: list[ValidationIssue] = []

@@ -11,6 +11,5 @@
   "extends": "common_device_spec_schema_v0_1",
   "required_type_specific_fields": ["rootNodeName", "urdf", "trajectoryConfig"],
   "required_behaviors": ["pick_and_place"],
-  "required_signals": ["start_pick", "busy", "done", "error"]
+  "required_signals": ["start_pick", "pause_pick", "resume_pick", "busy", "done", "error"]
 }
-

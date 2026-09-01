@@ -1,0 +1,76 @@
+{
+  "case_id": "scene_09_rotary_table_robot_to_workstation",
+  "schema_type": "BenchmarkAssertions",
+  "version": "0.1.0",
+  "source": {
+    "kind": "manual_assertion",
+    "image": "docs/business/test/9.png"
+  },
+  "must_have_modules": [
+    "rotary_material_feed",
+    "rotary_indexing",
+    "robot_unload_to_workstation"
+  ],
+  "must_have_events": [
+    "runtime.sim_start",
+    "observation.deadlock_detected",
+    "global.process_done",
+    "rotary_table.occupied",
+    "rotary_table.at_pick_station",
+    "robot.pick_done",
+    "workstation.material_completed"
+  ],
+  "must_have_topics": [
+    "robot_task_request"
+  ],
+  "must_have_behavior_rules": [
+    "feed_material_to_rotary_station",
+    "rotate_material_to_pick_station",
+    "robot_moves_rotary_part_to_workstation"
+  ],
+  "must_have_policies": [
+    "capacity_threshold",
+    "deadlock_detection",
+    "deterministic_priority",
+    "downstream_release",
+    "nearest_available_stop_point",
+    "queue_wait",
+    "resource_lock"
+  ],
+  "must_have_state_variables": [
+    "workpiece_pool",
+    "material_locations",
+    "device_states",
+    "signal_values",
+    "resource_locks",
+    "active_actions",
+    "conveyor_stop_points",
+    "conveyor_occupancy",
+    "conveyor_queues",
+    "conveyor_loads",
+    "rotary_station_occupancy",
+    "rotary_position",
+    "workstation_buffer"
+  ],
+  "must_have_completion_conditions": [
+    "requested parts completed",
+    "rotary_station_occupancy all empty",
+    "workstation_buffer.workstation_1.occupied_by == null",
+    "active_actions.empty == true"
+  ],
+  "forbidden_schema_types": [
+    "SimPlan",
+    "ExecutableSimGraph",
+    "TransportPlan"
+  ],
+  "forbidden_rule_forms": [
+    "when_event / when_state / if / then_*",
+    "move material directly to conveyor.exit"
+  ],
+  "minimum_validation_expectations": [
+    "SceneBehaviorGraph contains required top-level sections",
+    "event_bus routes reference registered events",
+    "behavior_rules use trigger / guard / policy / action",
+    "rotary / robot / workstation resources are mutually locked"
+  ]
+}

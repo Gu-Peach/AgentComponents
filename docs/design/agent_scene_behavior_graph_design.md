@@ -1,4 +1,4 @@
-# SceneBehaviorGraph Agent 技术与学术方案
+﻿# SceneBehaviorGraph Agent 技术与学术方案
 
 > 版本：v0.2
 > 日期：2026-08-26
@@ -179,12 +179,14 @@ Step 1: 事实索引
 
 Step 2: 能力索引
   从 DeviceSpec 建立 behavior_index、signal_port_index、resource_index、capacity_index。
+  对 conveyor 额外建立 stop_point_model_index，用于判断是否能基于 entry/exit 生成停留点。
 
 Step 3: 模块分解
   将用户目标拆成业务模块，标注顺序、并行、持续运行、前置触发和完成条件。
 
 Step 4: 事件状态建模
   为模块间协作设计事件、信号、状态变量、payload 和路由。
+  包含 conveyor 时必须建模 conveyor_stop_points、conveyor_occupancy、conveyor_queues、conveyor_loads。
 
 Step 5: 策略与规则合成
   使用策略模板生成 behavior_rules、state_transition_rules、policies 和 failure_observations。
@@ -194,9 +196,9 @@ Step 5: 策略与规则合成
 
 | 模块 | 运行方式 | 关键事件 | 关键状态 | 关键策略 |
 |---|---|---|---|---|
-| `pallet_transport` | 一次性顺序模块 | `runtime.sim_start`、`main_conveyor_1.pallet_ready` | `device_states.main_conveyor_1`、`material_locations.pallet_1` | 传送带资源锁。 |
+| `pallet_transport` | 停留点感知顺序模块 | `runtime.sim_start`、`main_conveyor_1.pallet_ready` | `device_states.main_conveyor_1`、`material_locations.pallet_1`、`conveyor_occupancy` | 停留点队列与传送带资源锁。 |
 | `parallel_robot_sorting` | 并行持续模块 | `robot.pick_request`、`global.workpiece_claimed`、`robot.pick_done` | `workpiece_pool`、`material_claims`、`device_states.robot_*` | 谁空闲谁 claim。 |
-| `output_conveying` | 并行持续模块 | `output_conveyor.blocked`、`output_conveyor.capacity_available` | `conveyor_loads`、`device_states.output_conveyor_*` | backpressure。 |
+| `output_conveying` | 停留点感知持续模块 | `conveyor.stop_point_occupied`、`conveyor.stop_point_released`、`conveyor.blocked`、`conveyor.capacity_available` | `conveyor_stop_points`、`conveyor_occupancy`、`conveyor_queues`、`conveyor_loads` | queue_wait、capacity_threshold、backpressure。 |
 
 ---
 
@@ -313,7 +315,7 @@ ActionExecutor / EffectApplier emit event
 |---|---|
 | 状态变量 | `conveyor_loads.{conveyor_id}.current_load / max_capacity / resume_threshold / blocked`。 |
 | 策略函数 | `capacity_backpressure`。 |
-| 事件反馈 | 超阈值发 `output_conveyor.blocked`，低于恢复阈值发 `capacity_available`。 |
+| 事件反馈 | 超阈值或无可用停留点发 `conveyor.blocked`，低于恢复阈值且停留点释放后发 `conveyor.capacity_available`。 |
 | 行为影响 | blocked 后暂停对应机械臂后续抓取，available 后恢复。 |
 
 ### 8.3 资源互斥
@@ -511,9 +513,9 @@ runtime.sim_start
   -> robot.pick_request
   -> global.workpiece_claimed
   -> robot.pick_done
-  -> output_conveyor.blocked
+  -> conveyor.blocked
   -> robot.pause_pick
-  -> output_conveyor.capacity_available
+  -> conveyor.capacity_available
   -> robot.resume_pick
   -> global.sorting_done
 ```

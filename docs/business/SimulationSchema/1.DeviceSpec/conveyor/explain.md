@@ -2,11 +2,17 @@
 
 本文用于解释 `conveyor/template.json` 中每个板块和字段的含义，作为后续编写传送带类 `DeviceSpec` 的填写说明。
 
-# 遗留问题
+## 当前结论：传送带需要停留点模型
 
-传送带在阻塞时会释放blocked信号，入口处会接收release_waiting_material信号,实际上传送带在运行时物料会每隔一定时间从入口运输，传送带堵塞的原因其实是由下游状态正在运行导致，如果下游正在运行，物料会被运输到传送带的终点，等待下游结束，前面的物料会在下游运行时持续在传送带上传递，所以其实可能有两种原因造成传送带阻塞：1.当前传送带上的所有物料重量马上达到传送带的承载能力；2.物料数量超过当前传送带长度。原因2过于复杂本期暂不考虑作为遗留问题，所以当前物料可以全部运输到终点再等待。
+所有传送带都应支持“停留点 / 占位点”建模。停留点不是新的设备，而是传送带本体能力的一部分：`DeviceSpec` 定义停留点如何由 `entry` 和 `exit` 坐标生成，`SceneDocument` 通过实例参数决定本场景使用几个停留点，`SceneBehaviorGraph` 定义停留点如何参与队列、阻塞、释放和行为触发，`RuntimeSnapshot` 保存当前每个停留点的占用状态。
 
-那么基于以上考虑，blocked信号发送的时机是不是也要考虑一下，并且谁来接收这个信号？一定是下游告诉传送带正在运行中，这时候传送带exit处才会发出blocked信号，那么在发出blocked前是否需要有一个判断，判断当前承载量，然后上游设备是不是要接收传送带这边的block信号？然后entry处会接收release_waiting_material信号，谁来发送这个信号？这一点是不是应该在场景级schema中考虑，暂存这个问题
+第一阶段采用线性插值：
+
+```text
+point(t) = entry + t * (exit - entry)
+```
+
+其中 `t` 从 `0` 到 `1`，`0` 表示入口停留点，`1` 表示出口停留点。后续如果需要弯曲传送带，可以扩展为 `polyline_interpolation`。
 
 ## 1. 模板定位
 
@@ -97,6 +103,14 @@
   "capacity": {
     "type": "integer",
     "default": "容量_required"
+  },
+  "resume_threshold": {
+    "type": "integer",
+    "default": "恢复阈值_required"
+  },
+  "stop_point_count": {
+    "type": "integer",
+    "default": "停留点数量_required"
   }
 }
 ```
@@ -111,6 +125,8 @@
 | `capacity`          | 传送带最大承载数量，用于判断是否可接收新物料、是否进入等待或阻塞。 |
 | `capacity.type`     | 参数类型；`integer` 表示整数。                                     |
 | `capacity.default`  | 默认容量，创建具体设备规范时必须给出。                             |
+| `resume_threshold` | blocked 后恢复接收的负载阈值。 |
+| `stop_point_count` | 默认停留点数量；场景实例可通过 `param_overrides.stop_point_count` 覆盖。 |
 
 ## 7. 物理接口 `physical_interfaces`
 
@@ -202,6 +218,21 @@
     "value_type": "boolean"
   },
   {
+    "port_id": "capacity_available",
+    "direction": "output",
+    "value_type": "event"
+  },
+  {
+    "port_id": "stop_point_occupied",
+    "direction": "output",
+    "value_type": "event"
+  },
+  {
+    "port_id": "stop_point_released",
+    "direction": "output",
+    "value_type": "event"
+  },
+  {
     "port_id": "done",
     "direction": "output",
     "value_type": "event"
@@ -226,6 +257,9 @@
 | -------------------------- | -------- | --------- | -------------------------------------------------------------- |
 | `part_ready`               | `output` | `event`   | 物料到达 `exit` 后发出的到料事件，用于通知下游设备接收或抓取。 |
 | `blocked`                  | `output` | `boolean` | 传送带进入阻塞状态时输出的状态信号。                           |
+| `capacity_available`       | `output` | `event`   | 停留点释放且负载低于恢复阈值后发出的恢复接收事件。             |
+| `stop_point_occupied`      | `output` | `event`   | 某个停留点被物料或载具占用时发出的事件。                       |
+| `stop_point_released`      | `output` | `event`   | 某个停留点被释放时发出的事件。                                 |
 | `done`                     | `output` | `event`   | 单次输送行为完成时发出的事件。                                 |
 | `release_waiting_material` | `input`  | `event`   | 下游设备释放等待条件时输入的事件，用于推进或释放等待物料。     |
 
@@ -263,15 +297,24 @@
   {
     "behavior_id": "accept_material",
     "behavior_type": "material_transfer",
-    "input_physical_interface": "entry"
+    "input_physical_interface": "entry",
+    "output_signals": ["stop_point_occupied"]
+  },
+  {
+    "behavior_id": "advance_to_next_stop_point",
+    "behavior_type": "stop_point_buffered_transport",
+    "input_physical_interface": "entry",
+    "output_physical_interface": "exit",
+    "default_algorithm": "linear_stop_point_motion",
+    "output_signals": ["stop_point_occupied", "stop_point_released"]
   },
   {
     "behavior_id": "transport_to_exit",
-    "behavior_type": "continuous_transport",
+    "behavior_type": "stop_point_buffered_transport",
     "input_physical_interface": "entry",
     "output_physical_interface": "exit",
-    "default_algorithm": "linear_conveyor_motion",
-    "output_signals": ["part_ready", "done"]
+    "default_algorithm": "linear_stop_point_motion",
+    "output_signals": ["part_ready", "done", "stop_point_released"]
   },
   {
     "behavior_id": "release_material",
@@ -290,14 +333,15 @@
 | `behavior_type`             | 行为类型，用于运行时选择执行逻辑。                          |
 | `input_physical_interface`  | 行为读取物料的输入物理接口。                                |
 | `output_physical_interface` | 行为输出物料的物理接口。                                    |
-| `default_algorithm`         | 默认执行算法名称。传送带输送使用 `linear_conveyor_motion`。 |
+| `default_algorithm`         | 默认执行算法名称。传送带停留点输送使用 `linear_stop_point_motion`。 |
 | `input_signals`             | 触发该行为所需的输入信号。                                  |
 | `output_signals`            | 行为完成或到达关键状态时输出的信号。                        |
 
 | 行为                | 含义                                                                    |
 | ------------------- | ----------------------------------------------------------------------- |
 | `accept_material`   | 从 `entry` 接收物料，将物料纳入传送带当前承载集合。                     |
-| `transport_to_exit` | 将物料从 `entry` 连续输送到 `exit`，到达后输出 `part_ready` 和 `done`。 |
+| `advance_to_next_stop_point` | 将物料从当前停留点推进到下一个可用停留点。 |
+| `transport_to_exit` | 按停留点感知输送模型将物料推进到出口停留点，到达后输出 `part_ready` 和 `done`。 |
 | `release_material`  | 在收到 `release_waiting_material` 后，从 `exit` 向下游释放物料。        |
 
 ## 12. 运行契约 `runtime_contract`
@@ -312,9 +356,10 @@
       "exclusive": false
     }
   ],
-  "capacity": {
-    "max_active_materials": "容量_required",
-    "queue_id": "exit_queue"
+    "capacity": {
+      "max_active_materials": "容量_required",
+      "queue_id": "stop_point_queue",
+      "resume_threshold": "恢复阈值_required"
   },
   "error_policy": {
     "on_downstream_timeout": "emit_observation"
@@ -355,7 +400,8 @@
 | ---------------------- | ------------------------------------------------------------ |
 | `capacity`             | 传送带运行时容量约束。                                       |
 | `max_active_materials` | 同一时间可承载或处理的最大物料数量。                         |
-| `queue_id`             | 等待队列 ID。传送带模板中为 `exit_queue`，表示出口等待队列。 |
+| `queue_id`             | 等待队列 ID。传送带模板中为 `stop_point_queue`，表示停留点等待队列。 |
+| `resume_threshold`     | 从 blocked 恢复接收的负载阈值。 |
 
 ### 12.4 异常策略 `error_policy`
 
@@ -379,8 +425,18 @@
     "axis": [1, 0, 0],
     "speed_param": "speed_mps"
   },
+  "stop_point_model": {
+    "type": "linear_interpolation",
+    "start_interface": "entry",
+    "end_interface": "exit",
+    "default_stop_point_count": "停留点数量_required",
+    "include_entry": true,
+    "include_exit": true,
+    "coordinate_formula": "entry + t * (exit - entry)",
+    "spacing_policy": "evenly_spaced"
+  },
   "queue_policy": {
-    "when_downstream_busy": "wait_at_exit",
+    "when_downstream_busy": "wait_at_nearest_upstream_stop_point",
     "release_on_signal": "release_waiting_material"
   }
 }
@@ -413,8 +469,24 @@
 | 字段                   | 含义                                                              |
 | ---------------------- | ----------------------------------------------------------------- |
 | `queue_policy`         | 下游不可接收时的等待和释放策略。                                  |
-| `when_downstream_busy` | 下游忙碌时的处理方式。`wait_at_exit` 表示物料在出口等待。         |
+| `when_downstream_busy` | 下游忙碌时的处理方式。`wait_at_nearest_upstream_stop_point` 表示物料停在最靠近下游的上游可用停留点。 |
 | `release_on_signal`    | 释放等待物料所需的输入信号。这里使用 `release_waiting_material`。 |
+
+### 13.4 停留点模型 `stop_point_model`
+
+| 字段 | 含义 |
+| --- | --- |
+| `stop_point_model` | 传送带停留点生成规则。 |
+| `type` | 生成方式，第一阶段为 `linear_interpolation`。 |
+| `start_interface` | 起点物理接口，通常为 `entry`。 |
+| `end_interface` | 终点物理接口，通常为 `exit`。 |
+| `default_stop_point_count` | 默认停留点数量，场景实例可覆盖。 |
+| `include_entry` | 是否把入口作为第一个停留点。 |
+| `include_exit` | 是否把出口作为最后一个停留点。 |
+| `coordinate_formula` | 坐标公式，第一阶段为 `entry + t * (exit - entry)`。 |
+| `spacing_policy` | 点位间距策略，第一阶段默认 `evenly_spaced`。 |
+
+`stop_point_model` 只定义点位如何生成，不保存当前占用。当前占用应写入 `RuntimeSnapshot.conveyor_occupancy`。
 
 ## 14. 字段协作关系
 
@@ -427,6 +499,7 @@ physical_interfaces  定义物料实际进出位置
 transport_behaviors  定义设备能执行哪些输送行为
 runtime_contract     定义运行状态、资源占用、容量和异常策略
 type_specific_contract.motion_model 定义物料如何运动
+type_specific_contract.stop_point_model 定义停留点如何生成
 signal_ports         定义到料、阻塞、完成、释放等实时通信信号
 ```
 
@@ -435,9 +508,10 @@ signal_ports         定义到料、阻塞、完成、释放等实时通信信�
 ```text
 1. 上游设备把物料交付到 conveyor.entry。
 2. Runtime 检查 capacity 和 resources，判断是否允许执行 accept_material。
-3. 传送带执行 transport_to_exit。
-4. Runtime 根据 motion_model 计算物料从 entry 到 exit 的运动。
-5. 物料到达 exit 后，传送带输出 part_ready 和 done。
-6. 如果下游忙碌，物料依据 queue_policy 在 exit 等待。
-7. 收到 release_waiting_material 后，传送带执行 release_material 并向下游交付物料。
+3. Runtime 根据 stop_point_model 生成或读取该传送带停留点。
+4. 传送带执行 accept_material，将物料放入入口侧可用停留点。
+5. Runtime 根据 motion_model 和 stop_point_model 执行 advance_to_next_stop_point。
+6. 如果前方停留点或下游忙碌，物料依据 queue_policy 停在最近的上游停留点。
+7. 物料到达出口停留点后，传送带输出 part_ready 和 done。
+8. 收到 release_waiting_material 或下游可接收后，传送带执行 release_material 并向下游交付物料。
 ```

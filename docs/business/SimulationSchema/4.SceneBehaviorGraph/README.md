@@ -45,6 +45,64 @@ Agent 节点、工具、上下文管理、Runtime 调度和存储方案见 `../.
 
 ---
 
+## 传送带停留点建模
+
+所有包含 `conveyor` 的场景都应显式考虑停留点 / 占位点。停留点不是新的设备，而是传送带设备本体能力在当前场景中的运行表达：
+
+```text
+DeviceSpec.conveyor.stop_point_model
+  定义停留点如何由 entry/exit 坐标生成。
+
+SceneDocument.instances[].param_overrides.stop_point_count
+  定义某条传送带在当前场景中生成几个停留点。
+
+SceneBehaviorGraph.state_model
+  定义本次仿真需要维护哪些停留点、占用、队列和容量状态。
+
+RuntimeSnapshot
+  保存当前每个停留点被哪个物料占用。
+```
+
+### 必备状态变量
+
+| 状态变量 | 含义 |
+|---|---|
+| `conveyor_stop_points` | 每条传送带的停留点定义，点位由 Runtime 根据 entry/exit 插值得到。 |
+| `conveyor_occupancy` | 每个停留点当前是否被物料或载具占用。 |
+| `conveyor_queues` | 当前无法前进或无法释放的等待物料队列。 |
+| `conveyor_loads` | 每条传送带当前负载、容量、恢复阈值和 blocked 状态。 |
+
+### 推荐事件
+
+| 事件 | 含义 |
+|---|---|
+| `conveyor.stop_point_occupied` | 某个物料进入或移动到某个停留点。 |
+| `conveyor.stop_point_released` | 某个物料离开某个停留点。 |
+| `conveyor.blocked` | 传送带无可用停留点、达到容量上限或下游不可接收。 |
+| `conveyor.capacity_available` | 停留点释放且负载低于恢复阈值，可以恢复接收。 |
+
+### 推荐行为规则
+
+| 规则 | 含义 |
+|---|---|
+| `accept_material_to_first_available_stop_point` | 新物料进入传送带时放入入口侧可用停留点。 |
+| `advance_material_to_next_stop_point` | 前方停留点可用时，物料向出口方向推进。 |
+| `wait_when_next_stop_point_occupied` | 前方停留点或下游不可用时，物料在当前停留点等待。 |
+| `release_material_when_downstream_available` | 出口停留点有物料且下游可接收时释放物料。 |
+| `emit_blocked_when_no_stop_point_available` | 无可用停留点或容量满时发 blocked。 |
+| `emit_capacity_available_when_stop_point_released` | 停留点释放并低于恢复阈值时发 capacity_available。 |
+
+### 推荐策略
+
+| 策略类型 | 含义 |
+|---|---|
+| `nearest_available_stop_point` | 从入口或当前位置向出口方向选择最近可用停留点。 |
+| `queue_wait` | 当前不可前进但非异常时进入等待队列。 |
+| `capacity_threshold` | 根据 current_load、max_capacity、resume_threshold 控制 blocked 与恢复。 |
+| `downstream_release` | 判断出口物料何时可以交给下游设备或消失节点。 |
+
+---
+
 ## `behavior_rules` 规则结构
 
 `behavior_rules` 是 Scheduler 直接解释的规则集合。每条规则必须显式区分四层：
@@ -169,6 +227,8 @@ behavior_rules[].policy
 | `shared_pool_claim` | 多设备从共享工件池原子领取任务，避免重复 claim。 |
 | `load_balancing` | 在多个候选目标中选择未 blocked 且负载更低的目标。 |
 | `capacity_threshold` | 基于容量阈值实现 backpressure。 |
+| `nearest_available_stop_point` | 为传送带选择入口侧或出口方向最近可用停留点。 |
+| `downstream_release` | 判断出口停留点是否可以向下游释放物料。 |
 | `resource_lock` | 行为启动前申请设备或物料互斥资源。 |
 | `queue_wait` | 当前不可执行但非异常时进入等待队列。 |
 | `deadlock_detection` | 无可执行规则且任务未完成时产生异常观测。 |

@@ -31,6 +31,15 @@
     "capacity": {
       "type": "integer",
       "default": "容量_required"
+    },
+    "resume_threshold": {
+      "type": "integer",
+      "default": "恢复阈值_required"
+    },
+    "stop_point_count": {
+      "type": "integer",
+      "default": "停留点数量_required",
+      "description": "Runtime 根据 entry/exit 坐标插值得到停留点。"
     }
   },
   "physical_interfaces": [
@@ -77,6 +86,21 @@
       "value_type": "boolean"
     },
     {
+      "port_id": "capacity_available",
+      "direction": "output",
+      "value_type": "event"
+    },
+    {
+      "port_id": "stop_point_occupied",
+      "direction": "output",
+      "value_type": "event"
+    },
+    {
+      "port_id": "stop_point_released",
+      "direction": "output",
+      "value_type": "event"
+    },
+    {
       "port_id": "done",
       "direction": "output",
       "value_type": "event"
@@ -101,15 +125,24 @@
     {
       "behavior_id": "accept_material",
       "behavior_type": "material_transfer",
-      "input_physical_interface": "entry"
+      "input_physical_interface": "entry",
+      "output_signals": ["stop_point_occupied"]
+    },
+    {
+      "behavior_id": "advance_to_next_stop_point",
+      "behavior_type": "stop_point_buffered_transport",
+      "input_physical_interface": "entry",
+      "output_physical_interface": "exit",
+      "default_algorithm": "linear_stop_point_motion",
+      "output_signals": ["stop_point_occupied", "stop_point_released"]
     },
     {
       "behavior_id": "transport_to_exit",
-      "behavior_type": "continuous_transport",
+      "behavior_type": "stop_point_buffered_transport",
       "input_physical_interface": "entry",
       "output_physical_interface": "exit",
-      "default_algorithm": "linear_conveyor_motion",
-      "output_signals": ["part_ready", "done"]
+      "default_algorithm": "linear_stop_point_motion",
+      "output_signals": ["part_ready", "done", "stop_point_released"]
     },
     {
       "behavior_id": "release_material",
@@ -129,7 +162,8 @@
     ],
     "capacity": {
       "max_active_materials": "容量_required",
-      "queue_id": "exit_queue"
+      "queue_id": "stop_point_queue",
+      "resume_threshold": "恢复阈值_required"
     },
     "error_policy": {
       "on_downstream_timeout": "emit_observation"
@@ -146,8 +180,18 @@
       "axis": [1, 0, 0],
       "speed_param": "speed_mps"
     },
+    "stop_point_model": {
+      "type": "linear_interpolation",
+      "start_interface": "entry",
+      "end_interface": "exit",
+      "default_stop_point_count": "停留点数量_required",
+      "include_entry": true,
+      "include_exit": true,
+      "coordinate_formula": "entry + t * (exit - entry)",
+      "spacing_policy": "evenly_spaced"
+    },
     "queue_policy": {
-      "when_downstream_busy": "wait_at_exit",
+      "when_downstream_busy": "wait_at_nearest_upstream_stop_point",
       "release_on_signal": "release_waiting_material"
     }
   }

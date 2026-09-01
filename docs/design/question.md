@@ -46,7 +46,6 @@ SceneBehaviorGraph.event_bus
 SignalBusRuntime
   在 Runtime 中真正执行 publish / route / deliver。
 ```
-
 因此二者关系是：
 
 | 层级 | 归属 | 作用 |
@@ -554,7 +553,7 @@ PolicyLibrary.backpressure 判断 current_load 是否超过 max_capacity
 如果超载：
 
 ```text
-emit output_conveyor.blocked
+emit conveyor.blocked
 SignalBusRuntime 投递 blocked
 Scheduler 命中 blocked_conveyor_pauses_robot
 emit robot.pause_pick
@@ -564,7 +563,7 @@ emit robot.pause_pick
 如果负载下降：
 
 ```text
-emit output_conveyor.capacity_available
+emit conveyor.capacity_available
 Scheduler 命中 capacity_available_resumes_robot
 emit robot.resume_pick
 robot 重新进入 claim 物料流程

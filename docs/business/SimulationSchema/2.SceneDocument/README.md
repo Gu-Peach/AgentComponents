@@ -6,6 +6,7 @@
 
 - 保存场景实例、位姿、参数覆盖和物料实例。
 - 保存 `process_edges`、`physical_edges`、`signal_edges` 三类场景关系。
+- 为传送带实例设置 `stop_point_count`、`capacity`、`resume_threshold` 等场景级参数覆盖。
 - 作为 `SceneBehaviorGraph` 的场景事实输入。
 
 ## 输入与输出
@@ -56,7 +57,8 @@
 | `position` | 实例位置 `[x, y, z]`。 |
 | `rotation_euler` | 实例欧拉角旋转。 |
 | `scale` | 实例缩放。 |
-| `params` | 对设备本体默认参数的场景级覆盖。 |
+| `param_overrides` | 对设备本体默认参数的场景级覆盖，推荐新字段。 |
+| `params` | `param_overrides` 的旧别名，兼容早期示例。 |
 | `material_id` | 物料实例 ID。 |
 | `located_at` | 物料当前初始位置，如设备接口、载具槽位。 |
 | `edge_id` | 场景边 ID。 |
@@ -73,3 +75,12 @@
 | `edge_contract` | 三类场景边的职责说明。 |
 | `deadlock_detection` | 是否启用死锁检测。 |
 | `default_signal_timeout_s` | 默认信号等待超时时间，单位秒。 |
+
+### 传送带实例参数覆盖
+
+| Key | 含义 |
+|---|---|
+| `param_overrides.stop_point_count` | 当前传送带实例生成多少个停留点。Runtime 根据 entry/exit 坐标线性插值。 |
+| `param_overrides.stop_point_spacing_policy` | 停留点分布方式，第一阶段默认 `evenly_spaced`。 |
+| `param_overrides.capacity` | 当前传送带实例可同时承载的物料或载具数量。 |
+| `param_overrides.resume_threshold` | blocked 后恢复接收的负载阈值。 |

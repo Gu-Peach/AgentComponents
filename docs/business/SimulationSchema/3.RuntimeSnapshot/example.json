@@ -3,7 +3,7 @@
   "schema_type": "RuntimeSnapshot",
   "version": "0.1.0",
   "name": "Figure 1 RuntimeSnapshot Example",
-  "description": "机械臂等待传送带物料到达时的运行时状态示例。",
+  "description": "机械臂等待传送带物料到达时的运行时状态示例，包含传送带停留点占用。",
   "source": {
     "kind": "runtime_example",
     "run_id": "run_figure_1_001"
@@ -13,7 +13,8 @@
     "../4.SceneBehaviorGraph/example.json"
   ],
   "notes": [
-    "该状态适合 Redis 存储，关键事件摘要另行落 Postgres。"
+    "该状态适合 Redis 存储，关键事件摘要另行落 Postgres。",
+    "停留点坐标由 Runtime 根据 conveyor DeviceSpec.stop_point_model 派生；这里保存当前占用事实。"
   ],
   "run_id": "run_figure_1_001",
   "clock": 12.5,
@@ -27,10 +28,35 @@
     "robot_1": "idle"
   },
   "material_locations": {
-    "part_001": "conveyor_1.exit"
+    "part_001": "conveyor_1.sp_04"
+  },
+  "conveyor_stop_points": {
+    "conveyor_1": {
+      "generation": "linear_interpolation",
+      "points": [
+        { "point_id": "conveyor_1.sp_01", "index": 0, "t": 0, "role": "entry" },
+        { "point_id": "conveyor_1.sp_02", "index": 1, "t": 0.3333, "role": "middle" },
+        { "point_id": "conveyor_1.sp_03", "index": 2, "t": 0.6667, "role": "middle" },
+        { "point_id": "conveyor_1.sp_04", "index": 3, "t": 1, "role": "exit" }
+      ]
+    }
+  },
+  "conveyor_occupancy": {
+    "conveyor_1": {
+      "conveyor_1.sp_01": null,
+      "conveyor_1.sp_02": null,
+      "conveyor_1.sp_03": null,
+      "conveyor_1.sp_04": "part_001"
+    }
+  },
+  "conveyor_queues": {
+    "conveyor_1": { "queue_id": "conveyor_1.stop_point_queue", "waiting_materials": [] }
+  },
+  "conveyor_loads": {
+    "conveyor_1": { "current_load": 1, "max_capacity": 3, "resume_threshold": 2, "blocked": false }
   },
   "wait_queues": {
-    "conveyor_1.exit_queue": []
+    "conveyor_1.stop_point_queue": []
   },
   "resource_locks": {
     "robot_1.gripper": null

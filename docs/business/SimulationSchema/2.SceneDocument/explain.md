@@ -77,7 +77,21 @@ SceneBehaviorGraph  基于 SceneDocument 和 DeviceSpec 生成场景行为图
 | `transform.position` | 位置 `[x, y, z]`。 |
 | `transform.rotation_euler` | 欧拉角旋转 `[x, y, z]`。 |
 | `transform.scale` | 缩放 `[x, y, z]`。 |
-| `params` | 对设备本体默认参数的场景级覆盖。 |
+| `param_overrides` | 对设备本体默认参数的场景级覆盖，推荐新字段。 |
+| `params` | `param_overrides` 的旧别名，用于兼容早期示例。 |
+
+### 6.1 传送带参数覆盖
+
+传送带的停留点生成方式属于 `DeviceSpec.conveyor.type_specific_contract.stop_point_model`，但每条传送带在具体场景中需要几个停留点、容量是多少，应由 `SceneDocument.instances[].param_overrides` 指定。
+
+| 字段 | 含义 |
+| --- | --- |
+| `stop_point_count` | 该传送带实例的停留点数量。Runtime 根据 entry/exit 坐标按数量插值生成点位。 |
+| `stop_point_spacing_policy` | 停留点分布策略，第一阶段默认 `evenly_spaced`。 |
+| `capacity` | 该传送带实例可同时承载的物料或载具数量。 |
+| `resume_threshold` | blocked 后恢复接收的阈值。 |
+
+这层只保存场景事实，不保存当前哪个停留点被占用。停留点占用属于 `RuntimeSnapshot.conveyor_occupancy`。
 
 ## 7. 物料实例 `materials`
 

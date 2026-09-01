@@ -17,6 +17,17 @@ class PolicyLibrary:
                 "lock_scope": "instance_resource",
                 "on_conflict": "wait",
             },
+            "queue_wait": {
+                "type": "queue_wait",
+                "queue_scope": "conveyor_stop_points",
+                "wait_when": "next_stop_point_occupied or downstream_unavailable",
+                "resume_when": "stop_point_released or downstream_available",
+            },
+            "nearest_available_stop_point": {
+                "type": "nearest_available_stop_point",
+                "search_direction": "towards_exit",
+                "fallback": "wait_at_nearest_upstream_stop_point",
+            },
             "deadlock_detection": {
                 "type": "deadlock_detection",
                 "condition": "no_enabled_behavior and completion_conditions_not_met",
@@ -37,11 +48,27 @@ class PolicyLibrary:
                 "mutual_exclusion": True,
                 "claim_order": "deterministic_by_material_id",
             }
-        if "conveyor" in device_types and conveyor_count > 1:
+        if "conveyor" in device_types:
+            policies["conveyor_queue_wait"] = {
+                "type": "queue_wait",
+                "queue_scope": "conveyor_stop_points",
+                "wait_when": "next_stop_point_occupied or downstream_unavailable",
+                "resume_when": "stop_point_released or downstream_available",
+            }
+            policies["conveyor_stop_point_selection"] = {
+                "type": "nearest_available_stop_point",
+                "search_direction": "towards_exit",
+                "fallback": "wait_at_nearest_upstream_stop_point",
+            }
             policies["backpressure"] = {
                 "type": "capacity_threshold",
                 "blocked_when": "current_load >= max_capacity",
                 "resume_when": "current_load <= resume_threshold",
                 "pause_strategy": "pause_before_next_pick",
+            }
+            policies["downstream_release"] = {
+                "type": "downstream_release",
+                "release_when": "downstream_entry_available and exit_stop_point_occupied",
+                "on_blocked": "queue_wait",
             }
         return policies

@@ -29,6 +29,7 @@
     {
       "module_id": "module_id",
       "mode": "one_shot | sequential | parallel_continuous | continuous",
+      "transport_model": "optional: stop_point_buffered_transport",
       "devices": [],
       "start_event": "event_id",
       "complete_event": "event_id",
@@ -85,6 +86,39 @@
     "signal_values": {},
     "resource_locks": {},
     "active_actions": {},
+    "conveyor_stop_points": {
+      "conveyor_id": {
+        "generation": "linear_interpolation",
+        "points": [
+          {
+            "point_id": "conveyor_id.sp_01",
+            "index": 0,
+            "t": 0,
+            "role": "entry | middle | exit",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          }
+        ]
+      }
+    },
+    "conveyor_occupancy": {
+      "conveyor_id": {
+        "conveyor_id.sp_01": null
+      }
+    },
+    "conveyor_queues": {
+      "conveyor_id": {
+        "queue_id": "conveyor_id.stop_point_queue",
+        "waiting_materials": []
+      }
+    },
+    "conveyor_loads": {
+      "conveyor_id": {
+        "current_load": 0,
+        "max_capacity": "capacity_from_scene_or_device_spec",
+        "resume_threshold": "resume_threshold_from_scene_or_device_spec",
+        "blocked": false
+      }
+    },
     "domain_state_variables": {}
   },
   "behavior_rules": [
@@ -131,8 +165,8 @@
   ],
   "policies": {
     "policy_id": {
-      "type": "deterministic_priority | shared_pool_claim | load_balancing | capacity_threshold | resource_lock | queue_wait | deadlock_detection | timeout_retry",
-      "params": {}
+        "type": "deterministic_priority | shared_pool_claim | load_balancing | capacity_threshold | nearest_available_stop_point | downstream_release | resource_lock | queue_wait | deadlock_detection | timeout_retry",
+        "params": {}
     }
   },
   "completion_conditions": [],

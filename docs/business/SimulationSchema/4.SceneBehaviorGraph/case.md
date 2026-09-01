@@ -1,4 +1,4 @@
-# SceneBehaviorGraph Policy Cases
+﻿# SceneBehaviorGraph Policy Cases
 
 > 本文补充 `template.json` 中 `policies` 的完整案例。  
 > 范围：当前基线支持的 policy 类型为 `deterministic_priority`、`shared_pool_claim`、`load_balancing`、`capacity_threshold`、`resource_lock`、`queue_wait`、`deadlock_detection`、`timeout_retry`。
@@ -349,7 +349,7 @@ current_load <= resume_threshold 时恢复机械臂抓取。
   "module_id": "parallel_robot_sorting",
   "trigger": {
     "type": "event",
-    "event_id": "output_conveyor.blocked"
+    "event_id": "conveyor.blocked"
   },
   "guard": {
     "all": [
@@ -388,8 +388,8 @@ current_load <= resume_threshold 时恢复机械臂抓取。
     "state_path": "conveyor_loads",
     "blocked_when": "current_load >= max_capacity",
     "resume_when": "current_load <= resume_threshold",
-    "blocked_event": "output_conveyor.blocked",
-    "available_event": "output_conveyor.capacity_available",
+    "blocked_event": "conveyor.blocked",
+    "available_event": "conveyor.capacity_available",
     "target_resolver": "robots_bound_to_conveyor"
   }
 }
@@ -403,7 +403,7 @@ output_conveyor.material_arrived 到达
   -> PolicyLibrary.capacity_threshold 读取 current_load / max_capacity / resume_threshold
   -> 如果 current_load >= max_capacity
        set conveyor_loads[conveyor_id].blocked = true
-       emit output_conveyor.blocked
+       emit conveyor.blocked
   -> blocked_conveyor_pauses_robot 被 trigger 唤醒
   -> policy.target_resolver 找到绑定 robot
   -> action emit robot.pause_pick
@@ -416,7 +416,7 @@ output_conveyor.material_arrived 到达
   -> current_load 下降
   -> 如果 current_load <= resume_threshold
        set blocked = false
-       emit output_conveyor.capacity_available
+       emit conveyor.capacity_available
   -> capacity_available_resumes_robot 被 trigger 唤醒
   -> emit robot.resume_pick
 ```
@@ -427,7 +427,7 @@ output_conveyor.material_arrived 到达
 {
   "blocked": true,
   "target_robots": ["robot_1"],
-  "event_id": "output_conveyor.blocked"
+  "event_id": "conveyor.blocked"
 }
 ```
 
@@ -543,7 +543,7 @@ guard 通过
 
 ```text
 目标传送带 blocked，robot 暂不 claim 新物料；
-等待 output_conveyor.capacity_available 后恢复。
+等待 conveyor.capacity_available 后恢复。
 ```
 
 ### `behavior_rules[].policy` 示例
@@ -554,7 +554,7 @@ guard 通过
   "module_id": "parallel_robot_sorting",
   "trigger": {
     "type": "event",
-    "event_id": "output_conveyor.blocked"
+    "event_id": "conveyor.blocked"
   },
   "guard": {
     "all": [
@@ -568,7 +568,7 @@ guard 通过
     "inputs": {
       "queue_id": "wait_queues.output_capacity",
       "item": "robots_bound_to_conveyor(trigger.payload.conveyor_id)",
-      "release_event": "output_conveyor.capacity_available"
+      "release_event": "conveyor.capacity_available"
     }
   },
   "action": {
@@ -588,7 +588,7 @@ guard 通过
   "queue_wait": {
     "type": "queue_wait",
     "queue_state_path": "wait_queues",
-    "release_event": "output_conveyor.capacity_available",
+    "release_event": "conveyor.capacity_available",
     "ordering": "fifo",
     "timeout_ms": 30000,
     "on_timeout": "emit observation.queue_timeout"
@@ -615,7 +615,7 @@ blocked 事件到达
 {
   "queue_id": "wait_queues.output_capacity",
   "queued_items": ["robot_1"],
-  "release_event": "output_conveyor.capacity_available"
+  "release_event": "conveyor.capacity_available"
 }
 ```
 
@@ -708,7 +708,7 @@ Scheduler 一轮调度结束
 {
   "deadlock": true,
   "wait_chain": [
-    "robot_1 waits output_conveyor.capacity_available",
+    "robot_1 waits conveyor.capacity_available",
     "upper_out_conveyor_1 blocked and no active transport action"
   ],
   "blocked_resources": ["upper_out_conveyor_1.belt_surface"]
@@ -727,7 +727,7 @@ Scheduler 一轮调度结束
 
 ```text
 robot_1.pick_and_place 超过 30 秒未完成；
-等待 output_conveyor.capacity_available 超时；
+等待 conveyor.capacity_available 超时；
 设备 done 信号迟迟未返回。
 ```
 
@@ -827,10 +827,10 @@ main_conveyor_1.pallet_ready
 
 output_conveyor.material_arrived
   -> capacity_threshold 检查 current_load
-  -> 若超阈值，emit output_conveyor.blocked
+  -> 若超阈值，emit conveyor.blocked
   -> queue_wait 暂存受影响 robot 的后续抓取请求
 
-output_conveyor.capacity_available
+conveyor.capacity_available
   -> queue_wait 释放等待项
   -> deterministic_priority 重新排序可执行规则
   -> robot 恢复 claim / pick

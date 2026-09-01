@@ -57,11 +57,37 @@
       "shared_pool_claim",
       "load_balancing",
       "capacity_threshold",
+      "nearest_available_stop_point",
+      "downstream_release",
       "resource_lock",
       "queue_wait",
       "deadlock_detection",
       "timeout_retry"
     ]
+  },
+  "conveyor_stop_point_contract": {
+    "description": "当场景中存在 conveyor 时，SceneBehaviorGraph.state_model 必须表达传送带停留点、占用、队列和容量状态。停留点坐标由 Runtime 根据 DeviceSpec.stop_point_model 和 SceneDocument 实例参数派生。",
+    "required_state_model_fields": [
+      "conveyor_stop_points",
+      "conveyor_occupancy",
+      "conveyor_queues",
+      "conveyor_loads"
+    ],
+    "required_behavior_rules": [
+      "accept_material_to_first_available_stop_point",
+      "advance_material_to_next_stop_point",
+      "wait_when_next_stop_point_occupied",
+      "release_material_when_downstream_available",
+      "emit_blocked_when_no_stop_point_available",
+      "emit_capacity_available_when_stop_point_released"
+    ],
+    "required_policy_types": [
+      "queue_wait",
+      "capacity_threshold",
+      "nearest_available_stop_point",
+      "downstream_release"
+    ],
+    "runtime_boundary": "SceneBehaviorGraph 定义停留点如何参与规则和策略；RuntimeSnapshot 保存当前每个停留点被哪个物料占用。"
   },
   "event_bus_event_contract": {
     "description": "event_bus.events 注册本场景所有可能出现的事件和信号，供 SignalBusRuntime 校验、路由和记录。",

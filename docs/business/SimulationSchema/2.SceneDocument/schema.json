@@ -15,7 +15,8 @@
   ],
   "notes": [
     "SceneDocument 不保存当前运行时状态。",
-    "instances 通过 spec_id 引用 DeviceSpec。"
+    "instances 通过 spec_id 引用 DeviceSpec。",
+    "传送带实例可通过 param_overrides 覆盖 stop_point_count、capacity、resume_threshold 等场景级参数。"
   ],
   "required_sections": [
     "scene_id",
@@ -31,5 +32,19 @@
     "process_edges": "流程画布层面的 flow_output -> flow_input。",
     "physical_edges": "真实 physical interface 之间的连接。",
     "signal_edges": "设备 signal port 之间的通讯关系。"
+  },
+  "instance_contract": {
+    "description": "instances 描述场景中实际使用的设备实例。DeviceSpec 给出默认能力，param_overrides 给出该实例在本场景中的参数覆盖。",
+    "required_fields": ["instance_id", "spec_id", "device_type", "transform"],
+    "recommended_fields": ["display_name", "param_overrides"],
+    "legacy_aliases": {
+      "params": "param_overrides"
+    },
+    "conveyor_param_overrides": {
+      "stop_point_count": "该传送带实例生成多少个停留点。Runtime 根据 entry/exit 坐标插值。",
+      "stop_point_spacing_policy": "停留点分布策略，第一阶段默认 evenly_spaced。",
+      "capacity": "该实例可同时承载的物料或载具数量。",
+      "resume_threshold": "blocked 后恢复接收的负载阈值。"
+    }
   }
 }

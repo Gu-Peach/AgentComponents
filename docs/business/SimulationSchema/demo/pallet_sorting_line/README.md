@@ -1,7 +1,8 @@
-# 托盘分拣线 SceneBehaviorGraph Demo
+﻿# 托盘分拣线 SceneBehaviorGraph Demo
 
 > 场景来源：`docs/business/test/1.png`
-> Demo JSON：`full_chain_schema.json`
+> Demo 输入：`docs/business/SimulationSchema/2.SceneDocument/example.json`
+> 关联阅读：`full_chain_schema.json`（历史一体化快照，仅用于字段关系参考；最新图 1 benchmark 以 `docs/test/case/scene_01/` 为准）
 > 目标：用 v0.2 基线展示 `DeviceSpec + SceneDocument + 用户目标 -> SceneBehaviorGraph -> RuntimeSnapshot` 的完整行为建模链路。
 
 ---
@@ -11,13 +12,14 @@
 该 demo 对应图片中的简化分拣工位：
 
 ```text
-托盘 pallet_1 上有多个物料；
-主传送带 main_conveyor_1 将托盘送到中央分拣位；
+托盘 pallet_1 上有 12 个物料；
+两段主传送带 main_conveyor_1 -> main_conveyor_2 将托盘送到中央分拣位；
+所有传送带都基于 entry / exit 线性插值生成停留点，并通过停留点占用逐步推进；
 robot_1 和 robot_2 不按固定编号分配物料，而是从共享工件池动态 claim；
 两个机械臂持续抓取物料并放到两条出料传送带；
-出料传送带持续运行，负载过高时通过 backpressure 暂停机械臂继续抓取；
+出料传送带持续运行，停留点无空位或负载过高时通过 backpressure 暂停机械臂继续抓取；
 负载降低后恢复机械臂；
-所有物料处理完且传送带清空后，场景结束。
+所有物料处理完、所有传送带停留点清空且无 active action 后，场景结束。
 ```
 
 当前阶段只处理**显式连接**，不做隐式空间连接推断。
@@ -60,7 +62,7 @@ SignalBusRuntime 是 Runtime 内部模块，执行 event_bus 路由，不是独�
 
 ## 3. Demo 文件结构
 
-`full_chain_schema.json` 将以下内容放在同一个文件中，方便阅读：
+`full_chain_schema.json` 将以下内容放在同一个文件中，方便阅读。它是早期一体化快照，不作为最新图 1 benchmark 的事实来源；最新验证使用 `docs/business/SimulationSchema/2.SceneDocument/example.json` 和 `docs/test/case/scene_01/scene_behavior_graph.golden.json`。
 
 ```text
 device_specs
@@ -114,6 +116,7 @@ device_specs.workpiece_1
 
 ```text
 main_conveyor_1.spec_id = conveyor_1
+main_conveyor_2.spec_id = conveyor_1
 robot_1.spec_id = robot_arm_1
 pallet_1.spec_id = carrier_tray_1
 part_001.spec_id = workpiece_1
@@ -129,7 +132,7 @@ part_001.spec_id = workpiece_1
 
 ```text
 pallet_transport
-  一次性模块：主传送带把托盘送到分拣位。
+  停留点感知顺序模块：main_conveyor_1 把托盘送到 main_conveyor_2，main_conveyor_2 再送到分拣位。
 
 parallel_robot_sorting
   并行持续模块：两个机械臂从共享工件池 claim 物料并抓取。
@@ -144,12 +147,15 @@ output_conveying
 
 ```text
 runtime.sim_start
+conveyor.stop_point_occupied
+conveyor.stop_point_released
 main_conveyor_1.pallet_ready
+main_conveyor_2.pallet_ready
 robot.pick_request
 global.workpiece_claimed
 robot.pick_done
-output_conveyor.blocked
-output_conveyor.capacity_available
+conveyor.blocked
+conveyor.capacity_available
 robot.pause_pick
 robot.resume_pick
 global.sorting_done
@@ -165,6 +171,9 @@ global.sorting_done
 workpiece_pool
 material_claims
 conveyor_loads
+conveyor_stop_points
+conveyor_occupancy
+conveyor_queues
 device_states
 signal_values
 resource_locks
@@ -185,8 +194,14 @@ target_conveyor_selection
   选择未 blocked 且负载更低的目标传送带。
 
 backpressure
-  当出料传送带 current_load >= max_capacity，发 blocked；
-  当 current_load <= resume_threshold，发 capacity_available。
+  当出料传送带 current_load >= max_capacity 或无可用停留点，发 blocked；
+  当 current_load <= resume_threshold 且停留点释放，发 capacity_available。
+
+conveyor_stop_point_selection
+  选择入口侧或出口方向最近可用停留点。
+
+queue_wait / downstream_release
+  前方停留点或下游不可接收时等待，下游释放后继续推进或出料。
 ```
 
 ---
@@ -206,32 +221,40 @@ backpressure
    -> emit main_conveyor_1.pallet_ready
 
 4. main_conveyor_1.pallet_ready
+   -> route to rule:transfer_pallet_main_conveyor_1_to_main_conveyor_2
+   -> action start main_conveyor_2.transport_to_exit
+
+5. main_conveyor_2.transport_to_exit complete
+   -> pallet_1 到达 main_conveyor_2.exit
+   -> emit main_conveyor_2.pallet_ready
+
+6. main_conveyor_2.pallet_ready
    -> route to topic:robot_pick_request
    -> Scheduler 唤醒分拣相关 behavior_rules
 
-5. robot_1 / robot_2 idle
+7. robot_1 / robot_2 idle
    -> emit robot.pick_request
 
-6. claim_workpiece policy
+8. claim_workpiece policy
    -> 从 workpiece_pool 原子 claim 一个物料
    -> emit global.workpiece_claimed
 
-7. global.workpiece_claimed
+9. global.workpiece_claimed
    -> 对应 robot start pick_and_place
 
-8. robot.pick_done
+10. robot.pick_done
    -> output_conveyor.material_arrived
-   -> conveyor_loads.current_load 增加
+   -> 目标出料传送带选择可用 stop point，conveyor_loads.current_load 增加
 
-9. current_load >= max_capacity
-   -> emit output_conveyor.blocked
+11. current_load >= max_capacity 或 no_available_stop_point
+   -> emit conveyor.blocked
    -> emit robot.pause_pick
 
-10. current_load <= resume_threshold
-   -> emit output_conveyor.capacity_available
+12. stop_point released 且 current_load <= resume_threshold
+   -> emit conveyor.capacity_available
    -> emit robot.resume_pick
 
-11. completion_conditions 全部满足
+13. completion_conditions 全部满足
    -> emit global.sorting_done
    -> route to runtime:CompletionChecker
 ```

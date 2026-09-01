@@ -1,0 +1,92 @@
+{
+  "case_id": "scene_07_machine_robot_process_transfer",
+  "schema_type": "BenchmarkAssertions",
+  "version": "0.1.0",
+  "source": {
+    "kind": "manual_assertion",
+    "image": "docs/business/test/7.png"
+  },
+  "must_have_modules": [
+    "input_feed",
+    "robot_machine_processing",
+    "output_transport"
+  ],
+  "must_have_events": [
+    "runtime.sim_start",
+    "conveyor.material_arrived",
+    "conveyor.stop_point_occupied",
+    "conveyor.stop_point_released",
+    "conveyor.blocked",
+    "conveyor.capacity_available",
+    "observation.deadlock_detected",
+    "global.process_done",
+    "input_conveyor.part_ready",
+    "machine.process_started",
+    "machine.process_done",
+    "robot.pick_done",
+    "upstream.pause",
+    "upstream.resume"
+  ],
+  "must_have_topics": [
+    "robot_task_request",
+    "backpressure"
+  ],
+  "must_have_behavior_rules": [
+    "accept_material_to_first_available_stop_point",
+    "advance_material_to_next_stop_point",
+    "wait_when_next_stop_point_occupied",
+    "release_material_when_downstream_available",
+    "emit_blocked_when_no_stop_point_available",
+    "emit_capacity_available_when_stop_point_released",
+    "pause_upstream_when_conveyor_blocked",
+    "resume_upstream_when_capacity_available",
+    "source_feeds_input_conveyor",
+    "robot_loads_machine_from_input",
+    "machine_processes_loaded_part",
+    "robot_unloads_machine_to_output"
+  ],
+  "must_have_policies": [
+    "capacity_threshold",
+    "deadlock_detection",
+    "deterministic_priority",
+    "downstream_release",
+    "nearest_available_stop_point",
+    "queue_wait",
+    "resource_lock"
+  ],
+  "must_have_state_variables": [
+    "workpiece_pool",
+    "material_locations",
+    "device_states",
+    "signal_values",
+    "resource_locks",
+    "active_actions",
+    "conveyor_stop_points",
+    "conveyor_occupancy",
+    "conveyor_queues",
+    "conveyor_loads",
+    "machine_process_buffer",
+    "material_processed"
+  ],
+  "must_have_completion_conditions": [
+    "requested parts processed == true",
+    "machine_process_buffer_1.occupied_by == null",
+    "all conveyor_occupancy stop points are empty",
+    "active_actions.empty == true"
+  ],
+  "forbidden_schema_types": [
+    "SimPlan",
+    "ExecutableSimGraph",
+    "TransportPlan"
+  ],
+  "forbidden_rule_forms": [
+    "when_event / when_state / if / then_*",
+    "move material directly to conveyor.exit"
+  ],
+  "minimum_validation_expectations": [
+    "SceneBehaviorGraph contains required top-level sections",
+    "event_bus routes reference registered events",
+    "behavior_rules use trigger / guard / policy / action",
+    "conveyor scenes include stop-point-aware state variables"
+  ]
+}

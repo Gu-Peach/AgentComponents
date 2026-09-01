@@ -38,7 +38,7 @@
 
 | 字段 | 是否必填 | 含义 |
 |---|---:|---|
-| `event_id` | 是 | 事件唯一 ID，建议使用命名空间形式，如 `runtime.sim_start`、`main_conveyor_1.pallet_ready`、`output_conveyor.blocked`。 |
+| `event_id` | 是 | 事件唯一 ID，建议使用命名空间形式，如 `runtime.sim_start`、`main_conveyor_1.pallet_ready`、`conveyor.blocked`。 |
 | `kind` | 是 | 事件类型，用来区分全局事件、设备信号、控制事件和异常观测。 |
 | `source` | 建议 | 事件默认来源，可以是设备实例 ID、`runtime`、`scheduler`、`policy` 或 `agent`。实际运行时也可由 payload 覆盖。 |
 | `description` | 建议 | 事件语义说明，给 Agent 校验、人工审阅和前端解释使用。 |
@@ -54,7 +54,7 @@
 | `kind` | 含义 | 典型例子 |
 |---|---|---|
 | `global_event` | 场景级事件，不隶属于某个设备信号口，通常表达业务阶段或全局事实。 | `runtime.sim_start`、`global.workpiece_claimed`、`global.sorting_done` |
-| `device_signal` | 设备实例发出或接收的信号，必须能被对应 `DeviceSpec.signal_ports` 或运行契约解释。 | `main_conveyor_1.pallet_ready`、`output_conveyor.blocked`、`robot.pick_done` |
+| `device_signal` | 设备实例发出或接收的信号，必须能被对应 `DeviceSpec.signal_ports` 或运行契约解释。 | `main_conveyor_1.pallet_ready`、`conveyor.blocked`、`conveyor.stop_point_occupied`、`robot.pick_done` |
 | `control_event` | Runtime、Scheduler 或策略对设备/规则发出的控制类事件。 | `robot.pause_pick`、`robot.resume_pick` |
 | `observation` | Runtime 观测到的异常、风险或诊断事件。 | `observation.deadlock_detected`、`observation.overload_detected` |
 
@@ -75,13 +75,14 @@
 
 ```json
 {
-  "event_id": "output_conveyor.blocked",
+  "event_id": "conveyor.blocked",
   "kind": "device_signal",
-  "source": "output_conveyor",
+  "source": "conveyor",
   "payload_schema": {
     "conveyor_id": "string",
     "current_load": "integer",
-    "max_capacity": "integer"
+    "max_capacity": "integer",
+    "reason": "no_stop_point_available | capacity_full | downstream_unavailable"
   },
   "retention": "latest_value"
 }
@@ -91,16 +92,16 @@
 
 ```json
 {
-  "event_id": "output_conveyor.blocked",
+  "event_id": "conveyor.blocked",
   "kind": "device_signal",
-  "source": "output_conveyor",
+  "source": "conveyor",
   "payload_schema": {
     "type": "object",
-    "required": ["conveyor_id", "current_load", "max_capacity"],
+    "required": ["conveyor_id", "current_load", "max_capacity", "reason"],
     "properties": {
       "conveyor_id": {
         "type": "string",
-        "description": "发出 blocked 的出料传送带实例 ID。"
+        "description": "发出 blocked 的传送带实例 ID。"
       },
       "current_load": {
         "type": "integer",
@@ -109,10 +110,45 @@
       "max_capacity": {
         "type": "integer",
         "description": "最大承载数量。"
+      },
+      "reason": {
+        "type": "string",
+        "enum": ["no_stop_point_available", "capacity_full", "downstream_unavailable"],
+        "description": "阻塞原因：无可用停留点、容量满或下游不可接收。"
       }
     }
   },
   "retention": "latest_value"
+}
+```
+
+传送带停留点相关事件建议统一使用通用事件 ID，具体是哪条传送带由 payload 指定：
+
+```json
+{
+  "event_id": "conveyor.stop_point_occupied",
+  "kind": "device_signal",
+  "source": "conveyor",
+  "payload_schema": {
+    "conveyor_id": "string",
+    "point_id": "string",
+    "material_id": "string"
+  },
+  "retention": "event_log"
+}
+```
+
+```json
+{
+  "event_id": "conveyor.stop_point_released",
+  "kind": "device_signal",
+  "source": "conveyor",
+  "payload_schema": {
+    "conveyor_id": "string",
+    "point_id": "string",
+    "material_id": "string"
+  },
+  "retention": "event_log"
 }
 ```
 

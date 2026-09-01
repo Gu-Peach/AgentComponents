@@ -1,0 +1,95 @@
+{
+  "case_id": "scene_08_synchronized_part_to_pallet_loading",
+  "schema_type": "BenchmarkAssertions",
+  "version": "0.1.0",
+  "source": {
+    "kind": "manual_assertion",
+    "image": "docs/business/test/8.png"
+  },
+  "must_have_modules": [
+    "part_feed",
+    "pallet_feed",
+    "synchronized_robot_loading",
+    "loaded_pallet_release"
+  ],
+  "must_have_events": [
+    "runtime.sim_start",
+    "conveyor.material_arrived",
+    "conveyor.stop_point_occupied",
+    "conveyor.stop_point_released",
+    "conveyor.blocked",
+    "conveyor.capacity_available",
+    "observation.deadlock_detected",
+    "global.process_done",
+    "part_conveyor.part_ready",
+    "pallet.ready_for_loading",
+    "loading.inputs_ready",
+    "robot.load_done",
+    "pallet.load_complete",
+    "upstream.pause",
+    "upstream.resume"
+  ],
+  "must_have_topics": [
+    "robot_task_request",
+    "backpressure"
+  ],
+  "must_have_behavior_rules": [
+    "accept_material_to_first_available_stop_point",
+    "advance_material_to_next_stop_point",
+    "wait_when_next_stop_point_occupied",
+    "release_material_when_downstream_available",
+    "emit_blocked_when_no_stop_point_available",
+    "emit_capacity_available_when_stop_point_released",
+    "pause_upstream_when_conveyor_blocked",
+    "resume_upstream_when_capacity_available",
+    "part_source_feeds_part_conveyor",
+    "detect_loading_inputs_ready",
+    "robot_loads_part_to_pallet",
+    "release_loaded_pallet"
+  ],
+  "must_have_policies": [
+    "capacity_threshold",
+    "deadlock_detection",
+    "deterministic_priority",
+    "downstream_release",
+    "nearest_available_stop_point",
+    "queue_wait",
+    "resource_lock",
+    "synchronization"
+  ],
+  "must_have_state_variables": [
+    "workpiece_pool",
+    "material_locations",
+    "device_states",
+    "signal_values",
+    "resource_locks",
+    "active_actions",
+    "conveyor_stop_points",
+    "conveyor_occupancy",
+    "conveyor_queues",
+    "conveyor_loads",
+    "carrier_loads",
+    "carrier_slots"
+  ],
+  "must_have_completion_conditions": [
+    "carrier_loads.pallet_1.load_count == carrier_loads.pallet_1.target_count",
+    "loaded pallet exits pallet_conveyor_1",
+    "all conveyor_occupancy stop points are empty",
+    "active_actions.empty == true"
+  ],
+  "forbidden_schema_types": [
+    "SimPlan",
+    "ExecutableSimGraph",
+    "TransportPlan"
+  ],
+  "forbidden_rule_forms": [
+    "when_event / when_state / if / then_*",
+    "move material directly to conveyor.exit"
+  ],
+  "minimum_validation_expectations": [
+    "SceneBehaviorGraph contains required top-level sections",
+    "event_bus routes reference registered events",
+    "behavior_rules use trigger / guard / policy / action",
+    "conveyor scenes include stop-point-aware state variables"
+  ]
+}

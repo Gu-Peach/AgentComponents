@@ -1,4 +1,4 @@
-{
+﻿{
   "schema_id": "pallet_sorting_line_scene_behavior_demo_v0_2",
   "schema_type": "SceneBehaviorGraphDemo",
   "version": "0.2.0",
@@ -22,7 +22,8 @@
     "SceneBehaviorGraph 是 Agent 生成的持久化行为建模结果。",
     "SignalBusRuntime 是 Runtime 内部模块，执行 scene_behavior_graph.event_bus 中定义的事件路由。",
     "RuntimeSnapshot 是运行时状态事实，不负责定义行为模型。",
-    "当前基线不处理用户中途改需求。"
+    "当前基线不处理用户中途改需求。",
+    "该文件是早期一体化展示快照，仅用于字段关系参考；最新图 1 benchmark 以 docs/test/case/scene_01/ 和 docs/business/SimulationSchema/2.SceneDocument/example.json 为准。"
   ],
   "user_goal": {
     "goal_id": "goal_sort_pallet_parts_v0_1",
@@ -1251,7 +1252,7 @@
           }
         },
         {
-          "event_id": "output_conveyor.blocked",
+          "event_id": "conveyor.blocked",
           "kind": "device_signal",
           "payload_schema": {
             "conveyor_id": "string",
@@ -1260,7 +1261,7 @@
           }
         },
         {
-          "event_id": "output_conveyor.capacity_available",
+          "event_id": "conveyor.capacity_available",
           "kind": "device_signal",
           "payload_schema": {
             "conveyor_id": "string",
@@ -1328,15 +1329,15 @@
           {
             "subscriber_type": "rule",
             "subscriber_id": "blocked_conveyor_pauses_robot",
-            "message_event_id": "output_conveyor.blocked",
-            "filter": "event.event_id == output_conveyor.blocked",
+            "message_event_id": "conveyor.blocked",
+            "filter": "event.event_id == conveyor.blocked",
             "payload_template": "source_event.payload"
           },
           {
             "subscriber_type": "rule",
             "subscriber_id": "capacity_available_resumes_robot",
-            "message_event_id": "output_conveyor.capacity_available",
-            "filter": "event.event_id == output_conveyor.capacity_available",
+            "message_event_id": "conveyor.capacity_available",
+            "filter": "event.event_id == conveyor.capacity_available",
             "payload_template": "source_event.payload"
           }
         ]
@@ -1388,7 +1389,7 @@
         },
         {
           "route_id": "route_blocked_to_backpressure_topic",
-          "from": "output_conveyor.blocked",
+          "from": "conveyor.blocked",
           "to": {
             "type": "topic",
             "id": "backpressure"
@@ -1401,7 +1402,7 @@
         },
         {
           "route_id": "route_capacity_available_to_backpressure_topic",
-          "from": "output_conveyor.capacity_available",
+          "from": "conveyor.capacity_available",
           "to": {
             "type": "topic",
             "id": "backpressure"
@@ -1635,7 +1636,7 @@
         "description": "出料传送带 blocked 后，暂停绑定到该传送带的机械臂后续抓取。",
         "trigger": {
           "type": "event",
-          "event_id": "output_conveyor.blocked"
+          "event_id": "conveyor.blocked"
         },
         "guard": {
           "all": [
@@ -1669,7 +1670,7 @@
         "description": "出料传送带容量恢复后，恢复绑定机械臂的后续抓取。",
         "trigger": {
           "type": "event",
-          "event_id": "output_conveyor.capacity_available"
+          "event_id": "conveyor.capacity_available"
         },
         "guard": {
           "all": [
@@ -1751,7 +1752,7 @@
         "on_event": "output_conveyor.material_arrived",
         "effects": [
           "increment conveyor_loads[conveyor_id].current_load",
-          "if current_load >= max_capacity emit output_conveyor.blocked"
+          "if current_load >= max_capacity emit conveyor.blocked"
         ]
       },
       {
@@ -1759,7 +1760,7 @@
         "on_behavior_complete": "*.transport_to_exit where instance in [upper_out_conveyor_1, lower_out_conveyor_1]",
         "effects": [
           "decrement conveyor_loads[conveyor_id].current_load",
-          "if blocked == true and current_load <= resume_threshold emit output_conveyor.capacity_available"
+          "if blocked == true and current_load <= resume_threshold emit conveyor.capacity_available"
         ]
       },
       {

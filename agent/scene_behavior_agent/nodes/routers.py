@@ -21,8 +21,16 @@ def route_graph_validation(state: AgentState, max_repair_attempts: int = 2) -> s
 
 def route_human_review(state: AgentState) -> str:
     status = state.get("approval_status", "pending")
-    if status == "approved":
-        return "approved"
     if status == "needs_revision":
         return "revise"
-    return "rejected"
+    if status != "approved":
+        return "rejected"
+
+    graph = state.get("scene_behavior_graph_draft")
+    validation_report = state.get("validation_report")
+    if not graph:
+        return "rejected"
+    if validation_report and not validation_report.get("valid"):
+        return "rejected"
+
+    return "approved"

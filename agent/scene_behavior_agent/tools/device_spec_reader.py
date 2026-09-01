@@ -33,6 +33,8 @@ class DeviceSpecReader:
             "behavior_index": self._build_behavior_index(specs),
             "signal_port_index": self._build_signal_port_index(specs),
             "resource_index": self._build_resource_index(specs),
+            "capacity_index": self._build_capacity_index(specs),
+            "stop_point_model_index": self._build_stop_point_model_index(specs),
             "summary": self._build_summary(specs, missing),
         }
 
@@ -79,6 +81,21 @@ class DeviceSpecReader:
         return resource_index
 
     @staticmethod
+    def _build_capacity_index(specs: dict[str, Any]) -> dict[str, Any]:
+        return {
+            spec_id: spec.get("runtime_contract", {}).get("capacity", {})
+            for spec_id, spec in specs.items()
+        }
+
+    @staticmethod
+    def _build_stop_point_model_index(specs: dict[str, Any]) -> dict[str, Any]:
+        return {
+            spec_id: spec.get("type_specific_contract", {}).get("stop_point_model")
+            for spec_id, spec in specs.items()
+            if spec.get("type_specific_contract", {}).get("stop_point_model")
+        }
+
+    @staticmethod
     def _build_summary(specs: dict[str, Any], missing: list[str]) -> dict[str, Any]:
         devices = []
         for spec_id, spec in specs.items():
@@ -89,6 +106,8 @@ class DeviceSpecReader:
                     "behaviors": [behavior.get("behavior_id") for behavior in spec.get("transport_behaviors", [])],
                     "signals": [port.get("port_id") for port in spec.get("signal_ports", [])],
                     "default_state": spec.get("runtime_contract", {}).get("default_state"),
+                    "capacity": spec.get("runtime_contract", {}).get("capacity", {}),
+                    "stop_point_model": spec.get("type_specific_contract", {}).get("stop_point_model"),
                 }
             )
         return {"devices": devices, "missing": missing}

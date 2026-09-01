@@ -239,7 +239,7 @@ robot_2 抓 part_007 ~ part_012。
 
 | 设备类型 | 必需接口 | 必需信号 | 必需行为 |
 |---|---|---|---|
-| `conveyor` | `entry`、`exit` | `blocked`、`capacity_available`、`done` | `transport_to_exit`、`accept_material` |
+| `conveyor` | `entry`、`exit`，并基于两者生成停留点 | `blocked`、`capacity_available`、`stop_point_occupied`、`stop_point_released`、`done` | `accept_material`、`advance_to_next_stop_point`、`transport_to_exit`、`release_material` |
 | `robot_arm` | `pick_area`、`place_area` | `start_pick`、`pause_pick`、`resume_pick`、`busy`、`done` | `pick_and_place` |
 | `workpiece_carrier` | `load_surface`、`carrier_bottom` | `loaded`、`unloaded` | `carry_material`、`release_material` |
 | `workpiece` | `grasp_surface`、`bottom` | `picked`、`placed` | 被动对象 |

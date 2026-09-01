@@ -1,0 +1,96 @@
+{
+  "case_id": "scene_01_pallet_sorting_stop_point_conveyors",
+  "schema_type": "BenchmarkAssertions",
+  "version": "0.1.0",
+  "source": {
+    "kind": "manual_assertion",
+    "image": "docs/business/test/1.png",
+    "scene_document": "docs/business/SimulationSchema/2.SceneDocument/example.json"
+  },
+  "must_have_modules": [
+    "pallet_transport",
+    "parallel_robot_sorting",
+    "output_conveying"
+  ],
+  "must_have_events": [
+    "runtime.sim_start",
+    "conveyor.stop_point_occupied",
+    "conveyor.stop_point_released",
+    "main_conveyor_1.pallet_ready",
+    "main_conveyor_2.pallet_ready",
+    "robot.pick_request",
+    "global.workpiece_claimed",
+    "robot.pick_done",
+    "output_conveyor.material_arrived",
+    "conveyor.blocked",
+    "conveyor.capacity_available",
+    "robot.pause_pick",
+    "robot.resume_pick",
+    "global.sorting_done"
+  ],
+  "must_have_topics": [
+    "robot_pick_request",
+    "backpressure"
+  ],
+  "must_have_behavior_rules": [
+    "start_pallet_transport",
+    "transfer_pallet_main_conveyor_1_to_main_conveyor_2",
+    "accept_material_to_first_available_stop_point",
+    "advance_material_to_next_stop_point",
+    "wait_when_next_stop_point_occupied",
+    "release_material_when_downstream_available",
+    "emit_blocked_when_no_stop_point_available",
+    "emit_capacity_available_when_stop_point_released",
+    "idle_robot_requests_workpiece",
+    "claimed_workpiece_starts_pick",
+    "blocked_conveyor_pauses_robot",
+    "capacity_available_resumes_robot"
+  ],
+  "must_have_policies": [
+    "shared_pool_claim",
+    "capacity_threshold",
+    "queue_wait",
+    "nearest_available_stop_point",
+    "downstream_release",
+    "resource_lock",
+    "deadlock_detection"
+  ],
+  "must_have_state_variables": [
+    "workpiece_pool",
+    "material_claims",
+    "device_states",
+    "resource_locks",
+    "active_actions",
+    "conveyor_stop_points",
+    "conveyor_occupancy",
+    "conveyor_queues",
+    "conveyor_loads"
+  ],
+  "must_have_completion_conditions": [
+    "workpiece_pool.remaining_parts.empty == true",
+    "active_actions.empty == true",
+    "all conveyor_loads current_load == 0",
+    "all conveyor_occupancy stop points are empty"
+  ],
+  "forbidden_schema_types": [
+    "SimPlan",
+    "ExecutableSimGraph",
+    "TransportPlan"
+  ],
+  "forbidden_events": [
+    "output_conveyor.blocked",
+    "output_conveyor.capacity_available"
+  ],
+  "forbidden_rule_forms": [
+    "when_event / when_state / if / then_*",
+    "move material directly to conveyor.exit"
+  ],
+  "minimum_validation_expectations": [
+    "GraphValidator.valid == true",
+    "all event_bus.routes[].from are registered in event_bus.events",
+    "all conveyor instances have state_model.conveyor_stop_points entries",
+    "all conveyor instances have state_model.conveyor_occupancy entries",
+    "conveyor DeviceSpec declares type_specific_contract.stop_point_model",
+    "robot_arm DeviceSpec declares pause_pick and resume_pick signal ports"
+  ]
+}

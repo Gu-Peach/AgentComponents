@@ -7,9 +7,41 @@
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/schema.json" },
   "created_for": "图 1 / 图 4 / 图 7 中传送带设备建模",
   "references": ["../common_device_spec.schema.json", "conveyor_1.json"],
-  "notes": ["传送带通过 entry/exit 暴露通用流转接口，通过 part_ready/blocked 信号参与调度。"],
+  "notes": [
+    "传送带通过 entry/exit 暴露通用流转接口，通过 part_ready/blocked/capacity_available 信号参与调度。",
+    "所有传送带默认支持 stop_point_model，Runtime 可根据 entry/exit 坐标和 stop_point_count 生成停留点。"
+  ],
   "extends": "common_device_spec_schema_v0_1",
-  "required_type_specific_fields": ["conveyor_geometry", "motion_model", "queue_policy"],
-  "required_behaviors": ["accept_material", "transport_to_exit", "release_material"],
-  "required_signals": ["part_ready", "blocked", "done", "release_waiting_material"]
+  "required_type_specific_fields": ["conveyor_geometry", "motion_model", "stop_point_model", "queue_policy"],
+  "required_behaviors": ["accept_material", "advance_to_next_stop_point", "transport_to_exit", "release_material"],
+  "required_signals": [
+    "part_ready",
+    "blocked",
+    "capacity_available",
+    "done",
+    "stop_point_occupied",
+    "stop_point_released",
+    "release_waiting_material"
+  ],
+  "stop_point_model_contract": {
+    "description": "传送带停留点模型。DeviceSpec 定义生成方式，SceneDocument 实例参数可覆盖数量和容量，SceneBehaviorGraph 定义本次工艺如何使用停留点，RuntimeSnapshot 保存当前占用。",
+    "required_fields": [
+      "type",
+      "start_interface",
+      "end_interface",
+      "default_stop_point_count",
+      "include_entry",
+      "include_exit",
+      "coordinate_formula"
+    ],
+    "type_values": {
+      "linear_interpolation": "基于 entry 和 exit 的局部坐标线性插值生成停留点。"
+    },
+    "scene_instance_overrides": [
+      "stop_point_count",
+      "stop_point_spacing_policy",
+      "capacity",
+      "resume_threshold"
+    ]
+  }
 }

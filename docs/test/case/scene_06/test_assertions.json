@@ -1,0 +1,99 @@
+{
+  "case_id": "scene_06_storage_rack_dual_lift_buffering",
+  "schema_type": "BenchmarkAssertions",
+  "version": "0.1.0",
+  "source": {
+    "kind": "manual_assertion",
+    "image": "docs/business/test/6.png"
+  },
+  "must_have_modules": [
+    "inbound_feed",
+    "store_with_lift",
+    "retrieve_with_lift",
+    "outbound_transport"
+  ],
+  "must_have_events": [
+    "runtime.sim_start",
+    "conveyor.material_arrived",
+    "conveyor.stop_point_occupied",
+    "conveyor.stop_point_released",
+    "conveyor.blocked",
+    "conveyor.capacity_available",
+    "observation.deadlock_detected",
+    "global.process_done",
+    "source.material_available",
+    "inbound_conveyor.part_ready",
+    "storage.cell_reserved",
+    "storage.material_stored",
+    "storage.request_release",
+    "storage.material_released",
+    "lift.at_level",
+    "outbound_lift.material_released",
+    "upstream.pause",
+    "upstream.resume"
+  ],
+  "must_have_topics": [
+    "backpressure"
+  ],
+  "must_have_behavior_rules": [
+    "accept_material_to_first_available_stop_point",
+    "advance_material_to_next_stop_point",
+    "wait_when_next_stop_point_occupied",
+    "release_material_when_downstream_available",
+    "emit_blocked_when_no_stop_point_available",
+    "emit_capacity_available_when_stop_point_released",
+    "pause_upstream_when_conveyor_blocked",
+    "resume_upstream_when_capacity_available",
+    "source_feeds_inbound_conveyor",
+    "reserve_storage_cell_for_inbound_material",
+    "inbound_lift_stores_material",
+    "outbound_lift_retrieves_material",
+    "outbound_lift_releases_to_conveyor"
+  ],
+  "must_have_policies": [
+    "capacity_threshold",
+    "deadlock_detection",
+    "deterministic_priority",
+    "downstream_release",
+    "nearest_available_stop_point",
+    "queue_wait",
+    "resource_lock",
+    "storage_release_selection",
+    "storage_slot_selection"
+  ],
+  "must_have_state_variables": [
+    "workpiece_pool",
+    "material_locations",
+    "device_states",
+    "signal_values",
+    "resource_locks",
+    "active_actions",
+    "conveyor_stop_points",
+    "conveyor_occupancy",
+    "conveyor_queues",
+    "conveyor_loads",
+    "storage_cells",
+    "lift_positions"
+  ],
+  "must_have_completion_conditions": [
+    "requested inbound/outbound count completed",
+    "all storage operations settled",
+    "all conveyor_occupancy stop points are empty",
+    "active_actions.empty == true"
+  ],
+  "forbidden_schema_types": [
+    "SimPlan",
+    "ExecutableSimGraph",
+    "TransportPlan"
+  ],
+  "forbidden_rule_forms": [
+    "when_event / when_state / if / then_*",
+    "move material directly to conveyor.exit"
+  ],
+  "minimum_validation_expectations": [
+    "SceneBehaviorGraph contains required top-level sections",
+    "event_bus routes reference registered events",
+    "behavior_rules use trigger / guard / policy / action",
+    "conveyor scenes include stop-point-aware state variables"
+  ]
+}

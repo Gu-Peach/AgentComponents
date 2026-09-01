@@ -29,6 +29,8 @@
   ],
   "signal_ports": [
     { "port_id": "start_pick", "direction": "input", "value_type": "event", "description": "触发抓取动作" },
+    { "port_id": "pause_pick", "direction": "input", "value_type": "event", "description": "暂停启动新的抓取任务；通常由出料传送带 blocked 信号触发" },
+    { "port_id": "resume_pick", "direction": "input", "value_type": "event", "description": "恢复启动新的抓取任务；通常由出料传送带 capacity_available 信号触发" },
     { "port_id": "busy", "direction": "output", "value_type": "boolean", "description": "机械臂正在执行动作" },
     { "port_id": "done", "direction": "output", "value_type": "event", "description": "动作完成" },
     { "port_id": "error", "direction": "output", "value_type": "event", "description": "动作失败或目标不可达" }
@@ -44,10 +46,11 @@
       "input_physical_interface": "pick_area",
       "output_physical_interface": "place_area",
       "default_algorithm": "robot_pick_place",
-      "input_signals": ["start_pick"],
+      "input_signals": ["start_pick", "resume_pick"],
+      "control_signals": ["pause_pick"],
       "output_signals": ["busy", "done", "error"],
       "resources": ["robot_arm", "gripper"],
-      "preconditions": ["fsm_state == idle", "material_at(input_physical_interface)", "gripper.empty == true"],
+      "preconditions": ["fsm_state == idle", "material_at(input_physical_interface)", "gripper.empty == true", "pause_pick.active != true"],
       "effects": ["material_at(output_physical_interface)", "emit done"]
     }
   ],
@@ -78,4 +81,3 @@
     "gripper": { "type": "vacuum_or_clamp", "supported_material_classes": ["workpiece", "workpiece_carrier"], "max_payload_kg": 5.0 }
   }
 }
-

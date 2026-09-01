@@ -166,35 +166,35 @@ LangGraph 中的基础图可以抽象为：
 - **类型**：Model Node
 - **输入状态**：`scene_facts`、`intent`
 - **输出状态**：`scene_facts.summary`
-- **职责**：生成自然语言场景理解摘要，为后续模块分解提供上下文。
+- **职责**：生成自然语言场景理解摘要，为后续模块分解提供上下文；识别所有 conveyor 都需要按停留点 / 占位点进行运输建模。
 
 ### 4.6 `DeviceCapabilitySummarizerNode`
 
 - **类型**：Model Node
 - **输入状态**：`device_capabilities`
 - **输出状态**：`device_capabilities.summary`
-- **职责**：把设备能力索引转成适合 LLM 推理的摘要，例如每类设备可执行行为、信号、资源约束。
+- **职责**：把设备能力索引转成适合 LLM 推理的摘要，例如每类设备可执行行为、信号、资源约束；对 conveyor 额外提取 `stop_point_model`、默认停留点数量、容量和恢复阈值。
 
 ### 4.7 `ProcessDecomposerNode`
 
 - **类型**：Model Node
 - **输入状态**：`intent`、`scene_facts.summary`、`device_capabilities.summary`
 - **输出状态**：`process_modules`
-- **职责**：将用户目标拆成业务模块，标注模块模式：`one_shot`、`sequential`、`parallel_continuous`、`continuous`。
+- **职责**：将用户目标拆成业务模块，标注模块模式：`one_shot`、`sequential`、`parallel_continuous`、`continuous`；传送带运输模块应优先标注为 `stop_point_buffered_transport`。
 
 ### 4.8 `EventStateModelerNode`
 
 - **类型**：Model Node
 - **输入状态**：`process_modules`、`device_capabilities`、`scene_facts`
 - **输出状态**：`event_bus_draft`、`state_model_draft`
-- **职责**：生成本场景需要注册的事件、topic、subscriptions、routes、状态变量和 payload schema。
+- **职责**：生成本场景需要注册的事件、topic、subscriptions、routes、状态变量和 payload schema；包含 conveyor 场景时必须生成 `conveyor_stop_points`、`conveyor_occupancy`、`conveyor_queues`、`conveyor_loads`。
 
 ### 4.9 `BehaviorRuleNode`
 
 - **类型**：Model Node
 - **输入状态**：`event_bus_draft`、`state_model_draft`、`device_capabilities`、`process_modules`
 - **输出状态**：`behavior_rules_draft`、`state_transition_rules_draft`
-- **职责**：定义事件如何触发设备行为，以及行为开始、完成、异常后如何更新状态和发出事件。
+- **职责**：定义事件如何触发设备行为，以及行为开始、完成、异常后如何更新状态和发出事件；传送带规则必须覆盖停留点接收、逐点推进、等待、释放、阻塞和恢复。
 
 ### 4.10 `PolicySynthesizerNode`
 
@@ -202,7 +202,7 @@ LangGraph 中的基础图可以抽象为：
 - **输入状态**：`behavior_rules_draft`、`state_model_draft`、`process_modules`
 - **调用工具**：`PolicyLibrary`
 - **输出状态**：`policies_draft`、`failure_observations_draft`
-- **职责**：从策略库选择并参数化策略，例如共享工件池、backpressure、资源锁、deadlock detection。
+- **职责**：从策略库选择并参数化策略，例如共享工件池、backpressure、资源锁、deadlock detection；传送带默认启用 `queue_wait`、`capacity_threshold`、`nearest_available_stop_point` 和 `downstream_release`。
 
 ### 4.11 `AssembleGraphNode`
 
@@ -229,6 +229,7 @@ LangGraph 中的基础图可以抽象为：
 - 所有 `behavior_rules.trigger.event_id` 存在于事件注册或 topic 展开后的 `message_event_id`。
 - 所有 `guard / policy / action` 引用的状态变量存在于 `state_model`。
 - 所有 `state_transition_rules.effects` 只更新已声明状态或 emit 已注册事件。
+- conveyor 场景必须声明停留点状态、占用状态、等待队列、容量状态，以及对应 `queue_wait` / `capacity_threshold` / `nearest_available_stop_point` / `downstream_release` 策略。
 
 ### 4.13 `RepairGraphNode`
 

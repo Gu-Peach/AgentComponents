@@ -12,5 +12,5 @@
 
 - 离散抓取、搬运、放置。
 - 通过 `pick_area`、`place_area`、`tool_center_point` 参与场景编排。
-- 通过 `start_pick`、`busy`、`done`、`error` 参与运行时信号协调。
-
+- 通过 `start_pick`、`pause_pick`、`resume_pick`、`busy`、`done`、`error` 参与运行时信号协调。
+- `pause_pick` / `resume_pick` 用于容量 backpressure：传送带 blocked 时暂停新的抓取，容量恢复后恢复调度。

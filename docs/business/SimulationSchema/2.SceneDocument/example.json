@@ -3,29 +3,61 @@
   "schema_type": "SceneDocument",
   "version": "0.1.0",
   "name": "Figure 1 SceneDocument Example",
-  "description": "图 1 场景的最小事实示例：机械臂、传送带、物料载具与物料。",
+  "description": "图 1 场景事实示例：托盘经过两段主传送带到达分拣区，两台机械臂将 12 个工件分拣到上下两条出料传送带。",
   "source": { "kind": "manual_example", "path": "docs/business/SimulationSchema/2.SceneDocument/example.json" },
   "created_for": "场景事实示例",
   "references": ["../1.DeviceSpec/robot_arm/robot_arm_1.json", "../1.DeviceSpec/conveyor/conveyor_1.json", "../1.DeviceSpec/workpiece_carrier/carrier_tray_1.json", "../../test/1.png"],
-  "notes": ["位姿为占位示例，后续由前端场景保存真实 transform。"],
+  "notes": [
+    "位姿为占位示例，后续由前端场景保存真实 transform。",
+    "传送带停留点数量在 param_overrides 中按实例指定，Runtime 根据各实例 entry/exit 坐标线性插值生成具体点位。"
+  ],
   "scene_id": "scene_figure_1",
   "revision": 1,
   "instances": [
-    { "instance_id": "robot_1", "spec_id": "robot_arm_1", "device_type": "robot_arm", "transform": { "position": [0, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} },
-    { "instance_id": "conveyor_1", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [-1.2, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} },
-    { "instance_id": "carrier_1", "spec_id": "carrier_tray_1", "device_type": "workpiece_carrier", "transform": { "position": [-2.2, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "params": {} }
+    { "instance_id": "main_conveyor_1", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [-1.8, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "speed_mps": 0.25, "capacity": 1, "stop_point_count": 4, "resume_threshold": 1 } },
+    { "instance_id": "main_conveyor_2", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [-0.2, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "speed_mps": 0.25, "capacity": 1, "stop_point_count": 4, "resume_threshold": 1 } },
+    { "instance_id": "upper_out_conveyor_1", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [1.1, 0.55, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "speed_mps": 0.2, "capacity": 3, "stop_point_count": 4, "resume_threshold": 2, "accepted_class": "A" } },
+    { "instance_id": "lower_out_conveyor_1", "spec_id": "conveyor_1", "device_type": "conveyor", "transform": { "position": [1.1, -0.55, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "speed_mps": 0.2, "capacity": 3, "stop_point_count": 4, "resume_threshold": 2, "accepted_class": "B" } },
+    { "instance_id": "robot_1", "spec_id": "robot_arm_1", "device_type": "robot_arm", "transform": { "position": [0.45, -0.1, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "payload_kg": 5 } },
+    { "instance_id": "robot_2", "spec_id": "robot_arm_1", "device_type": "robot_arm", "transform": { "position": [0.15, 0.75, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "payload_kg": 5 } },
+    { "instance_id": "pallet_1", "spec_id": "carrier_tray_1", "device_type": "workpiece_carrier", "transform": { "position": [-2.7, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1] }, "param_overrides": { "slot_count": 12 } }
   ],
   "materials": [
-    { "material_id": "part_001", "spec_id": "workpiece_1", "located_at": "carrier_1.slot_01" }
+    { "material_id": "part_001", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_01" },
+    { "material_id": "part_002", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_02" },
+    { "material_id": "part_003", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_03" },
+    { "material_id": "part_004", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_04" },
+    { "material_id": "part_005", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_05" },
+    { "material_id": "part_006", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_06" },
+    { "material_id": "part_007", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_07" },
+    { "material_id": "part_008", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_08" },
+    { "material_id": "part_009", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_09" },
+    { "material_id": "part_010", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_10" },
+    { "material_id": "part_011", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_11" },
+    { "material_id": "part_012", "spec_id": "workpiece_1", "located_at": "pallet_1.slot_12" }
   ],
   "process_edges": [
-    { "edge_id": "proc_001", "source": "conveyor_1.flow_output", "target": "robot_1.flow_input", "edge_type": "material_flow" }
+    { "edge_id": "proc_main_1_to_main_2", "source": "main_conveyor_1.flow_output", "target": "main_conveyor_2.flow_input", "edge_type": "material_flow" },
+    { "edge_id": "proc_main_2_to_robot_1", "source": "main_conveyor_2.flow_output", "target": "robot_1.flow_input", "edge_type": "material_flow" },
+    { "edge_id": "proc_main_2_to_robot_2", "source": "main_conveyor_2.flow_output", "target": "robot_2.flow_input", "edge_type": "material_flow" },
+    { "edge_id": "proc_robot_1_to_upper_out", "source": "robot_1.flow_output", "target": "upper_out_conveyor_1.flow_input", "edge_type": "material_flow" },
+    { "edge_id": "proc_robot_2_to_lower_out", "source": "robot_2.flow_output", "target": "lower_out_conveyor_1.flow_input", "edge_type": "material_flow" }
   ],
   "physical_edges": [
-    { "edge_id": "phys_001", "source": "conveyor_1.exit", "target": "robot_1.pick_area", "compiled_from": "proc_001" }
+    { "edge_id": "phys_main_1_to_main_2", "source": "main_conveyor_1.exit", "target": "main_conveyor_2.entry", "compiled_from": "proc_main_1_to_main_2" },
+    { "edge_id": "phys_main_2_to_robot_1", "source": "main_conveyor_2.exit", "target": "robot_1.pick_area", "compiled_from": "proc_main_2_to_robot_1" },
+    { "edge_id": "phys_main_2_to_robot_2", "source": "main_conveyor_2.exit", "target": "robot_2.pick_area", "compiled_from": "proc_main_2_to_robot_2" },
+    { "edge_id": "phys_robot_1_to_upper_out", "source": "robot_1.place_area", "target": "upper_out_conveyor_1.entry", "compiled_from": "proc_robot_1_to_upper_out" },
+    { "edge_id": "phys_robot_2_to_lower_out", "source": "robot_2.place_area", "target": "lower_out_conveyor_1.entry", "compiled_from": "proc_robot_2_to_lower_out" }
   ],
   "signal_edges": [
-    { "edge_id": "sig_001", "source": "conveyor_1.part_ready", "target": "robot_1.start_pick", "edge_type": "control_signal" }
+    { "edge_id": "sig_main_1_ready_to_main_2_release", "source": "main_conveyor_1.part_ready", "target": "main_conveyor_2.release_waiting_material", "edge_type": "control_signal" },
+    { "edge_id": "sig_main_2_ready_to_robot_1", "source": "main_conveyor_2.part_ready", "target": "robot_1.start_pick", "edge_type": "control_signal" },
+    { "edge_id": "sig_main_2_ready_to_robot_2", "source": "main_conveyor_2.part_ready", "target": "robot_2.start_pick", "edge_type": "control_signal" },
+    { "edge_id": "sig_upper_blocked_to_robot_1", "source": "upper_out_conveyor_1.blocked", "target": "robot_1.pause_pick", "edge_type": "control_signal" },
+    { "edge_id": "sig_lower_blocked_to_robot_2", "source": "lower_out_conveyor_1.blocked", "target": "robot_2.pause_pick", "edge_type": "control_signal" },
+    { "edge_id": "sig_upper_available_to_robot_1", "source": "upper_out_conveyor_1.capacity_available", "target": "robot_1.resume_pick", "edge_type": "control_signal" },
+    { "edge_id": "sig_lower_available_to_robot_2", "source": "lower_out_conveyor_1.capacity_available", "target": "robot_2.resume_pick", "edge_type": "control_signal" }
   ],
   "runtime_config": { "deadlock_detection": true, "default_signal_timeout_s": 30 }
 }
