@@ -1,0 +1,150 @@
+{
+  "case_id": "scene_05_case_06",
+  "case_type": "semantic_interference",
+  "expected_result": "generate_with_assumptions",
+  "input_assertions": {
+    "raw_description_summary_source": "docs/test/case/scene_05/normalized_case.md#raw_description_summary",
+    "scene_image": "docs/business/test/5.png",
+    "must_use_raw_description_summary_as_scene_input": true,
+    "must_use_scene_image_as_layout_input": true,
+    "must_not_use_normalized_user_goal_as_input": true
+  },
+  "schema_assertions": {
+    "required_sections": [
+      "goal",
+      "modules",
+      "event_bus",
+      "state_model",
+      "behavior_rules",
+      "state_transition_rules",
+      "policies",
+      "completion_conditions",
+      "failure_observations"
+    ],
+    "forbidden_fields": [
+      "scene_transport_schema",
+      "signal_bus_schema",
+      "sim_plan",
+      "executable_sim_graph",
+      "device_runtime_profile",
+      "when_event",
+      "when_state",
+      "then_start_behavior",
+      "then_emit_signal"
+    ],
+    "rule_required_fields": [
+      "rule_id",
+      "module_id",
+      "trigger",
+      "guard",
+      "policy",
+      "action"
+    ]
+  },
+  "semantic_assertions": {
+    "must_have_goal_requirements": [
+      "按这个场景生成图就行，但我以前叫它 SimPlan，也可能说成 SignalBusSchema；别被名字带偏。实际目标是图里的圆桌双机械臂多出料分拣顺畅运行，谁空谁拿、别堵住、满了就等。"
+    ],
+    "must_have_modules": [
+      "round_table_feed",
+      "dual_robot_dispatch",
+      "output_conveyor_dispatch"
+    ],
+    "must_have_events": [
+      "runtime.sim_start",
+      "observation.deadlock_detected",
+      "observation.invalid_requirement",
+      "conveyor.material_arrived",
+      "conveyor.stop_point_occupied",
+      "conveyor.stop_point_released",
+      "conveyor.blocked",
+      "conveyor.capacity_available",
+      "robot.pick_request",
+      "global.workpiece_claimed",
+      "robot.pick_done",
+      "round_table.material_available",
+      "output_conveyor.material_arrived",
+      "global.dispatch_done"
+    ],
+    "must_have_routes": [
+      "route_conveyor_material_arrived_to_accept_material_to_first_available_stop_point",
+      "route_conveyor_stop_point_occupied_to_advance_material_to_next_stop_point",
+      "route_conveyor_stop_point_occupied_to_wait_when_next_stop_point_occupied",
+      "route_conveyor_stop_point_occupied_to_release_material_when_downstream_available",
+      "route_conveyor_stop_point_released_to_emit_capacity_available_when_stop_point_released",
+      "route_runtime_sim_start_to_present_round_table_material",
+      "route_round_table_material_available_to_idle_robot_claims_round_table_part",
+      "route_global_workpiece_claimed_to_claimed_part_to_least_loaded_conveyor",
+      "route_conveyor_blocked_to_backpressure_topic",
+      "route_capacity_available_to_backpressure_topic"
+    ],
+    "must_have_state_variables": [
+      "device_states",
+      "signal_values",
+      "resource_locks",
+      "active_actions",
+      "conveyor_stop_points",
+      "conveyor_occupancy",
+      "conveyor_queues",
+      "conveyor_loads",
+      "domain_state_variables"
+    ],
+    "must_have_behavior_rules": [
+      "accept_material_to_first_available_stop_point",
+      "advance_material_to_next_stop_point",
+      "wait_when_next_stop_point_occupied",
+      "release_material_when_downstream_available",
+      "emit_blocked_when_no_stop_point_available",
+      "emit_capacity_available_when_stop_point_released",
+      "present_round_table_material",
+      "idle_robot_claims_round_table_part",
+      "claimed_part_to_least_loaded_conveyor"
+    ],
+    "must_have_transition_effects": [
+      "mark_behavior_started",
+      "mark_behavior_completed",
+      "behavior_failure_emits_observation",
+      "conveyor_accept_updates_occupancy",
+      "conveyor_advance_updates_occupancy",
+      "conveyor_release_updates_load"
+    ],
+    "must_have_policies": [
+      "deterministic_priority",
+      "resource_lock",
+      "deadlock_detection",
+      "conveyor_queue_wait",
+      "conveyor_stop_point_selection",
+      "backpressure",
+      "downstream_release",
+      "robot_resource_claim",
+      "target_conveyor_selection",
+      "station_mutex"
+    ],
+    "must_have_completion_conditions": [
+      "round_table_pool.station_a.empty == true",
+      "all conveyor_loads current_load == 0",
+      "all conveyor_occupancy stop points are empty",
+      "active_actions.empty == true"
+    ],
+    "must_have_failure_observations": [
+      "deadlock_detected",
+      "resource_conflict",
+      "invalid_requirement"
+    ]
+  },
+  "reference_assertions": {
+    "all_action_instances_exist": true,
+    "all_action_behaviors_exist_in_device_spec": true,
+    "all_trigger_events_registered": true,
+    "all_route_sources_registered": true,
+    "all_state_references_declared": true,
+    "all_payload_references_declared": true,
+    "all_emitted_events_registered": true
+  },
+  "negative_assertions": {
+    "must_report_invalid_reason": false,
+    "must_not_invent_devices": true,
+    "must_not_invent_behaviors": true,
+    "must_not_ignore_invalid_connections": true
+  }
+}

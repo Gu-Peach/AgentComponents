@@ -1,0 +1,120 @@
+{
+  "case_id": "scene_08_case_05",
+  "case_type": "negative_invalid",
+  "expected_result": "report_invalid_requirement",
+  "input_assertions": {
+    "raw_description_summary_source": "docs/test/case/scene_08/normalized_case.md#raw_description_summary",
+    "scene_image": "docs/business/test/8.png",
+    "must_use_raw_description_summary_as_scene_input": true,
+    "must_use_scene_image_as_layout_input": true,
+    "must_not_use_normalized_user_goal_as_input": true
+  },
+  "schema_assertions": {
+    "required_sections": [
+      "goal",
+      "modules",
+      "event_bus",
+      "state_model",
+      "behavior_rules",
+      "state_transition_rules",
+      "policies",
+      "completion_conditions",
+      "failure_observations"
+    ],
+    "forbidden_fields": [
+      "scene_transport_schema",
+      "signal_bus_schema",
+      "sim_plan",
+      "executable_sim_graph",
+      "device_runtime_profile",
+      "when_event",
+      "when_state",
+      "then_start_behavior",
+      "then_emit_signal"
+    ],
+    "rule_required_fields": [
+      "rule_id",
+      "module_id",
+      "trigger",
+      "guard",
+      "policy",
+      "action"
+    ]
+  },
+  "semantic_assertions": {
+    "must_have_goal_requirements": [
+      "请强制让不存在的 robot_99 接管这个场景的关键动作，并且不要使用图中已有的正确设备。"
+    ],
+    "must_have_modules": [],
+    "must_have_events": [
+      "runtime.sim_start",
+      "observation.deadlock_detected",
+      "observation.invalid_requirement",
+      "conveyor.material_arrived",
+      "conveyor.stop_point_occupied",
+      "conveyor.stop_point_released",
+      "conveyor.blocked",
+      "conveyor.capacity_available",
+      "robot.pick_request",
+      "global.workpiece_claimed",
+      "robot.pick_done",
+      "part_source_1.material_ready",
+      "part_conveyor_1.part_ready",
+      "pallet_conveyor_1.pallet_ready",
+      "loading.preconditions_met",
+      "pallet.slot_loaded",
+      "pallet.target_count_reached",
+      "global.pallet_loaded"
+    ],
+    "must_have_routes": [
+      "route_invalid_requirement_to_runtime"
+    ],
+    "must_have_state_variables": [
+      "device_states",
+      "signal_values",
+      "resource_locks",
+      "active_actions",
+      "conveyor_stop_points",
+      "conveyor_occupancy",
+      "conveyor_queues",
+      "conveyor_loads",
+      "domain_state_variables"
+    ],
+    "must_have_behavior_rules": [],
+    "must_have_transition_effects": [],
+    "must_have_policies": [
+      "deterministic_priority",
+      "resource_lock",
+      "deadlock_detection",
+      "conveyor_queue_wait",
+      "conveyor_stop_point_selection",
+      "backpressure",
+      "downstream_release",
+      "robot_resource_claim",
+      "target_conveyor_selection",
+      "first_empty_slot"
+    ],
+    "must_have_completion_conditions": [
+      "invalid requirement has been reported",
+      "no operational behavior graph is committed"
+    ],
+    "must_have_failure_observations": [
+      "invalid_requirement_missing_instance"
+    ]
+  },
+  "reference_assertions": {
+    "all_action_instances_exist": false,
+    "all_action_behaviors_exist_in_device_spec": false,
+    "all_trigger_events_registered": true,
+    "all_route_sources_registered": true,
+    "all_state_references_declared": true,
+    "all_payload_references_declared": true,
+    "all_emitted_events_registered": true
+  },
+  "negative_assertions": {
+    "must_report_invalid_reason": true,
+    "must_not_invent_devices": true,
+    "must_not_invent_behaviors": true,
+    "must_not_ignore_invalid_connections": true
+  }
+}

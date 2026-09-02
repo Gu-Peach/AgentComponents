@@ -1,0 +1,128 @@
+{
+  "case_id": "scene_09_case_01",
+  "case_type": "positive_basic",
+  "expected_result": "generate_valid_graph",
+  "input_assertions": {
+    "raw_description_summary_source": "docs/test/case/scene_09/normalized_case.md#raw_description_summary",
+    "scene_image": "docs/business/test/9.png",
+    "must_use_raw_description_summary_as_scene_input": true,
+    "must_use_scene_image_as_layout_input": true,
+    "must_not_use_normalized_user_goal_as_input": true
+  },
+  "schema_assertions": {
+    "required_sections": [
+      "goal",
+      "modules",
+      "event_bus",
+      "state_model",
+      "behavior_rules",
+      "state_transition_rules",
+      "policies",
+      "completion_conditions",
+      "failure_observations"
+    ],
+    "forbidden_fields": [
+      "scene_transport_schema",
+      "signal_bus_schema",
+      "sim_plan",
+      "executable_sim_graph",
+      "device_runtime_profile",
+      "when_event",
+      "when_state",
+      "then_start_behavior",
+      "then_emit_signal"
+    ],
+    "rule_required_fields": [
+      "rule_id",
+      "module_id",
+      "trigger",
+      "guard",
+      "policy",
+      "action"
+    ]
+  },
+  "semantic_assertions": {
+    "must_have_goal_requirements": [
+      "请按图里的布局跑一遍旋转台定位与机械臂下料，让物料按场景描述完成基础流程，传送带要按停留点排队，不要把物料瞬移到终点。"
+    ],
+    "must_have_modules": [
+      "rotary_material_feed",
+      "rotary_indexing",
+      "robot_unload_to_workstation"
+    ],
+    "must_have_events": [
+      "runtime.sim_start",
+      "observation.deadlock_detected",
+      "observation.invalid_requirement",
+      "robot.pick_request",
+      "global.workpiece_claimed",
+      "robot.pick_done",
+      "rotary_table.occupied",
+      "rotary_table.rotate_request",
+      "rotary_table.at_pick_station",
+      "robot_1.done",
+      "workstation.material_received",
+      "global.process_done"
+    ],
+    "must_have_routes": [
+      "route_runtime_sim_start_to_feed_material_to_rotary_station",
+      "route_rotary_table_occupied_to_rotate_material_to_pick_station",
+      "route_rotary_table_at_pick_station_to_robot_moves_rotary_part_to_workstation"
+    ],
+    "must_have_state_variables": [
+      "device_states",
+      "signal_values",
+      "resource_locks",
+      "active_actions",
+      "conveyor_stop_points",
+      "conveyor_occupancy",
+      "conveyor_queues",
+      "conveyor_loads",
+      "domain_state_variables"
+    ],
+    "must_have_behavior_rules": [
+      "feed_material_to_rotary_station",
+      "rotate_material_to_pick_station",
+      "robot_moves_rotary_part_to_workstation"
+    ],
+    "must_have_transition_effects": [
+      "mark_behavior_started",
+      "mark_behavior_completed",
+      "behavior_failure_emits_observation",
+      "rotary_rotation_updates_station"
+    ],
+    "must_have_policies": [
+      "deterministic_priority",
+      "resource_lock",
+      "deadlock_detection",
+      "robot_resource_claim",
+      "station_mutex"
+    ],
+    "must_have_completion_conditions": [
+      "all requested parts completed at workstation",
+      "rotary_station_occupancy.station_a == null",
+      "rotary_station_occupancy.station_b == null",
+      "active_actions.empty == true"
+    ],
+    "must_have_failure_observations": [
+      "deadlock_detected",
+      "resource_conflict",
+      "invalid_requirement"
+    ]
+  },
+  "reference_assertions": {
+    "all_action_instances_exist": true,
+    "all_action_behaviors_exist_in_device_spec": true,
+    "all_trigger_events_registered": true,
+    "all_route_sources_registered": true,
+    "all_state_references_declared": true,
+    "all_payload_references_declared": true,
+    "all_emitted_events_registered": true
+  },
+  "negative_assertions": {
+    "must_report_invalid_reason": false,
+    "must_not_invent_devices": true,
+    "must_not_invent_behaviors": true,
+    "must_not_ignore_invalid_connections": true
+  }
+}

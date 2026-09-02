@@ -1,0 +1,939 @@
+{
+  "schema_id": "scene_04_case_04_scene_behavior_graph_golden_v0_2",
+  "schema_type": "SceneBehaviorGraph",
+  "version": "0.2.0",
+  "name": "scene_04_case_04 continuous_discrete_event golden",
+  "description": "传送带中段机械臂加工模拟 的正式 benchmark 标准行为图。",
+  "source": {
+    "kind": "benchmark_golden",
+    "input": "test/test_case/scene_04/case_04_continuous_discrete_event/input.md",
+    "scene_image": "docs/business/test/4.png",
+    "raw_description_summary_source": "docs/test/case/scene_04/normalized_case.md#raw_description_summary"
+  },
+  "created_for": "SceneBehaviorGraph Agent benchmark",
+  "references": [
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json",
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/template.json",
+    "docs/business/SimulationSchema/README.md"
+  ],
+  "notes": [
+    "判卷对象只看最终 SceneBehaviorGraph。",
+    "不使用旧中间 schema 字段。"
+  ],
+  "goal": {
+    "natural_language": "请重点验证连续输送到离散事件的转换：停留点占用、满载阻塞、释放恢复、加工或定位完成后再进入下一步。",
+    "assumptions": [
+      "图片显示一条主传送带穿过中间加工停留点，两台机械臂位于传送带两侧，设备柜在旁侧。",
+      "所有传送带停留点由 DeviceSpec stop_point_model 与 SceneDocument 实例参数派生。"
+    ]
+  },
+  "modules": [
+    {
+      "module_id": "inline_feed",
+      "mode": "continuous",
+      "transport_model": "stop_point_buffered_transport",
+      "devices": [
+        "source_station_1",
+        "main_conveyor_1"
+      ],
+      "start_event": "runtime.sim_start",
+      "complete_event": "main_conveyor_1.processing_stop_point_ready",
+      "stop_condition": "materials reach processing stop point"
+    },
+    {
+      "module_id": "inline_processing",
+      "mode": "sequential",
+      "transport_model": "not_applicable",
+      "devices": [
+        "robot_1",
+        "robot_2"
+      ],
+      "start_event": "main_conveyor_1.processing_stop_point_ready",
+      "complete_event": "processing.done",
+      "stop_condition": "processing buffer released"
+    },
+    {
+      "module_id": "post_process_release",
+      "mode": "continuous",
+      "transport_model": "stop_point_buffered_transport",
+      "devices": [
+        "main_conveyor_1"
+      ],
+      "start_event": "processing.done",
+      "complete_event": "main_conveyor_1.material_released",
+      "stop_condition": "processed materials exit"
+    }
+  ],
+  "event_bus": {
+    "events": [
+      {
+        "event_id": "runtime.sim_start",
+        "kind": "global_event",
+        "source": "runtime",
+        "description": "仿真开始事件",
+        "payload_schema": {},
+        "retention": "checkpoint_only"
+      },
+      {
+        "event_id": "observation.deadlock_detected",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "没有可执行行为且完成条件未满足",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "observation.invalid_requirement",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "输入目标与场景事实或设备能力冲突",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.material_arrived",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料到达传送带入口或停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.stop_point_occupied",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料占用某个传送带停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "point_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.stop_point_released",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料释放某个传送带停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "point_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.blocked",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "传送带因容量或下游不可接收进入阻塞",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "reason": "string"
+        },
+        "retention": "latest_value"
+      },
+      {
+        "event_id": "conveyor.capacity_available",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "传送带释放容量后恢复可接收",
+        "payload_schema": {
+          "conveyor_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_request",
+        "kind": "control_event",
+        "source": "scheduler",
+        "description": "请求空闲机械臂执行抓取或搬运动作",
+        "payload_schema": {
+          "candidate_robots": "array",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.workpiece_claimed",
+        "kind": "global_event",
+        "source": "policy",
+        "description": "共享物料或工位被某个执行单元成功 claim",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_done",
+        "kind": "device_signal",
+        "source": "robot_arm",
+        "description": "机械臂抓取放置动作完成",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "source_station_1.material_ready",
+        "kind": "device_signal",
+        "source": "source_station_1",
+        "description": "source_station_1.material_ready 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "main_conveyor_1.processing_stop_point_ready",
+        "kind": "device_signal",
+        "source": "main_conveyor_1",
+        "description": "main_conveyor_1.processing_stop_point_ready 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "processing.start",
+        "kind": "device_signal",
+        "source": "processing",
+        "description": "processing.start 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "processing.done",
+        "kind": "device_signal",
+        "source": "processing",
+        "description": "processing.done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.processing_batch_done",
+        "kind": "global_event",
+        "source": "global",
+        "description": "global.processing_batch_done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      }
+    ],
+    "topics": [
+      {
+        "topic_id": "backpressure",
+        "description": "传送带阻塞与恢复广播",
+        "delivery": "broadcast"
+      }
+    ],
+    "subscriptions": {
+      "backpressure": [
+        {
+          "subscriber_type": "rule",
+          "subscriber_id": "emit_blocked_when_no_stop_point_available",
+          "message_event_id": "conveyor.blocked",
+          "filter": "conveyor_loads[conveyor_id].blocked == true",
+          "payload_template": {
+            "conveyor_id": "event.payload.conveyor_id"
+          }
+        },
+        {
+          "subscriber_type": "rule",
+          "subscriber_id": "emit_capacity_available_when_stop_point_released",
+          "message_event_id": "conveyor.capacity_available",
+          "filter": "conveyor_loads[conveyor_id].blocked == false",
+          "payload_template": {
+            "conveyor_id": "event.payload.conveyor_id"
+          }
+        }
+      ]
+    },
+    "routes": [
+      {
+        "route_id": "route_conveyor_material_arrived_to_accept_material_to_first_available_stop_point",
+        "from": "conveyor.material_arrived",
+        "to": {
+          "type": "rule",
+          "id": "accept_material_to_first_available_stop_point"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_conveyor_stop_point_occupied_to_advance_material_to_next_stop_point",
+        "from": "conveyor.stop_point_occupied",
+        "to": {
+          "type": "rule",
+          "id": "advance_material_to_next_stop_point"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_conveyor_stop_point_occupied_to_wait_when_next_stop_point_occupied",
+        "from": "conveyor.stop_point_occupied",
+        "to": {
+          "type": "rule",
+          "id": "wait_when_next_stop_point_occupied"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_conveyor_stop_point_occupied_to_release_material_when_downstream_available",
+        "from": "conveyor.stop_point_occupied",
+        "to": {
+          "type": "rule",
+          "id": "release_material_when_downstream_available"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_conveyor_stop_point_released_to_emit_capacity_available_when_stop_point_released",
+        "from": "conveyor.stop_point_released",
+        "to": {
+          "type": "rule",
+          "id": "emit_capacity_available_when_stop_point_released"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_runtime_sim_start_to_feed_material_to_processing_stop_point",
+        "from": "runtime.sim_start",
+        "to": {
+          "type": "rule",
+          "id": "feed_material_to_processing_stop_point"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_main_conveyor_1_processing_stop_point_ready_to_hold_part_at_processing_stop_point",
+        "from": "main_conveyor_1.processing_stop_point_ready",
+        "to": {
+          "type": "rule",
+          "id": "hold_part_at_processing_stop_point"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_processing_start_to_robot_processes_fixed_position",
+        "from": "processing.start",
+        "to": {
+          "type": "rule",
+          "id": "robot_processes_fixed_position"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_processing_done_to_release_processed_part",
+        "from": "processing.done",
+        "to": {
+          "type": "rule",
+          "id": "release_processed_part"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_conveyor_blocked_to_backpressure_topic",
+        "from": "conveyor.blocked",
+        "to": {
+          "type": "topic",
+          "id": "backpressure"
+        },
+        "delivery": "broadcast"
+      },
+      {
+        "route_id": "route_capacity_available_to_backpressure_topic",
+        "from": "conveyor.capacity_available",
+        "to": {
+          "type": "topic",
+          "id": "backpressure"
+        },
+        "delivery": "broadcast"
+      }
+    ]
+  },
+  "state_model": {
+    "device_states": {
+      "source_station_1": "idle",
+      "main_conveyor_1": "idle",
+      "robot_1": "idle",
+      "robot_2": "idle"
+    },
+    "signal_values": {},
+    "resource_locks": {
+      "source_station_1": {},
+      "main_conveyor_1": {},
+      "robot_1": {},
+      "robot_2": {}
+    },
+    "active_actions": {},
+    "conveyor_stop_points": {
+      "main_conveyor_1": {
+        "generation": "linear_interpolation",
+        "points": [
+          {
+            "point_id": "main_conveyor_1.sp_01",
+            "index": 0,
+            "t": 0,
+            "role": "entry",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "main_conveyor_1.sp_02",
+            "index": 1,
+            "t": 0.33,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "main_conveyor_1.sp_03",
+            "index": 2,
+            "t": 0.66,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "main_conveyor_1.sp_04",
+            "index": 3,
+            "t": 1,
+            "role": "exit",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          }
+        ]
+      }
+    },
+    "conveyor_occupancy": {
+      "main_conveyor_1": {
+        "main_conveyor_1.sp_01": null,
+        "main_conveyor_1.sp_02": null,
+        "main_conveyor_1.sp_03": null,
+        "main_conveyor_1.sp_04": null
+      }
+    },
+    "conveyor_queues": {
+      "main_conveyor_1": {
+        "queue_id": "main_conveyor_1.stop_point_queue",
+        "waiting_materials": []
+      }
+    },
+    "conveyor_loads": {
+      "main_conveyor_1": {
+        "current_load": 0,
+        "max_capacity": 1,
+        "resume_threshold": 1,
+        "blocked": false
+      }
+    },
+    "domain_state_variables": {
+      "processing_stop_point": {
+        "point_id": "main_conveyor_1.sp_02",
+        "occupied_by": null,
+        "processed": false
+      },
+      "processing_queue": [],
+      "processed_parts": []
+    }
+  },
+  "behavior_rules": [
+    {
+      "rule_id": "accept_material_to_first_available_stop_point",
+      "module_id": "inline_processing",
+      "description": "新物料进入传送带时写入入口侧最近可用停留点。",
+      "trigger": {
+        "type": "event",
+        "event_id": "conveyor.material_arrived"
+      },
+      "guard": {
+        "all": [
+          "conveyor_loads[trigger.payload.conveyor_id].blocked == false",
+          "entry stop point is available"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "conveyor_stop_point_selection",
+        "inputs": {
+          "conveyor_id": "trigger.payload.conveyor_id",
+          "material_id": "trigger.payload.material_id"
+        },
+        "bind_outputs_to": {
+          "point_id": "action.payload.target_stop_point"
+        }
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "trigger.payload.conveyor_id",
+        "behavior_id": "accept_material",
+        "payload": {
+          "material_id": "trigger.payload.material_id",
+          "target_stop_point": "policy.point_id"
+        }
+      }
+    },
+    {
+      "rule_id": "advance_material_to_next_stop_point",
+      "module_id": "inline_processing",
+      "description": "前方停留点可用时，物料沿出口方向推进一个停留点。",
+      "trigger": {
+        "type": "event",
+        "event_id": "conveyor.stop_point_occupied"
+      },
+      "guard": {
+        "all": [
+          "next stop point exists",
+          "next stop point is empty",
+          "conveyor_loads[trigger.payload.conveyor_id].blocked == false"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "conveyor_stop_point_selection",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "trigger.payload.conveyor_id",
+        "behavior_id": "advance_to_next_stop_point",
+        "payload": {
+          "material_id": "trigger.payload.material_id",
+          "from_point_id": "trigger.payload.point_id",
+          "to_point_id": "policy.point_id"
+        }
+      }
+    },
+    {
+      "rule_id": "wait_when_next_stop_point_occupied",
+      "module_id": "inline_processing",
+      "description": "前方停留点或下游不可用时，将物料留在当前位置并进入等待队列。",
+      "trigger": {
+        "type": "event",
+        "event_id": "conveyor.stop_point_occupied"
+      },
+      "guard": {
+        "all": [
+          "next stop point occupied or downstream unavailable"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "conveyor_queue_wait",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "update_state",
+        "payload": {
+          "append": "trigger.payload.material_id",
+          "to": "conveyor_queues[trigger.payload.conveyor_id].waiting_materials"
+        }
+      }
+    },
+    {
+      "rule_id": "release_material_when_downstream_available",
+      "module_id": "inline_processing",
+      "description": "出口停留点有物料且下游可接收时释放物料。",
+      "trigger": {
+        "type": "event",
+        "event_id": "conveyor.stop_point_occupied"
+      },
+      "guard": {
+        "all": [
+          "trigger.payload.point_id role == exit",
+          "downstream available"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "downstream_release",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "trigger.payload.conveyor_id",
+        "behavior_id": "release_material",
+        "payload": {
+          "material_id": "trigger.payload.material_id"
+        }
+      }
+    },
+    {
+      "rule_id": "emit_blocked_when_no_stop_point_available",
+      "module_id": "inline_processing",
+      "description": "无可用停留点或达到容量上限时发出阻塞观测。",
+      "trigger": {
+        "type": "state_change",
+        "state": "conveyor_loads[*].current_load >= conveyor_loads[*].max_capacity"
+      },
+      "guard": {
+        "all": [
+          "no available stop point or current_load >= max_capacity"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "backpressure",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "emit_event",
+        "event_id": "conveyor.blocked",
+        "payload": {
+          "conveyor_id": "state.conveyor_id",
+          "reason": "capacity_or_downstream_blocked"
+        }
+      }
+    },
+    {
+      "rule_id": "emit_capacity_available_when_stop_point_released",
+      "module_id": "inline_processing",
+      "description": "停留点释放且负载低于恢复阈值时发出容量恢复事件。",
+      "trigger": {
+        "type": "event",
+        "event_id": "conveyor.stop_point_released"
+      },
+      "guard": {
+        "all": [
+          "conveyor_loads[trigger.payload.conveyor_id].current_load <= conveyor_loads[trigger.payload.conveyor_id].resume_threshold"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "backpressure",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "emit_event",
+        "event_id": "conveyor.capacity_available",
+        "payload": {
+          "conveyor_id": "trigger.payload.conveyor_id"
+        }
+      }
+    },
+    {
+      "rule_id": "feed_material_to_processing_stop_point",
+      "module_id": "inline_feed",
+      "description": "上料台生成物料并送入主传送带。",
+      "trigger": {
+        "type": "event",
+        "event_id": "runtime.sim_start"
+      },
+      "guard": {
+        "all": [
+          "main_conveyor_1 entry available"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "resource_lock",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "source_station_1",
+        "behavior_id": "produce_material",
+        "payload": {
+          "material_id": "next_part"
+        }
+      }
+    },
+    {
+      "rule_id": "hold_part_at_processing_stop_point",
+      "module_id": "inline_processing",
+      "description": "物料到达中间加工停留点后暂停继续前进。",
+      "trigger": {
+        "type": "event",
+        "event_id": "main_conveyor_1.processing_stop_point_ready"
+      },
+      "guard": {
+        "all": [
+          "processing_stop_point.occupied_by != null",
+          "processing_stop_point.processed == false"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "conveyor_queue_wait",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "update_state",
+        "payload": {
+          "set": "processing_stop_point.hold = true"
+        }
+      }
+    },
+    {
+      "rule_id": "robot_processes_fixed_position",
+      "module_id": "inline_processing",
+      "description": "空闲机械臂在固定位置执行一次模拟加工。",
+      "trigger": {
+        "type": "event",
+        "event_id": "processing.start"
+      },
+      "guard": {
+        "all": [
+          "processing_stop_point.occupied_by != null",
+          "device_states.robot_1 == idle or device_states.robot_2 == idle"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "deterministic_priority",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "policy.robot_id",
+        "behavior_id": "pick_and_place",
+        "payload": {
+          "operation": "process_in_place",
+          "position": "processing_stop_point"
+        }
+      }
+    },
+    {
+      "rule_id": "release_processed_part",
+      "module_id": "post_process_release",
+      "description": "加工完成后释放停留点并允许继续输送。",
+      "trigger": {
+        "type": "event",
+        "event_id": "processing.done"
+      },
+      "guard": {
+        "all": [
+          "processing_stop_point.processed == true"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "downstream_release",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "main_conveyor_1",
+        "behavior_id": "advance_to_next_stop_point",
+        "payload": {
+          "from": "processing_stop_point",
+          "to": "next_stop_point"
+        }
+      }
+    },
+    {
+      "rule_id": "observe_continuous_to_discrete_boundary",
+      "module_id": "inline_processing",
+      "description": "将连续输送、旋转或加工状态越过阈值转换为离散完成事件。",
+      "trigger": {
+        "type": "state_change",
+        "state": "continuous_progress >= threshold"
+      },
+      "guard": {
+        "all": [
+          "active action progress reached boundary"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "deterministic_priority",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "emit_event",
+        "event_id": "global.processing_batch_done",
+        "payload": {
+          "reason": "threshold_reached"
+        }
+      }
+    }
+  ],
+  "state_transition_rules": [
+    {
+      "rule_id": "mark_behavior_started",
+      "trigger": {
+        "type": "behavior_started",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = busy_or_moving",
+        "register active_actions[action_id]",
+        "lock required resource_locks"
+      ]
+    },
+    {
+      "rule_id": "mark_behavior_completed",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = idle",
+        "remove active_actions[action_id]",
+        "release resource_locks owned by action"
+      ]
+    },
+    {
+      "rule_id": "behavior_failure_emits_observation",
+      "trigger": {
+        "type": "behavior_failed",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = error",
+        "emit observation.deadlock_detected or observation.invalid_requirement"
+      ]
+    },
+    {
+      "rule_id": "conveyor_accept_updates_occupancy",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "*.accept_material"
+      },
+      "effects": [
+        "set conveyor_occupancy[conveyor_id][selected_stop_point] = material_id",
+        "increment conveyor_loads[conveyor_id].current_load",
+        "emit conveyor.stop_point_occupied"
+      ]
+    },
+    {
+      "rule_id": "conveyor_advance_updates_occupancy",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "*.advance_to_next_stop_point"
+      },
+      "effects": [
+        "clear conveyor_occupancy[conveyor_id][from_point_id]",
+        "set conveyor_occupancy[conveyor_id][to_point_id] = material_id",
+        "emit conveyor.stop_point_released",
+        "emit conveyor.stop_point_occupied"
+      ]
+    },
+    {
+      "rule_id": "conveyor_release_updates_load",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "*.release_material"
+      },
+      "effects": [
+        "clear exit stop point occupancy",
+        "decrement conveyor_loads[conveyor_id].current_load",
+        "emit conveyor.stop_point_released"
+      ]
+    }
+  ],
+  "policies": {
+    "deterministic_priority": {
+      "type": "deterministic_priority",
+      "params": {
+        "tie_breaker": "rule_id_then_instance_id"
+      }
+    },
+    "resource_lock": {
+      "type": "resource_lock",
+      "params": {
+        "lock_scope": "instance_resource",
+        "on_conflict": "wait"
+      }
+    },
+    "deadlock_detection": {
+      "type": "deadlock_detection",
+      "params": {
+        "condition": "no_enabled_behavior and completion_conditions_not_met",
+        "emit": "observation.deadlock_detected"
+      }
+    },
+    "conveyor_queue_wait": {
+      "type": "queue_wait",
+      "params": {
+        "queue_scope": "conveyor_stop_points",
+        "wait_when": "next_stop_point_occupied or downstream_unavailable",
+        "resume_when": "stop_point_released or downstream_available"
+      }
+    },
+    "conveyor_stop_point_selection": {
+      "type": "nearest_available_stop_point",
+      "params": {
+        "search_direction": "towards_exit",
+        "fallback": "wait_at_nearest_upstream_stop_point"
+      }
+    },
+    "backpressure": {
+      "type": "capacity_threshold",
+      "params": {
+        "blocked_when": "current_load >= max_capacity",
+        "resume_when": "current_load <= resume_threshold",
+        "pause_strategy": "pause_before_next_pick"
+      }
+    },
+    "downstream_release": {
+      "type": "downstream_release",
+      "params": {
+        "release_when": "downstream_entry_available and exit_stop_point_occupied",
+        "on_blocked": "queue_wait"
+      }
+    },
+    "robot_resource_claim": {
+      "type": "shared_pool_claim",
+      "params": {
+        "mutual_exclusion": true,
+        "claim_order": "deterministic_by_material_id",
+        "eligible_when": "device_state == idle"
+      }
+    }
+  },
+  "completion_conditions": [
+    "processed_parts.count == requested_count",
+    "processing_stop_point.occupied_by == null",
+    "all conveyor_occupancy stop points are empty",
+    "active_actions.empty == true"
+  ],
+  "failure_observations": [
+    {
+      "observation_id": "deadlock_detected",
+      "condition": "no_enabled_behavior and completion_conditions_not_met",
+      "emit_event": "observation.deadlock_detected"
+    },
+    {
+      "observation_id": "resource_conflict",
+      "condition": "resource lock conflict exceeds retry threshold",
+      "emit_event": "observation.deadlock_detected"
+    },
+    {
+      "observation_id": "invalid_requirement",
+      "condition": "goal references missing device, unsupported behavior, or impossible connection",
+      "emit_event": "observation.invalid_requirement"
+    }
+  ]
+}

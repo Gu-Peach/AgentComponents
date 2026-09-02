@@ -1,0 +1,441 @@
+{
+  "schema_id": "scene_03_case_05_scene_behavior_graph_golden_v0_2",
+  "schema_type": "SceneBehaviorGraph",
+  "version": "0.2.0",
+  "name": "scene_03_case_05 invalid requirement golden",
+  "description": "负向 benchmark：Agent 应报告目标与场景事实冲突，不硬编成功运行图。",
+  "source": {
+    "kind": "benchmark_golden",
+    "input": "test/test_case/scene_03/case_05_negative_invalid/input.md",
+    "scene_image": "docs/business/test/3.png"
+  },
+  "created_for": "SceneBehaviorGraph Agent benchmark negative case",
+  "references": [
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json",
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/template.json"
+  ],
+  "notes": [
+    "该 case 的期望结果是报告非法需求，而不是发明缺失设备或能力。"
+  ],
+  "goal": {
+    "natural_language": "请强制让不存在的 robot_99 接管这个场景的关键动作，并且不要使用图中已有的正确设备。",
+    "assumptions": [
+      "输入目标要求场景中不存在的 robot_99 或 ghost 设备执行关键动作。",
+      "不得凭空创建设备实例、连接或设备行为。"
+    ]
+  },
+  "modules": [],
+  "event_bus": {
+    "events": [
+      {
+        "event_id": "runtime.sim_start",
+        "kind": "global_event",
+        "source": "runtime",
+        "description": "仿真开始事件",
+        "payload_schema": {},
+        "retention": "checkpoint_only"
+      },
+      {
+        "event_id": "observation.deadlock_detected",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "没有可执行行为且完成条件未满足",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "observation.invalid_requirement",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "输入目标与场景事实或设备能力冲突",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.material_arrived",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料到达传送带入口或停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.stop_point_occupied",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料占用某个传送带停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "point_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.stop_point_released",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "物料释放某个传送带停留点",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "point_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "conveyor.blocked",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "传送带因容量或下游不可接收进入阻塞",
+        "payload_schema": {
+          "conveyor_id": "string",
+          "reason": "string"
+        },
+        "retention": "latest_value"
+      },
+      {
+        "event_id": "conveyor.capacity_available",
+        "kind": "device_signal",
+        "source": "conveyor",
+        "description": "传送带释放容量后恢复可接收",
+        "payload_schema": {
+          "conveyor_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_request",
+        "kind": "control_event",
+        "source": "scheduler",
+        "description": "请求空闲机械臂执行抓取或搬运动作",
+        "payload_schema": {
+          "candidate_robots": "array",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.workpiece_claimed",
+        "kind": "global_event",
+        "source": "policy",
+        "description": "共享物料或工位被某个执行单元成功 claim",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_done",
+        "kind": "device_signal",
+        "source": "robot_arm",
+        "description": "机械臂抓取放置动作完成",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "source_station_1.material_ready",
+        "kind": "device_signal",
+        "source": "source_station_1",
+        "description": "source_station_1.material_ready 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "right_in_conveyor_1.part_ready",
+        "kind": "device_signal",
+        "source": "right_in_conveyor_1",
+        "description": "right_in_conveyor_1.part_ready 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "handoff_buffer.occupied",
+        "kind": "device_signal",
+        "source": "handoff_buffer",
+        "description": "handoff_buffer.occupied 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "handoff_buffer.released",
+        "kind": "device_signal",
+        "source": "handoff_buffer",
+        "description": "handoff_buffer.released 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot_1.done",
+        "kind": "device_signal",
+        "source": "robot_1",
+        "description": "robot_1.done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot_2.done",
+        "kind": "device_signal",
+        "source": "robot_2",
+        "description": "robot_2.done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.transfer_done",
+        "kind": "global_event",
+        "source": "global",
+        "description": "global.transfer_done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      }
+    ],
+    "topics": [],
+    "subscriptions": {},
+    "routes": [
+      {
+        "route_id": "route_invalid_requirement_to_runtime",
+        "from": "observation.invalid_requirement",
+        "to": {
+          "type": "runtime",
+          "id": "InvalidRequirementReporter"
+        },
+        "delivery": "internal"
+      }
+    ]
+  },
+  "state_model": {
+    "device_states": {
+      "source_station_1": "declared",
+      "right_in_conveyor_1": "declared",
+      "robot_1": "declared",
+      "robot_2": "declared",
+      "left_out_conveyor_1": "declared"
+    },
+    "signal_values": {},
+    "resource_locks": {},
+    "active_actions": {},
+    "conveyor_stop_points": {
+      "right_in_conveyor_1": {
+        "generation": "linear_interpolation",
+        "points": [
+          {
+            "point_id": "right_in_conveyor_1.sp_01",
+            "index": 0,
+            "t": 0,
+            "role": "entry",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "right_in_conveyor_1.sp_02",
+            "index": 1,
+            "t": 0.33,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "right_in_conveyor_1.sp_03",
+            "index": 2,
+            "t": 0.66,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "right_in_conveyor_1.sp_04",
+            "index": 3,
+            "t": 1,
+            "role": "exit",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          }
+        ]
+      },
+      "left_out_conveyor_1": {
+        "generation": "linear_interpolation",
+        "points": [
+          {
+            "point_id": "left_out_conveyor_1.sp_01",
+            "index": 0,
+            "t": 0,
+            "role": "entry",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "left_out_conveyor_1.sp_02",
+            "index": 1,
+            "t": 0.33,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "left_out_conveyor_1.sp_03",
+            "index": 2,
+            "t": 0.66,
+            "role": "middle",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          },
+          {
+            "point_id": "left_out_conveyor_1.sp_04",
+            "index": 3,
+            "t": 1,
+            "role": "exit",
+            "coordinate_source": "DeviceSpec.type_specific_contract.stop_point_model.coordinate_formula"
+          }
+        ]
+      }
+    },
+    "conveyor_occupancy": {
+      "right_in_conveyor_1": {
+        "right_in_conveyor_1.sp_01": null,
+        "right_in_conveyor_1.sp_02": null,
+        "right_in_conveyor_1.sp_03": null,
+        "right_in_conveyor_1.sp_04": null
+      },
+      "left_out_conveyor_1": {
+        "left_out_conveyor_1.sp_01": null,
+        "left_out_conveyor_1.sp_02": null,
+        "left_out_conveyor_1.sp_03": null,
+        "left_out_conveyor_1.sp_04": null
+      }
+    },
+    "conveyor_queues": {
+      "right_in_conveyor_1": {
+        "queue_id": "right_in_conveyor_1.stop_point_queue",
+        "waiting_materials": []
+      },
+      "left_out_conveyor_1": {
+        "queue_id": "left_out_conveyor_1.stop_point_queue",
+        "waiting_materials": []
+      }
+    },
+    "conveyor_loads": {
+      "right_in_conveyor_1": {
+        "current_load": 0,
+        "max_capacity": 3,
+        "resume_threshold": 2,
+        "blocked": false
+      },
+      "left_out_conveyor_1": {
+        "current_load": 0,
+        "max_capacity": 3,
+        "resume_threshold": 2,
+        "blocked": false
+      }
+    },
+    "domain_state_variables": {
+      "invalid_requirement": {
+        "reason": "requested instance is absent from SceneDocument",
+        "missing_instance_ids": [
+          "robot_99"
+        ]
+      }
+    }
+  },
+  "behavior_rules": [],
+  "state_transition_rules": [],
+  "policies": {
+    "deterministic_priority": {
+      "type": "deterministic_priority",
+      "params": {
+        "tie_breaker": "rule_id_then_instance_id"
+      }
+    },
+    "resource_lock": {
+      "type": "resource_lock",
+      "params": {
+        "lock_scope": "instance_resource",
+        "on_conflict": "wait"
+      }
+    },
+    "deadlock_detection": {
+      "type": "deadlock_detection",
+      "params": {
+        "condition": "no_enabled_behavior and completion_conditions_not_met",
+        "emit": "observation.deadlock_detected"
+      }
+    },
+    "conveyor_queue_wait": {
+      "type": "queue_wait",
+      "params": {
+        "queue_scope": "conveyor_stop_points",
+        "wait_when": "next_stop_point_occupied or downstream_unavailable",
+        "resume_when": "stop_point_released or downstream_available"
+      }
+    },
+    "conveyor_stop_point_selection": {
+      "type": "nearest_available_stop_point",
+      "params": {
+        "search_direction": "towards_exit",
+        "fallback": "wait_at_nearest_upstream_stop_point"
+      }
+    },
+    "backpressure": {
+      "type": "capacity_threshold",
+      "params": {
+        "blocked_when": "current_load >= max_capacity",
+        "resume_when": "current_load <= resume_threshold",
+        "pause_strategy": "pause_before_next_pick"
+      }
+    },
+    "downstream_release": {
+      "type": "downstream_release",
+      "params": {
+        "release_when": "downstream_entry_available and exit_stop_point_occupied",
+        "on_blocked": "queue_wait"
+      }
+    },
+    "robot_resource_claim": {
+      "type": "shared_pool_claim",
+      "params": {
+        "mutual_exclusion": true,
+        "claim_order": "deterministic_by_material_id",
+        "eligible_when": "device_state == idle"
+      }
+    },
+    "target_conveyor_selection": {
+      "type": "load_balancing",
+      "params": {
+        "candidates": [
+          "right_in_conveyor_1",
+          "left_out_conveyor_1"
+        ],
+        "prefer": "lowest_current_load_not_blocked"
+      }
+    }
+  },
+  "completion_conditions": [
+    "invalid requirement has been reported",
+    "no operational behavior graph is committed"
+  ],
+  "failure_observations": [
+    {
+      "observation_id": "invalid_requirement_missing_instance",
+      "condition": "case_user_goal references instance_id not present in SceneDocument",
+      "emit_event": "observation.invalid_requirement"
+    }
+  ]
+}

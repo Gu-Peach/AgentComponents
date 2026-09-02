@@ -1,0 +1,490 @@
+{
+  "schema_id": "scene_09_case_04_scene_behavior_graph_golden_v0_2",
+  "schema_type": "SceneBehaviorGraph",
+  "version": "0.2.0",
+  "name": "scene_09_case_04 continuous_discrete_event golden",
+  "description": "旋转台定位与机械臂下料 的正式 benchmark 标准行为图。",
+  "source": {
+    "kind": "benchmark_golden",
+    "input": "test/test_case/scene_09/case_04_continuous_discrete_event/input.md",
+    "scene_image": "docs/business/test/9.png",
+    "raw_description_summary_source": "docs/test/case/scene_09/normalized_case.md#raw_description_summary"
+  },
+  "created_for": "SceneBehaviorGraph Agent benchmark",
+  "references": [
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json",
+    "docs/business/SimulationSchema/4.SceneBehaviorGraph/template.json",
+    "docs/business/SimulationSchema/README.md"
+  ],
+  "notes": [
+    "判卷对象只看最终 SceneBehaviorGraph。",
+    "不使用旧中间 schema 字段。"
+  ],
+  "goal": {
+    "natural_language": "请重点验证连续输送到离散事件的转换：停留点占用、满载阻塞、释放恢复、加工或定位完成后再进入下一步。",
+    "assumptions": [
+      "图片显示安全围栏内旋转台和机械臂、外部工作台/手推车与人工来源；人工搬运简化为旋转台站点生成。",
+      "所有传送带停留点由 DeviceSpec stop_point_model 与 SceneDocument 实例参数派生。"
+    ]
+  },
+  "modules": [
+    {
+      "module_id": "rotary_material_feed",
+      "mode": "continuous",
+      "transport_model": "not_applicable",
+      "devices": [
+        "source_station_1",
+        "rotary_table_1"
+      ],
+      "start_event": "runtime.sim_start",
+      "complete_event": "rotary_table.occupied",
+      "stop_condition": "station_a receives material"
+    },
+    {
+      "module_id": "rotary_indexing",
+      "mode": "sequential",
+      "transport_model": "not_applicable",
+      "devices": [
+        "rotary_table_1"
+      ],
+      "start_event": "rotary_table.occupied",
+      "complete_event": "rotary_table.at_pick_station",
+      "stop_condition": "station_b aligned to robot"
+    },
+    {
+      "module_id": "robot_unload_to_workstation",
+      "mode": "sequential",
+      "transport_model": "not_applicable",
+      "devices": [
+        "robot_1",
+        "workstation_1"
+      ],
+      "start_event": "rotary_table.at_pick_station",
+      "complete_event": "global.process_done",
+      "stop_condition": "workstation accepts and clears material"
+    }
+  ],
+  "event_bus": {
+    "events": [
+      {
+        "event_id": "runtime.sim_start",
+        "kind": "global_event",
+        "source": "runtime",
+        "description": "仿真开始事件",
+        "payload_schema": {},
+        "retention": "checkpoint_only"
+      },
+      {
+        "event_id": "observation.deadlock_detected",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "没有可执行行为且完成条件未满足",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "observation.invalid_requirement",
+        "kind": "observation",
+        "source": "runtime",
+        "description": "输入目标与场景事实或设备能力冲突",
+        "payload_schema": {
+          "reason": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_request",
+        "kind": "control_event",
+        "source": "scheduler",
+        "description": "请求空闲机械臂执行抓取或搬运动作",
+        "payload_schema": {
+          "candidate_robots": "array",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.workpiece_claimed",
+        "kind": "global_event",
+        "source": "policy",
+        "description": "共享物料或工位被某个执行单元成功 claim",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot.pick_done",
+        "kind": "device_signal",
+        "source": "robot_arm",
+        "description": "机械臂抓取放置动作完成",
+        "payload_schema": {
+          "robot_id": "string",
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "rotary_table.occupied",
+        "kind": "device_signal",
+        "source": "rotary_table",
+        "description": "rotary_table.occupied 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "rotary_table.rotate_request",
+        "kind": "device_signal",
+        "source": "rotary_table",
+        "description": "rotary_table.rotate_request 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "rotary_table.at_pick_station",
+        "kind": "device_signal",
+        "source": "rotary_table",
+        "description": "rotary_table.at_pick_station 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "robot_1.done",
+        "kind": "device_signal",
+        "source": "robot_1",
+        "description": "robot_1.done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "workstation.material_received",
+        "kind": "device_signal",
+        "source": "workstation",
+        "description": "workstation.material_received 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      },
+      {
+        "event_id": "global.process_done",
+        "kind": "global_event",
+        "source": "global",
+        "description": "global.process_done 场景事件",
+        "payload_schema": {
+          "material_id": "string"
+        },
+        "retention": "event_log"
+      }
+    ],
+    "topics": [],
+    "subscriptions": {},
+    "routes": [
+      {
+        "route_id": "route_runtime_sim_start_to_feed_material_to_rotary_station",
+        "from": "runtime.sim_start",
+        "to": {
+          "type": "rule",
+          "id": "feed_material_to_rotary_station"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_rotary_table_occupied_to_rotate_material_to_pick_station",
+        "from": "rotary_table.occupied",
+        "to": {
+          "type": "rule",
+          "id": "rotate_material_to_pick_station"
+        },
+        "delivery": "direct"
+      },
+      {
+        "route_id": "route_rotary_table_at_pick_station_to_robot_moves_rotary_part_to_workstation",
+        "from": "rotary_table.at_pick_station",
+        "to": {
+          "type": "rule",
+          "id": "robot_moves_rotary_part_to_workstation"
+        },
+        "delivery": "direct"
+      }
+    ]
+  },
+  "state_model": {
+    "device_states": {
+      "source_station_1": "idle",
+      "rotary_table_1": "idle",
+      "robot_1": "idle",
+      "workstation_1": "idle"
+    },
+    "signal_values": {},
+    "resource_locks": {
+      "source_station_1": {},
+      "rotary_table_1": {},
+      "robot_1": {},
+      "workstation_1": {}
+    },
+    "active_actions": {},
+    "conveyor_stop_points": {},
+    "conveyor_occupancy": {},
+    "conveyor_queues": {},
+    "conveyor_loads": {},
+    "domain_state_variables": {
+      "rotary_station_occupancy": {
+        "station_a": null,
+        "station_b": null
+      },
+      "rotary_position": {
+        "angle_deg": 180,
+        "target_angle_deg": 0
+      },
+      "workstation_buffer": {
+        "occupied_by": null,
+        "completed_parts": []
+      }
+    }
+  },
+  "behavior_rules": [
+    {
+      "rule_id": "feed_material_to_rotary_station",
+      "module_id": "rotary_material_feed",
+      "description": "将人工搬运简化为 station_a 生成/接收工件。",
+      "trigger": {
+        "type": "event",
+        "event_id": "runtime.sim_start"
+      },
+      "guard": {
+        "all": [
+          "rotary_station_occupancy.station_a == null"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "station_mutex",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "rotary_table_1",
+        "behavior_id": "accept_material",
+        "payload": {
+          "station_id": "station_a",
+          "material_id": "next_part"
+        }
+      }
+    },
+    {
+      "rule_id": "rotate_material_to_pick_station",
+      "module_id": "rotary_indexing",
+      "description": "station_a 有工件后旋转 90 度到机械臂可达 station_b。",
+      "trigger": {
+        "type": "event",
+        "event_id": "rotary_table.occupied"
+      },
+      "guard": {
+        "all": [
+          "resource_locks.rotary_table_1.rotary_plate is free",
+          "device_states.robot_1 != busy"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "station_mutex",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "rotary_table_1",
+        "behavior_id": "rotate_to_station",
+        "payload": {
+          "from_station": "station_a",
+          "to_station": "station_b",
+          "angle_deg": 90
+        }
+      }
+    },
+    {
+      "rule_id": "robot_moves_rotary_part_to_workstation",
+      "module_id": "robot_unload_to_workstation",
+      "description": "旋转到位后机械臂将工件搬到工作台并完成。",
+      "trigger": {
+        "type": "event",
+        "event_id": "rotary_table.at_pick_station"
+      },
+      "guard": {
+        "all": [
+          "rotary_station_occupancy.station_b != null",
+          "workstation_buffer.occupied_by == null",
+          "device_states.robot_1 == idle"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "resource_lock",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "start_behavior",
+        "instance_id": "robot_1",
+        "behavior_id": "pick_and_place",
+        "payload": {
+          "from": "rotary_table_1.station_b",
+          "to": "workstation_1.buffer_area"
+        }
+      }
+    },
+    {
+      "rule_id": "observe_continuous_to_discrete_boundary",
+      "module_id": "rotary_indexing",
+      "description": "将连续输送、旋转或加工状态越过阈值转换为离散完成事件。",
+      "trigger": {
+        "type": "state_change",
+        "state": "continuous_progress >= threshold"
+      },
+      "guard": {
+        "all": [
+          "active action progress reached boundary"
+        ],
+        "any": [],
+        "none": []
+      },
+      "policy": {
+        "policy_id": "deterministic_priority",
+        "inputs": {},
+        "bind_outputs_to": {}
+      },
+      "action": {
+        "type": "emit_event",
+        "event_id": "global.process_done",
+        "payload": {
+          "reason": "threshold_reached"
+        }
+      }
+    }
+  ],
+  "state_transition_rules": [
+    {
+      "rule_id": "mark_behavior_started",
+      "trigger": {
+        "type": "behavior_started",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = busy_or_moving",
+        "register active_actions[action_id]",
+        "lock required resource_locks"
+      ]
+    },
+    {
+      "rule_id": "mark_behavior_completed",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = idle",
+        "remove active_actions[action_id]",
+        "release resource_locks owned by action"
+      ]
+    },
+    {
+      "rule_id": "behavior_failure_emits_observation",
+      "trigger": {
+        "type": "behavior_failed",
+        "behavior_ref": "*.transport_or_pick_behavior"
+      },
+      "effects": [
+        "set device_states[instance_id] = error",
+        "emit observation.deadlock_detected or observation.invalid_requirement"
+      ]
+    },
+    {
+      "rule_id": "rotary_rotation_updates_station",
+      "trigger": {
+        "type": "behavior_completed",
+        "behavior_ref": "rotary_table_1.rotate_to_station"
+      },
+      "effects": [
+        "move material from station_a to station_b",
+        "set rotary_position.angle_deg = target_angle_deg",
+        "emit rotary_table.at_pick_station"
+      ]
+    }
+  ],
+  "policies": {
+    "deterministic_priority": {
+      "type": "deterministic_priority",
+      "params": {
+        "tie_breaker": "rule_id_then_instance_id"
+      }
+    },
+    "resource_lock": {
+      "type": "resource_lock",
+      "params": {
+        "lock_scope": "instance_resource",
+        "on_conflict": "wait"
+      }
+    },
+    "deadlock_detection": {
+      "type": "deadlock_detection",
+      "params": {
+        "condition": "no_enabled_behavior and completion_conditions_not_met",
+        "emit": "observation.deadlock_detected"
+      }
+    },
+    "robot_resource_claim": {
+      "type": "shared_pool_claim",
+      "params": {
+        "mutual_exclusion": true,
+        "claim_order": "deterministic_by_material_id",
+        "eligible_when": "device_state == idle"
+      }
+    },
+    "station_mutex": {
+      "type": "resource_lock",
+      "params": {
+        "lock_scope": "rotary_or_round_table_station",
+        "on_conflict": "wait"
+      }
+    }
+  },
+  "completion_conditions": [
+    "all requested parts completed at workstation",
+    "rotary_station_occupancy.station_a == null",
+    "rotary_station_occupancy.station_b == null",
+    "active_actions.empty == true"
+  ],
+  "failure_observations": [
+    {
+      "observation_id": "deadlock_detected",
+      "condition": "no_enabled_behavior and completion_conditions_not_met",
+      "emit_event": "observation.deadlock_detected"
+    },
+    {
+      "observation_id": "resource_conflict",
+      "condition": "resource lock conflict exceeds retry threshold",
+      "emit_event": "observation.deadlock_detected"
+    },
+    {
+      "observation_id": "invalid_requirement",
+      "condition": "goal references missing device, unsupported behavior, or impossible connection",
+      "emit_event": "observation.invalid_requirement"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+# scene_06_case_01_positive_basic
+
+## 1. Case 元信息
+
+| 字段 | 内容 |
+|---|---|
+| case_id | scene_06_case_01 |
+| case_type | positive_basic |
+| source_scene | scene_06 |
+| based_on_case | 无 |
+| difficulty | medium |
+| expected_result | generate_valid_graph |
+
+## 2. 用户目标
+
+请按图里的布局跑一遍升降台入库出库仓储线，让物料按场景描述完成基础流程，传送带要按停留点排队，不要把物料瞬移到终点。
+
+## 3. 输入来源
+
+| 字段 | 内容 |
+|---|---|
+| raw_description_summary_source | `docs/test/case/scene_06/normalized_case.md#raw_description_summary` |
+| scene_image | `docs/business/test/6.png` |
+| raw_description_summary | 出料口间隔出物料，经入口传送带到第一升降台，升降台把物料放入空闲库位；第二升降台从库位取料并送到末端传送带输出。 |
+| case_user_goal | 请按图里的布局跑一遍升降台入库出库仓储线，让物料按场景描述完成基础流程，传送带要按停留点排队，不要把物料瞬移到终点。 |
+
+## 4. 场景修改点
+
+无。
+
+## 5. 主要验证点
+
+- 最终图包含所有必填 section
+- 引用的设备和行为必须来自当前 DeviceSpec/SceneDocument
+- 传送带必须建模停留点、占位、队列、负载、阻塞和释放
+
+## 6. 期望 Agent 行为
+
+Agent 应基于 `raw_description_summary`、场景图片和本 case 用户目标生成或拒绝生成最终 `SceneBehaviorGraph`；判卷只检查最终图或失败报告，不检查 LangGraph 中间节点。
