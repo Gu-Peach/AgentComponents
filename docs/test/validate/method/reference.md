@@ -1,0 +1,2 @@
+- 📌 WebArena: A Realistic Web Environment for Building Autonomous Agents
+对自由文本答案，WebArena 没有强制模型从固定选项中选择，而是让 Agent 在 stop [answer] 中输出答案，再由自动评测器打分：格式固定的用 exact_match，关键字段明确的用 must_include，语义/格式变化较大的用基于 GPT-4 的 fuzzy_match（LLM-bridge方案）。
