@@ -1,7 +1,7 @@
 {
-  "schema_id": "scene_behavior_graph_template_v0_2",
+  "schema_id": "scene_behavior_graph_template_v0_3",
   "schema_type": "SceneBehaviorGraphTemplate",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "SceneBehaviorGraph Template",
   "description": "SceneBehaviorGraph 的推荐填写模板，显式区分 trigger、guard、policy 和 action。",
   "source": {
@@ -13,17 +13,26 @@
     "schema.json",
     "../1.DeviceSpec/schema.json",
     "../2.SceneDocument/schema.json",
+    "../5.TopologyGraph/schema.json",
     "../3.RuntimeSnapshot/schema.json"
   ],
   "notes": [
     "trigger 定义规则何时被唤醒。",
     "guard 定义规则被唤醒后是否允许执行。",
     "policy 定义存在动态选择或冲突时如何决策。",
-    "action 定义通过校验和决策后要启动行为、投递事件或更新状态。"
+    "action 定义通过校验和决策后要启动行为、投递事件或更新状态。",
+    "source_topology_graph 记录本次行为图生成时使用的派生拓扑索引。"
   ],
   "goal": {
     "natural_language": "用户对本次仿真的目标描述。",
     "assumptions": []
+  },
+  "source_topology_graph": {
+    "graph_id": "topology_graph_id",
+    "source_scene_id": "scene_id",
+    "source_scene_revision": 1,
+    "graph_hash": "optional_hash",
+    "warnings_accepted": []
   },
   "modules": [
     {

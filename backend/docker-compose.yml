@@ -1,0 +1,22 @@
+name: vc-simulation-backend
+
+services:
+  redis:
+    image: redis:7-alpine
+    pull_policy: if_not_present
+    container_name: vc-simulation-redis
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-local_redis_pass}
+    ports:
+      - "6380:6379"
+    volumes:
+      - ./.local/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-local_redis_pass}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

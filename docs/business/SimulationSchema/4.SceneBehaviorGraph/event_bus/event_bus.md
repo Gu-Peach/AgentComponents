@@ -19,6 +19,19 @@
 
 一句话：`event_bus` 定义“事件和信号应该怎么流动”，`SignalBusRuntime` 执行“实际投递”，`RuntimeSnapshot` 记录“当前流动到什么状态”。
 
+`SceneDocument.signal_edges` 是信号连接事实；`event_bus.routes` 是运行时投递规则。编译时通常按以下关系生成：
+
+```text
+signal_edges.source   -> routes[].from
+signal_edges.target   -> routes[].to
+signal_edges.delivery -> routes[].delivery
+signal_edges.trigger  -> routes[].trigger
+signal_edges.transform -> routes[].transform
+signal_edges.timeout_ms / on_timeout -> routes[] 超时策略
+```
+
+因此，`signal_edges` 不直接执行；它需要经过 `TopologyGraph.signal_graph` 校验后，再由 `SceneBehaviorGraph.event_bus.routes` 进入 `SignalBusRuntime`。
+
 ---
 
 ## 2. `events` 标准模板
@@ -49,7 +62,7 @@
 
 ## 3. `kind` 取值
 
-当前 v0.2 基线建议只使用以下四类：
+当前 v0.3 基线建议只使用以下四类：
 
 | `kind` | 含义 | 典型例子 |
 |---|---|---|

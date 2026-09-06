@@ -3,7 +3,7 @@
 > 场景来源：`docs/business/test/1.png`
 > Demo 输入：`docs/business/SimulationSchema/2.SceneDocument/example.json`
 > 关联阅读：`full_chain_schema.json`（历史一体化快照，仅用于字段关系参考；最新图 1 benchmark 以 `docs/test/case/scene_01/` 为准）
-> 目标：用 v0.2 基线展示 `DeviceSpec + SceneDocument + 用户目标 -> SceneBehaviorGraph -> RuntimeSnapshot` 的完整行为建模链路。
+> 目标：用 v0.3 基线展示 `DeviceSpec + SceneDocument + TopologyGraph + 用户目标 -> SceneBehaviorGraph -> RuntimeSnapshot` 的完整行为建模链路。
 
 ---
 
@@ -35,7 +35,10 @@ DeviceSpec
 SceneDocument
   -> 场景事实：设备实例、物料、位姿、显式 process / physical / signal 连接。
 
-Agent(DeviceSpec + SceneDocument + 用户目标)
+TopologyGraph
+  -> 由 DeviceSpec + SceneDocument 编译得到的派生拓扑索引。
+
+Agent(DeviceSpec + SceneDocument + TopologyGraph + 用户目标)
   -> SceneBehaviorGraph
 
 Runtime(SceneBehaviorGraph + SceneDocument.materials)
@@ -89,11 +92,13 @@ runtime_snapshot_initial
 
 ## 4. DeviceSpec 使用方式
 
-本 demo 在 `full_chain_schema.json.device_specs` 中内嵌参与场景事务推理所需的设备行为字段。为了突出场景行为建模，暂不展开 `asset`、`params_schema`、`display_name` 等运行期或展示期才需要的设备参数。
+本 demo 在 `full_chain_schema.json.device_specs` 中内嵌参与场景事务推理所需的设备行为字段，并保留最小 `asset` 与 `params_schema`，确保内嵌 DeviceSpec 仍满足 v0.2 通用契约。
 
 保留字段：
 
 ```text
+asset
+params_schema
 physical_interfaces
 process_ports
 signal_ports
@@ -269,10 +274,10 @@ queue_wait / downstream_release
 多个中间 schema 串联（旧拆分链路）
 ```
 
-v0.2 基线改为：
+v0.3 基线改为：
 
 ```text
-SceneBehaviorGraph + RuntimeSnapshot
+TopologyGraph + SceneBehaviorGraph + RuntimeSnapshot
 ```
 
-原因是托盘分拣这类业务场景更需要描述“场景实际如何持续运行”，包括共享工件池、动态 claim、backpressure 和事件驱动状态变更，而不是拆成多个静态中间约束。
+原因是托盘分拣这类业务场景既需要确定性拓扑索引，也需要描述“场景实际如何持续运行”，包括共享工件池、动态 claim、backpressure 和事件驱动状态变更，而不是拆成多个静态中间约束。

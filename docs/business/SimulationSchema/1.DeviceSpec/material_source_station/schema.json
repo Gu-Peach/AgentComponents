@@ -1,16 +1,45 @@
 ﻿{
-  "schema_id": "material_source_station_device_spec_schema_v0_1",
+  "schema_id": "material_source_station_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Material Source Station DeviceSpec 规范",
   "description": "物料生产/上料台设备本体规范，负责生成、提供或缓存待流转物料。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/material_source_station/schema.json" },
   "created_for": "图 4 中物料来源/生产台建模",
-  "references": ["../common_device_spec.schema.json", "material_source_station_1.json"],
-  "notes": ["该设备强调物料来源，不等同于复杂加工中心。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "material_source_station_1.json"],
+  "notes": [
+    "该设备强调物料来源，不等同于复杂加工中心。",
+    "v0.2 要求出料位置既可作为 process output，也可绑定 material_available/done 等信号。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["production_policy", "buffer", "output_material_spec"],
   "required_behaviors": ["produce_material", "present_material"],
-  "required_signals": ["material_available", "empty", "done"]
+  "required_signals": ["material_available", "empty", "done"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_ids": ["output"],
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields"]
+    },
+    "process_ports": {
+      "required_port_ids": ["flow_output"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "capacity", "bound_signal_ports"],
+      "port_roles": { "flow_output": "material_exit" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "material_available": "输出事件，表示 output/process flow_output 已有物料可取。",
+        "empty": "库存或缓存为空状态，保留 latest_value。",
+        "done": "本次生产或上料完成事件。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_bindings": [
+        { "binding_role": "exit", "physical_interface": "output", "process_port": "flow_output" }
+      ]
+    }
+  }
 }
-

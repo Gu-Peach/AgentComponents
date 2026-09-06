@@ -1,17 +1,18 @@
 ﻿{
-  "schema_id": "conveyor_device_spec_schema_v0_1",
+  "schema_id": "conveyor_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Conveyor DeviceSpec 规范",
   "description": "传送带设备本体规范，适用于连续输送、阻塞等待和物料到达触发。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/schema.json" },
   "created_for": "图 1 / 图 4 / 图 7 中传送带设备建模",
-  "references": ["../common_device_spec.schema.json", "conveyor_1.json"],
+  "references": ["../common_device_spec.schema.json", "../schema.json", "conveyor_1.json"],
   "notes": [
     "传送带通过 entry/exit 暴露通用流转接口，通过 part_ready/blocked/capacity_available 信号参与调度。",
-    "所有传送带默认支持 stop_point_model，Runtime 可根据 entry/exit 坐标和 stop_point_count 生成停留点。"
+    "所有传送带默认支持 stop_point_model，Runtime 可根据 entry/exit 坐标和 stop_point_count 生成停留点。",
+    "v0.2 要求 entry/exit 既是 physical interface，也应被 flow_input/flow_output 的 process_port 通过 interface_bindings 绑定。"
   ],
-  "extends": "common_device_spec_schema_v0_1",
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["conveyor_geometry", "motion_model", "stop_point_model", "queue_policy"],
   "required_behaviors": ["accept_material", "advance_to_next_stop_point", "transport_to_exit", "release_material"],
   "required_signals": [
@@ -23,6 +24,37 @@
     "stop_point_released",
     "release_waiting_material"
   ],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_ids": ["entry", "exit"],
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields"],
+      "legacy_aliases": { "local_position": "local_frame.position", "local_forward": "local_frame.forward" }
+    },
+    "process_ports": {
+      "required_port_ids": ["flow_input", "flow_output"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "capacity", "bound_signal_ports"],
+      "port_roles": { "flow_input": "material_entry", "flow_output": "material_exit" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "recommended_fields": ["payload_schema", "default_value", "semantic", "bound_to"],
+      "required_semantics": {
+        "part_ready": "出口到料事件，通常绑定到 flow_output。",
+        "blocked": "下游或内部容量不可用状态，保留 latest_value。",
+        "capacity_available": "容量恢复事件，通常用于反压解除。",
+        "release_waiting_material": "下游允许放行输入命令，通常绑定到 flow_output。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_bindings": [
+        { "binding_role": "entry", "physical_interface": "entry", "process_port": "flow_input" },
+        { "binding_role": "exit", "physical_interface": "exit", "process_port": "flow_output" }
+      ]
+    }
+  },
   "stop_point_model_contract": {
     "description": "传送带停留点模型。DeviceSpec 定义生成方式，SceneDocument 实例参数可覆盖数量和容量，SceneBehaviorGraph 定义本次工艺如何使用停留点，RuntimeSnapshot 保存当前占用。",
     "required_fields": [

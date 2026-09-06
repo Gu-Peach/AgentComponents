@@ -1,7 +1,7 @@
 {
-  "schema_id": "scene_behavior_graph_scene_figure_1_v0_2",
+  "schema_id": "scene_behavior_graph_scene_figure_1_v0_3",
   "schema_type": "SceneBehaviorGraph",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "SceneBehaviorGraph for scene_figure_1",
   "description": "Agent generated SceneBehaviorGraph draft.",
   "source": {
@@ -13,6 +13,7 @@
   "references": [
     "docs/business/SimulationSchema/1.DeviceSpec/schema.json",
     "docs/business/SimulationSchema/2.SceneDocument/schema.json",
+    "docs/business/SimulationSchema/5.TopologyGraph/schema.json",
     "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json"
   ],
   "notes": [
@@ -35,6 +36,12 @@
       "所有设备无 active actions",
       "出料传送带清空或完成条件满足"
     ]
+  },
+  "source_topology_graph": {
+    "graph_id": "topology_graph_scene_figure_1_v0_1",
+    "source_scene_id": "scene_figure_1",
+    "source_scene_revision": 1,
+    "warnings_accepted": []
   },
   "modules": [
     {

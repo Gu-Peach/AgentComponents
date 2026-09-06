@@ -1,23 +1,187 @@
-﻿{
+{
   "schema_id": "workpiece_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "物料 / 工件设备本体填写模板",
   "description": "用于新增物料或工件 DeviceSpec。",
-  "source": { "kind": "manual_template", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece/template.json" },
+  "source": {
+    "kind": "manual_template",
+    "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece/template.json"
+  },
   "created_for": "workpiece 设备本体建模",
-  "references": ["../common_device_spec.schema.json", "schema.json", "workpiece_1.json"],
-  "notes": ["物料通常是被动对象，transport_behaviors 可为空。"],
+  "references": [
+    "../common_device_spec.schema.json",
+    "schema.json",
+    "workpiece_1.json"
+  ],
+  "notes": [
+    "物料通常是被动对象，transport_behaviors 可为空。"
+  ],
   "device_spec_id": "workpiece_id_required",
   "device_type": "workpiece",
   "display_name": "物料展示名_required",
-  "asset": { "model_format": "glb_optional", "model_key": "assets/models/workpiece/{file}.glb_optional" },
-  "params_schema": { "mass_kg": { "type": "number", "default": "质量_optional", "unit": "kg" } },
-  "physical_interfaces": [{ "interface_id": "grasp_surface", "kind": "grasp", "direction": "bidirectional", "node_name": "GraspSurface_optional", "material_classes": ["workpiece"] }, { "interface_id": "bottom", "kind": "support", "direction": "input", "node_name": "BottomSurface_optional", "material_classes": ["workpiece"] }],
+  "asset": {
+    "model_format": "glb_optional",
+    "model_key": "assets/models/workpiece/{file}.glb_optional"
+  },
+  "params_schema": {
+    "mass_kg": {
+      "type": "number",
+      "default": "质量_optional",
+      "unit": "kg"
+    }
+  },
+  "physical_interfaces": [
+    {
+      "interface_id": "grasp_surface",
+      "kind": "grasp",
+      "direction": "bidirectional",
+      "node_name": "GraspSurface_optional",
+      "material_classes": [
+        "workpiece"
+      ],
+      "local_frame": {
+        "position": [
+          "x_grasp_surface_optional",
+          "y_grasp_surface_optional",
+          "z_grasp_surface_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece",
+          "match_rule": "intersects"
+        }
+      ]
+    },
+    {
+      "interface_id": "bottom",
+      "kind": "support",
+      "direction": "input",
+      "node_name": "BottomSurface_optional",
+      "material_classes": [
+        "workpiece"
+      ],
+      "local_frame": {
+        "position": [
+          "x_bottom_optional",
+          "y_bottom_optional",
+          "z_bottom_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece",
+          "match_rule": "intersects"
+        }
+      ]
+    }
+  ],
   "process_ports": [],
-  "signal_ports": [{ "port_id": "picked", "direction": "output", "value_type": "event" }, { "port_id": "placed", "direction": "output", "value_type": "event" }],
+  "signal_ports": [
+    {
+      "port_id": "picked",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "工件被抓取事件。",
+      "bound_to": {
+        "type": "physical_interface",
+        "id": "grasp_surface"
+      }
+    },
+    {
+      "port_id": "placed",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "工件被放置事件。",
+      "bound_to": {
+        "type": "physical_interface",
+        "id": "bottom"
+      }
+    }
+  ],
   "interface_bindings": [],
   "transport_behaviors": [],
-  "runtime_contract": { "fsm_states": ["free", "carried", "placed"], "default_state": "free", "resources": [], "capacity": { "max_active_materials": 0 } },
-  "type_specific_contract": { "material_class": "workpiece_required", "geometry": { "shape": "形状_required", "diameter_m": "直径_optional", "height_m": "高度_optional", "length_m": "长度_optional", "width_m": "宽度_optional" }, "grasping": { "allowed_grasp_interfaces": ["grasp_surface"], "preferred_grasp": "抓取偏好_optional" }, "placement": { "stable_surfaces": ["bottom"], "can_stack": "是否可堆叠_optional" } }
+  "runtime_contract": {
+    "fsm_states": [
+      "free",
+      "carried",
+      "placed"
+    ],
+    "default_state": "free",
+    "resources": [],
+    "capacity": {
+      "max_active_materials": 0
+    }
+  },
+  "type_specific_contract": {
+    "material_class": "workpiece_required",
+    "geometry": {
+      "shape": "形状_required",
+      "diameter_m": "直径_optional",
+      "height_m": "高度_optional",
+      "length_m": "长度_optional",
+      "width_m": "宽度_optional"
+    },
+    "grasping": {
+      "allowed_grasp_interfaces": [
+        "grasp_surface"
+      ],
+      "preferred_grasp": "抓取偏好_optional"
+    },
+    "placement": {
+      "stable_surfaces": [
+        "bottom"
+      ],
+      "can_stack": "是否可堆叠_optional"
+    }
+  }
 }

@@ -1,15 +1,15 @@
 # 设备与场景行为数据结构定义
 
-> 版本：v0.2
-> 日期：2026-08-26
-> 阶段：行为建模基线重构
-> 背景：删除早期拆得过细的旧中间 schema，收敛为一个核心 Agent 建模结果：`SceneBehaviorGraph`。
+> 版本：v0.3
+> 日期：2026-09-06
+> 阶段：VC 风格端口化建模补强
+> 背景：保留 `SceneBehaviorGraph` 作为核心 Agent 行为结果，同时新增派生 `TopologyGraph` 作为物理/工艺/信号/运输关系索引。
 
 ---
 
 ## 0. 核心结论
 
-当前基线只保留四个一等板块：
+当前基线保留四个一等事实/行为板块，并新增一个派生索引板块：
 
 | 板块 | 类型 | 归属 | 说明 |
 |---|---|---|---|
@@ -17,8 +17,9 @@
 | `SceneDocument` | 场景事实模型 | 场景文档 / Postgres | 定义设备实例、位姿、物料、流程边、物理边和信号边。 |
 | `SceneBehaviorGraph` | 场景行为模型 | Agent 产物 / 可持久化 | 描述该场景在用户目标下真实如何运行。 |
 | `RuntimeSnapshot` | 运行时状态快照 | Runtime memory / Redis，关键 checkpoint 可落库 | 保存当前信号值、设备状态、物料位置、队列、资源锁、负载和 active actions。 |
+| `TopologyGraph` | 派生拓扑图索引 | Compiler 产物 / 可缓存 | 由 DeviceSpec + SceneDocument 编译得到，统一提供物理图、工艺图、信号图和运输可达性查询。 |
 
-旧中间产物的职责已经收敛进 `SceneBehaviorGraph`：拓扑能力进入 `modules / behavior_rules`，信号通讯进入 `event_bus`，计划目标与策略进入 `goal / modules / policies`，guards/effects 进入 `behavior_rules / state_transition_rules`。
+旧中间产物的行为职责已经收敛进 `SceneBehaviorGraph`：信号通讯进入 `event_bus`，计划目标与策略进入 `goal / modules / policies`，guards/effects 进入 `behavior_rules / state_transition_rules`。拓扑关系不让 LLM 临时猜测，而由确定性 compiler 生成 `TopologyGraph`，再供 Agent 和 Runtime 读取。
 
 ---
 
@@ -27,6 +28,7 @@
 ```text
 DeviceSpec 描述“设备天生能做什么”；
 SceneDocument 描述“这个场景里有什么、怎么连”；
+TopologyGraph 描述“这些连接编译后形成什么可查询关系”；
 SceneBehaviorGraph 描述“这个场景在当前目标下实际如何运行”；
 RuntimeSnapshot 描述“当前真实运行到什么状态”。
 ```
@@ -45,6 +47,8 @@ runtime_contract
 type_specific_contract
 ```
 
+其中 `physical_interfaces`、`process_ports`、`signal_ports` 必须分层定义：物理接口解决真实几何对接，工艺端口解决物料流发生位置，信号端口解决控制/状态/事件。三者通过 `interface_bindings` 关联，不合并成一个泛化接口。
+
 ### 1.2 SceneDocument
 
 `SceneDocument` 是场景事实源，保存：
@@ -60,9 +64,25 @@ runtime_config
 
 它可以记录显式信号边，但不负责说明整个场景的动态行为策略。
 
-### 1.3 SceneBehaviorGraph
+`signal_edges` 只描述 signal_port 之间的静态通讯事实；触发边沿、投递方式、payload 转换、超时策略应由 schema 明确表达，再由 `SceneBehaviorGraph.event_bus.routes` 编译执行。
 
-`SceneBehaviorGraph` 是 Agent 基于 `DeviceSpec + SceneDocument + 用户目标` 生成的场景行为建模结果。
+### 1.3 TopologyGraph
+
+`TopologyGraph` 是派生索引，不是手工事实源。它由 `DeviceSpec + SceneDocument` 编译得到，包含：
+
+```text
+physical_graph
+process_graph
+signal_graph
+transport_graph
+warnings
+```
+
+它用于快速回答上下游、信号消费者、运输可达性、悬空端口、错连、容量死锁风险等问题。任何连接事实变更都必须回写到 `SceneDocument` 的三类 edge，再重编译 `TopologyGraph`。
+
+### 1.4 SceneBehaviorGraph
+
+`SceneBehaviorGraph` 是 Agent 基于 `DeviceSpec + SceneDocument + TopologyGraph + 用户目标` 生成的场景行为建模结果。
 
 它不是一般约束集合，而是描述该场景真实运作方式的行为图，包括：
 
@@ -78,7 +98,7 @@ completion_conditions
 failure_observations
 ```
 
-### 1.4 RuntimeSnapshot
+### 1.5 RuntimeSnapshot
 
 `RuntimeSnapshot` 只保存运行时事实状态，不负责解释行为，也不负责定义行为模型。
 
@@ -103,7 +123,7 @@ Scheduler / Runtime 基于两者决定下一步执行什么。
    系统保存 SceneDocument。
 
 4. Agent 行为建模
-   Agent 读取 DeviceSpec + SceneDocument + 用户目标，生成 SceneBehaviorGraph。
+   Agent 读取 DeviceSpec + SceneDocument + TopologyGraph + 用户目标，生成 SceneBehaviorGraph。
 
 5. Runtime 初始化
    Simulation Runtime 读取 SceneBehaviorGraph 和 SceneDocument.materials，初始化 RuntimeSnapshot。

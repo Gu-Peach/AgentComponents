@@ -1,7 +1,7 @@
 {
-  "schema_id": "scene_document_schema_v0_1",
+  "schema_id": "scene_document_schema_v0_2",
   "schema_type": "SceneDocumentSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "SceneDocument 场景事实规范",
   "description": "定义场景设备实例、物料实例、工艺边、物理边和信号边。",
   "source": {
@@ -11,12 +11,15 @@
   "created_for": "场景事实建模",
   "references": [
     "../common_schema_contract.json",
-    "../1.DeviceSpec/schema.json"
+    "../1.DeviceSpec/schema.json",
+    "../5.TopologyGraph/schema.json",
+    "../../vc_runtime_signal_schema_research.md"
   ],
   "notes": [
     "SceneDocument 不保存当前运行时状态。",
     "instances 通过 spec_id 引用 DeviceSpec。",
-    "传送带实例可通过 param_overrides 覆盖 stop_point_count、capacity、resume_threshold 等场景级参数。"
+    "传送带实例可通过 param_overrides 覆盖 stop_point_count、capacity、resume_threshold 等场景级参数。",
+    "v0.2 明确 process_edges、physical_edges、signal_edges 是三类不同场景事实；topology_graph 是从这些事实派生的运行时索引，不是第四类手工连线。"
   ],
   "required_sections": [
     "scene_id",
@@ -28,10 +31,83 @@
     "signal_edges",
     "runtime_config"
   ],
+  "recommended_sections": [
+    "derived_artifacts"
+  ],
   "edge_contract": {
-    "process_edges": "流程画布层面的 flow_output -> flow_input。",
-    "physical_edges": "真实 physical interface 之间的连接。",
-    "signal_edges": "设备 signal port 之间的通讯关系。"
+    "process_edges": "流程画布层面的 process_port -> process_port，表达物料或工艺顺序，不表达物理吸附，也不表达控制信号。",
+    "physical_edges": "真实 physical_interface -> physical_interface 之间的连接，表达几何对齐、吸附、挂载或交接位置。",
+    "signal_edges": "设备 signal_port -> signal_port 之间的通讯关系，表达控制、状态、互锁和事件传播。"
+  },
+  "process_edge_contract": {
+    "description": "对标 VC Process Flow / FlowTable 中的物料流顺序。",
+    "required_fields": ["edge_id", "source", "target", "edge_type"],
+    "recommended_fields": ["material_classes", "priority", "conditions", "compiled_physical_edges", "compiled_signal_edges"],
+    "source_target_format": "instance_id.process_port_id",
+    "validation_rules": [
+      "source 必须引用 output/bidirectional process_port。",
+      "target 必须引用 input/bidirectional process_port。",
+      "process_edge 不得直接引用 signal_port 或 physical_interface。"
+    ]
+  },
+  "physical_edge_contract": {
+    "description": "对标 VC vcSimInterface.connect/canConnect 后形成的真实接口连接。",
+    "required_fields": ["edge_id", "source", "target"],
+    "recommended_fields": ["edge_type", "connection_method", "compiled_from", "is_inferred", "confidence", "compatibility_result", "snap_result"],
+    "source_target_format": "instance_id.physical_interface_id",
+    "connection_method_values": ["manual", "snap", "compiled_from_process", "agent_suggested", "imported"],
+    "compatibility_result_shape": {
+      "status": "passed | failed | warning | not_checked",
+      "matched_fields": [],
+      "missing_fields": [],
+      "message": "string_optional"
+    },
+    "snap_result_shape": {
+      "distance_m": 0,
+      "angle_deg": 0,
+      "within_tolerance": true,
+      "retain_offset": false
+    },
+    "validation_rules": [
+      "source 和 target 必须引用 physical_interface。",
+      "方向、material_classes、compatibility_fields 和 snap_tolerance 必须通过校验或显式记录 warning。"
+    ]
+  },
+  "signal_edge_contract": {
+    "description": "对标 VC vcSignal.Connections / vcBooleanSignalMap.connect。用于 SignalBusRuntime 编译 event_bus.routes。",
+    "required_fields": ["edge_id", "source", "target", "delivery", "trigger"],
+    "recommended_fields": ["edge_type", "transform", "timeout_ms", "on_timeout", "enabled", "compiled_from", "route_id"],
+    "source_target_format": "instance_id.signal_port_id",
+    "delivery_values": ["event", "latest_value", "command", "broadcast"],
+    "trigger_values": ["on_rising_edge", "on_falling_edge", "on_change", "level", "manual"],
+    "transform_shape": {
+      "type": "identity | constant | payload_template | expression | lookup",
+      "payload_template": {},
+      "expression": "string_optional"
+    },
+    "timeout_ms": "可选。若未设置，Runtime 使用 runtime_config.default_signal_timeout_s。",
+    "on_timeout_values": ["raise_observation", "retry", "ignore", "pause_and_request_replan"],
+    "validation_rules": [
+      "source 必须引用 output/bidirectional signal_port。",
+      "target 必须引用 input/bidirectional signal_port。",
+      "source.value_type 与 target.value_type 必须一致，或 transform 必须显式声明转换。",
+      "signal_edge 不得表达物料流向；物料流必须进入 process_edges。"
+    ]
+  },
+  "derived_artifacts_contract": {
+    "description": "SceneDocument 可记录由 compiler 生成的派生产物引用，但派生产物不是场景事实源。",
+    "recommended_shape": {
+      "topology_graph": {
+        "graph_id": "topology_graph_id_optional",
+        "schema": "../5.TopologyGraph/schema.json",
+        "source_scene_revision": 1,
+        "status": "not_built | valid | warning | invalid"
+      }
+    },
+    "validation_rules": [
+      "修改 instances/materials/process_edges/physical_edges/signal_edges 后，既有 topology_graph 必须失效或重编译。",
+      "Runtime 和 Agent 可以读 topology_graph 加速查询，但回写连接事实必须写回 SceneDocument 的三类 edge。"
+    ]
   },
   "instance_contract": {
     "description": "instances 描述场景中实际使用的设备实例。DeviceSpec 给出默认能力，param_overrides 给出该实例在本场景中的参数覆盖。",
@@ -46,5 +122,9 @@
       "capacity": "该实例可同时承载的物料或载具数量。",
       "resume_threshold": "blocked 后恢复接收的负载阈值。"
     }
+  },
+  "runtime_config_contract": {
+    "recommended_fields": ["deadlock_detection", "default_signal_timeout_s", "topology_rebuild_policy"],
+    "topology_rebuild_policy_values": ["on_scene_change", "manual", "before_run", "on_agent_request"]
   }
 }

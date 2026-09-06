@@ -1,15 +1,50 @@
 ﻿{
-  "schema_id": "robot_arm_device_spec_schema_v0_1",
+  "schema_id": "robot_arm_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Robot Arm DeviceSpec 规范",
   "description": "机械臂设备本体规范，适用于离散抓取、搬运和放置行为。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/schema.json" },
   "created_for": "图 1 / 图 4 / 图 11 中机械臂设备建模",
-  "references": ["../common_device_spec.schema.json", "robot_arm_1.json"],
-  "notes": ["机械臂运动特性保留 urdf.joints 与 trajectoryConfig 格式。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "robot_arm_1.json"],
+  "notes": [
+    "机械臂运动特性保留 urdf.joints 与 trajectoryConfig 格式。",
+    "v0.2 将 pick/place/TCP 真实交互点、flow_input/flow_output 工艺端口、start/busy/done 信号分层定义。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["rootNodeName", "urdf", "trajectoryConfig"],
   "required_behaviors": ["pick_and_place"],
-  "required_signals": ["start_pick", "pause_pick", "resume_pick", "busy", "done", "error"]
+  "required_signals": ["start_pick", "pause_pick", "resume_pick", "busy", "done", "error"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_ids": ["pick_area", "place_area", "tool_center_point"],
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields", "connection_cardinality"],
+      "tool_interface_note": "tool_center_point 可作为 VC tool/mount interface 类似物，用于抓取、工具挂载或检测体定位。"
+    },
+    "process_ports": {
+      "required_port_ids": ["flow_input", "flow_output"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "bound_signal_ports"],
+      "port_roles": { "flow_input": "pick_position", "flow_output": "place_position" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "start_pick": "输入事件/命令，触发一次 pick_and_place 行为。",
+        "pause_pick": "输入互锁事件，暂停接收新的抓取任务。",
+        "resume_pick": "输入互锁解除事件，恢复接收任务。",
+        "busy": "机械臂执行中状态，保留 latest_value。",
+        "done": "本次抓放完成事件。",
+        "error": "目标不可达、夹爪失败或超时事件。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_bindings": [
+        { "binding_role": "pick", "physical_interface": "pick_area", "process_port": "flow_input" },
+        { "binding_role": "place", "physical_interface": "place_area", "process_port": "flow_output" }
+      ]
+    }
+  }
 }

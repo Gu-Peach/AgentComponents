@@ -6,6 +6,7 @@
 
 - 保存场景实例、位姿、参数覆盖和物料实例。
 - 保存 `process_edges`、`physical_edges`、`signal_edges` 三类场景关系。
+- 可记录 `derived_artifacts.topology_graph` 引用，但派生拓扑图不是手工事实源。
 - 为传送带实例设置 `stop_point_count`、`capacity`、`resume_threshold` 等场景级参数覆盖。
 - 作为 `SceneBehaviorGraph` 的场景事实输入。
 
@@ -15,7 +16,7 @@
 |---|---|
 | 上游输入 | 用户搭建场景、选择 DeviceSpec、连接流程口/物理口/信号口。 |
 | 输出 | 场景事实文档。 |
-| 下游消费者 | SceneBehaviorGraph、Agent、Runtime。 |
+| 下游消费者 | TopologyGraph compiler、SceneBehaviorGraph、Agent、Runtime。 |
 
 ## Key 含义
 
@@ -45,6 +46,7 @@
 | `physical_edges` | 真实物理接口连接关系，通常由流程边和接口绑定编译得到。 |
 | `signal_edges` | 设备实例之间的信号连接关系。 |
 | `runtime_config` | 场景运行配置，例如死锁检测、默认信号超时。 |
+| `derived_artifacts` | 推荐字段，记录 topology_graph 等派生产物引用和编译状态。 |
 
 ### 常见嵌套字段
 
@@ -66,6 +68,11 @@
 | `target` | 边的目标端口，如 `robot_1.flow_input`。 |
 | `edge_type` | 边类型，例如 `material_flow`、`control_signal`。 |
 | `compiled_from` | 派生边来源，常用于说明物理边由哪个流程边编译得到。 |
+| `delivery` | 信号边投递方式，例如 `event`、`latest_value`、`command`、`broadcast`。 |
+| `trigger` | 信号边触发方式，例如 `on_rising_edge`、`on_change`、`level`。 |
+| `transform` | 信号 payload 转换方式，例如 `identity`、`payload_template`、`expression`。 |
+| `timeout_ms` | 信号投递或等待超时时间。 |
+| `on_timeout` | 超时处理策略，例如 `raise_observation`、`retry`、`pause_and_request_replan`。 |
 
 ### 规范辅助字段
 
@@ -73,6 +80,10 @@
 |---|---|
 | `required_sections` | `SceneDocument` 必须包含的一级字段列表。 |
 | `edge_contract` | 三类场景边的职责说明。 |
+| `process_edge_contract` | 工艺边端口格式、方向和校验规则。 |
+| `physical_edge_contract` | 物理边接口格式、兼容性和吸附校验规则。 |
+| `signal_edge_contract` | 信号边投递、触发、转换和超时规则。 |
+| `derived_artifacts_contract` | topology_graph 等派生产物的引用和失效规则。 |
 | `deadlock_detection` | 是否启用死锁检测。 |
 | `default_signal_timeout_s` | 默认信号等待超时时间，单位秒。 |
 

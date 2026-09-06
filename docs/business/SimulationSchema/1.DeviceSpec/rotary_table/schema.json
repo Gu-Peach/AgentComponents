@@ -1,15 +1,44 @@
 ﻿{
-  "schema_id": "rotary_table_device_spec_schema_v0_1",
+  "schema_id": "rotary_table_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Rotary Table DeviceSpec 规范",
   "description": "旋转台设备本体规范，适用于多工位旋转定位和物料转位。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/rotary_table/schema.json" },
   "created_for": "图 11 中旋转台设备建模",
-  "references": ["../common_device_spec.schema.json", "rotary_table_1.json"],
-  "notes": ["旋转台通过角度到位、工位占用和旋转完成信号参与调度。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "rotary_table_1.json"],
+  "notes": [
+    "旋转台通过角度到位、工位占用和旋转完成信号参与调度。",
+    "v0.2 要求每个 station 既可作为物理支撑/放置锚点，也可派生为 process_port 和占用信号绑定点。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["stations", "rotation_axis", "indexing_policy"],
   "required_behaviors": ["rotate_to_station", "accept_material", "release_material"],
-  "required_signals": ["at_station", "occupied", "rotating", "done"]
+  "required_signals": ["at_station", "occupied", "rotating", "done"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_pattern": "station_*",
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields"]
+    },
+    "process_ports": {
+      "required_port_patterns": ["flow_input", "flow_output", "station_*"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "capacity", "bound_signal_ports"],
+      "port_roles": { "flow_input": "material_entry", "flow_output": "material_exit", "station_*": "process_position" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "at_station": "到位事件，payload 应包含 station_id。",
+        "occupied": "工位占用状态，保留 latest_value。",
+        "rotating": "旋转中状态，保留 latest_value。",
+        "done": "本次转位完成事件。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_binding_pattern": "station physical_interface 绑定同名 station process_port 和 occupied/at_station 信号。"
+    }
+  }
 }

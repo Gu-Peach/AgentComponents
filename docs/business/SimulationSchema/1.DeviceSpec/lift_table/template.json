@@ -1,7 +1,7 @@
-﻿{
+{
   "schema_id": "lift_table_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "升降台设备本体填写模板",
   "description": "用于新增升降台 DeviceSpec。",
   "source": {
@@ -14,7 +14,9 @@
     "schema.json",
     "lift_table_1.json"
   ],
-  "notes": ["lower_dock/upper_dock/platform 是升降台最小核心接口。"],
+  "notes": [
+    "lower_dock/upper_dock/platform 是升降台最小核心接口。"
+  ],
   "device_spec_id": "lift_table_id_required",
   "device_type": "lift_table",
   "display_name": "升降台展示名_required",
@@ -40,41 +42,304 @@
       "kind": "material",
       "direction": "bidirectional",
       "node_name": "LowerDock_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_frame": {
+        "position": [
+          "x_lower_dock_optional",
+          "y_lower_dock_optional",
+          "z_lower_dock_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "upper_dock",
       "kind": "material",
       "direction": "bidirectional",
       "node_name": "UpperDock_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_frame": {
+        "position": [
+          "x_upper_dock_optional",
+          "y_upper_dock_optional",
+          "z_upper_dock_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "platform",
       "kind": "support",
       "direction": "bidirectional",
       "node_name": "LiftPlatform_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_frame": {
+        "position": [
+          "x_platform_optional",
+          "y_platform_optional",
+          "z_platform_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     }
   ],
   "process_ports": [
-    { "port_id": "flow_input", "direction": "input", "label": "Lift Input" },
-    { "port_id": "flow_output", "direction": "output", "label": "Lift Output" }
+    {
+      "port_id": "flow_input",
+      "direction": "input",
+      "label": "Lift Input",
+      "role": "flow_input",
+      "bound_physical_interface": "lower_dock",
+      "local_frame": {
+        "position": [
+          "x_lower_dock_optional",
+          "y_lower_dock_optional",
+          "z_lower_dock_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "move_to_level"
+      ]
+    },
+    {
+      "port_id": "flow_output",
+      "direction": "output",
+      "label": "Lift Output",
+      "role": "flow_output",
+      "bound_physical_interface": "upper_dock",
+      "local_frame": {
+        "position": [
+          "x_upper_dock_optional",
+          "y_upper_dock_optional",
+          "z_upper_dock_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "done"
+      ]
+    }
   ],
   "signal_ports": [
     {
       "port_id": "move_to_level",
       "direction": "input",
-      "value_type": "command"
+      "value_type": "command",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "命令升降台移动到指定层。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      },
+      "payload_schema": {
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": "string"
+          }
+        }
+      }
     },
-    { "port_id": "at_level", "direction": "output", "value_type": "event" },
-    { "port_id": "moving", "direction": "output", "value_type": "boolean" },
-    { "port_id": "done", "direction": "output", "value_type": "event" },
-    { "port_id": "error", "direction": "output", "value_type": "event" }
+    {
+      "port_id": "at_level",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "平台到达目标层事件。",
+      "bound_to": {
+        "type": "physical_interface",
+        "id": "platform"
+      }
+    },
+    {
+      "port_id": "moving",
+      "direction": "output",
+      "value_type": "boolean",
+      "edge_trigger": "on_change",
+      "retention": "latest_value",
+      "default_value": false,
+      "semantic": "平台正在移动状态。",
+      "bound_to": {
+        "type": "physical_interface",
+        "id": "platform"
+      }
+    },
+    {
+      "port_id": "done",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "当前动作完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
+    },
+    {
+      "port_id": "error",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "设备异常事件。",
+      "bound_to": {
+        "type": "physical_interface",
+        "id": "platform"
+      }
+    }
   ],
   "interface_bindings": [
-    { "process_port": "flow_input", "physical_interface": "lower_dock" },
-    { "process_port": "flow_output", "physical_interface": "upper_dock" }
+    {
+      "process_port": "flow_input",
+      "physical_interface": "lower_dock",
+      "binding_id": "bind_flow_input_lower_dock",
+      "binding_role": "entry",
+      "signal_ports": [
+        "move_to_level"
+      ],
+      "transport_behaviors": [
+        "accept_material",
+        "lift_to_level"
+      ]
+    },
+    {
+      "process_port": "flow_output",
+      "physical_interface": "upper_dock",
+      "binding_id": "bind_flow_output_upper_dock",
+      "binding_role": "exit",
+      "signal_ports": [
+        "done"
+      ],
+      "transport_behaviors": [
+        "lift_to_level",
+        "release_material"
+      ]
+    }
   ],
   "transport_behaviors": [
     {
@@ -86,8 +351,14 @@
     {
       "behavior_id": "lift_to_level",
       "behavior_type": "vertical_motion",
-      "input_signals": ["move_to_level"],
-      "output_signals": ["moving", "at_level", "done"]
+      "input_signals": [
+        "move_to_level"
+      ],
+      "output_signals": [
+        "moving",
+        "at_level",
+        "done"
+      ]
     },
     {
       "behavior_id": "release_material",
@@ -106,15 +377,35 @@
       "error"
     ],
     "default_state": "idle",
-    "resources": [{ "resource_id": "lift_platform", "exclusive": true }],
-    "capacity": { "max_active_materials": 1 }
+    "resources": [
+      {
+        "resource_id": "lift_platform",
+        "exclusive": true
+      }
+    ],
+    "capacity": {
+      "max_active_materials": 1
+    }
   },
   "type_specific_contract": {
     "height_levels": [
-      { "level_id": "lower_required", "height_m": "高度_required" },
-      { "level_id": "upper_required", "height_m": "高度_required" }
+      {
+        "level_id": "lower_required",
+        "height_m": "高度_required"
+      },
+      {
+        "level_id": "upper_required",
+        "height_m": "高度_required"
+      }
     ],
-    "lift_motion": { "axis": [0, 1, 0], "speed_param": "lift_speed_mps" },
+    "lift_motion": {
+      "axis": [
+        0,
+        1,
+        0
+      ],
+      "speed_param": "lift_speed_mps"
+    },
     "dock_policy": {
       "requires_level_match": true,
       "tolerance_m": "对接容差_optional"

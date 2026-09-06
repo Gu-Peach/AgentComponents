@@ -1,7 +1,7 @@
 {
-  "schema_id": "runtime_snapshot_schema_contract_v0_1",
+  "schema_id": "runtime_snapshot_schema_contract_v0_2",
   "schema_type": "RuntimeSnapshotSchemaContract",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "RuntimeSnapshot 运行时快照规范",
   "description": "定义仿真运行时的信号值、设备状态、物料位置、传送带停留点占用、等待队列、资源锁和活动动作。",
   "source": {
@@ -11,16 +11,20 @@
   "created_for": "仿真运行时状态管理",
   "references": [
     "../common_schema_contract.json",
-    "../4.SceneBehaviorGraph/schema.json"
+    "../4.SceneBehaviorGraph/schema.json",
+    "../5.TopologyGraph/schema.json"
   ],
   "notes": [
     "RuntimeSnapshot 不是长期事实库，Redis 状态必须能被 checkpoint 或事件日志解释。",
-    "传送带停留点的生成规则来自 DeviceSpec 和 SceneBehaviorGraph，RuntimeSnapshot 只保存当前占用事实。"
+    "传送带停留点的生成规则来自 DeviceSpec、SceneDocument 和 TopologyGraph，RuntimeSnapshot 只保存当前占用事实。",
+    "v0.2 对齐 VC 信号模型：signal_values 保存最新值，event_queue/signal_queue 保存一次性投递，topology_graph_ref 指向本次运行使用的派生图。"
   ],
   "required_sections": [
     "run_id",
     "clock",
+    "topology_graph_ref",
     "signal_values",
+    "event_queue",
     "device_fsm_states",
     "material_locations",
     "conveyor_stop_points",
@@ -30,5 +34,40 @@
     "wait_queues",
     "resource_locks",
     "active_actions"
-  ]
+  ],
+  "topology_graph_ref_contract": {
+    "description": "本次运行所采用的派生拓扑图版本。Runtime 不应在运行中直接从 SceneDocument 重建关系，除非 topology_rebuild_policy 明确允许。",
+    "required_fields": ["graph_id", "source_scene_id", "source_scene_revision"],
+    "recommended_fields": ["compiled_at", "graph_hash", "status"]
+  },
+  "signal_values_contract": {
+    "description": "保存 signal_port 最新值和消费状态，对标 VC signal.Value，但不等同于一次 signal() 事件。",
+    "entry_shape": {
+      "signal_id": "instance_id.signal_port_id",
+      "value": "boolean_or_number_or_string_or_object_or_null",
+      "value_type": "boolean | integer | real | string | component | object | event | command",
+      "updated_at": "simulation_time_or_wall_time",
+      "producer": "instance_id_optional",
+      "retention": "latest_value | event_log | checkpoint_only",
+      "sequence": 0
+    }
+  },
+  "event_queue_contract": {
+    "description": "保存待投递或待消费的一次性事件，对标 VC signal() 触发 OnSignal/OnSignalTrigger 的运行时效果。",
+    "entry_shape": {
+      "event_id": "string_required",
+      "source_signal": "instance_id.signal_port_id_optional",
+      "target": "rule | topic | module | device | runtime",
+      "payload": {},
+      "delivery": "event | latest_value | command | broadcast | direct | internal",
+      "status": "queued | delivered | consumed | failed | expired",
+      "created_at": "simulation_time_or_wall_time",
+      "timeout_at": "simulation_time_or_wall_time_optional"
+    }
+  },
+  "topology_warning_state_contract": {
+    "description": "运行时可缓存 TopologyGraph warnings 的处理状态，用于前端显示和 Agent 修复闭环。",
+    "recommended_fields": ["warning_id", "status", "acknowledged_by", "resolved_at"],
+    "status_values": ["open", "acknowledged", "resolved", "ignored"]
+  }
 }

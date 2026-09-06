@@ -1,16 +1,40 @@
 ﻿{
-  "schema_id": "workpiece_device_spec_schema_v0_1",
+  "schema_id": "workpiece_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Workpiece DeviceSpec 规范",
   "description": "物料/工件本体规范，作为被动对象参与抓取、放置、承载和运输。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece/schema.json" },
   "created_for": "图 1 中小件物料建模",
-  "references": ["../common_device_spec.schema.json", "workpiece_1.json"],
-  "notes": ["workpiece 通常不主动执行 transport behavior，但需要暴露可抓取/可放置约束。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "workpiece_1.json"],
+  "notes": [
+    "workpiece 通常不主动执行 transport behavior，但需要暴露可抓取/可放置约束。",
+    "v0.2 允许物料没有 process_ports；picked/placed 是被动对象事件，可绑定到 grasp_surface/bottom 等 physical interface。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["material_class", "geometry", "grasping", "placement"],
   "required_behaviors": [],
-  "required_signals": ["picked", "placed"]
+  "required_signals": ["picked", "placed"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_ids": ["grasp_surface", "bottom"],
+      "required_fields": ["interface_id", "kind", "direction"],
+      "recommended_fields": ["local_frame", "material_classes", "compatibility_fields"]
+    },
+    "process_ports": {
+      "allowed_empty": true,
+      "note": "被动物料通常不主动提供流程口；若未来支持物料内部工艺状态，可添加 process_position 类型端口。"
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "picked": "物料被抓取事件，通常由机器人行为发出或 Runtime 转发。",
+        "placed": "物料被放置事件，通常绑定到底部支撑或目标 process_port。"
+      }
+    },
+    "interface_bindings": {
+      "allowed_empty": true,
+      "note": "物料不是主动流程设备，通常不需要 process_port 到 physical_interface 的绑定。"
+    }
+  }
 }
-

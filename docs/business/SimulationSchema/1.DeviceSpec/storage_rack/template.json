@@ -1,7 +1,7 @@
-﻿{
+{
   "schema_id": "storage_rack_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "存储柜 / 货架设备本体填写模板",
   "description": "用于新增存储柜或货架 DeviceSpec。",
   "source": {
@@ -25,8 +25,14 @@
     "model_key": "assets/models/storage/{file}.glb_optional"
   },
   "params_schema": {
-    "rows": { "type": "integer", "default": "行数_required" },
-    "columns": { "type": "integer", "default": "列数_required" }
+    "rows": {
+      "type": "integer",
+      "default": "行数_required"
+    },
+    "columns": {
+      "type": "integer",
+      "default": "列数_required"
+    }
   },
   "physical_interfaces": [
     {
@@ -34,55 +40,268 @@
       "kind": "material",
       "direction": "input",
       "node_name": "CellInput_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_frame": {
+        "position": [
+          "x_cell_input_optional",
+          "y_cell_input_optional",
+          "z_cell_input_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "cell_output",
       "kind": "material",
       "direction": "output",
       "node_name": "CellOutput_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_frame": {
+        "position": [
+          "x_cell_output_optional",
+          "y_cell_output_optional",
+          "z_cell_output_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     }
   ],
   "process_ports": [
-    { "port_id": "flow_input", "direction": "input", "label": "Store Input" },
+    {
+      "port_id": "flow_input",
+      "direction": "input",
+      "label": "Store Input",
+      "role": "flow_input",
+      "bound_physical_interface": "cell_input",
+      "local_frame": {
+        "position": [
+          "x_cell_input_optional",
+          "y_cell_input_optional",
+          "z_cell_input_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "cell_available",
+        "cell_full",
+        "stored"
+      ]
+    },
     {
       "port_id": "flow_output",
       "direction": "output",
-      "label": "Release Output"
+      "label": "Release Output",
+      "role": "flow_output",
+      "bound_physical_interface": "cell_output",
+      "local_frame": {
+        "position": [
+          "x_cell_output_optional",
+          "y_cell_output_optional",
+          "z_cell_output_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "released"
+      ]
     }
   ],
   "signal_ports": [
     {
       "port_id": "cell_available",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "货位可用状态。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
     },
-    { "port_id": "cell_full", "direction": "output", "value_type": "boolean" },
-    { "port_id": "stored", "direction": "output", "value_type": "event" },
-    { "port_id": "released", "direction": "output", "value_type": "event" }
+    {
+      "port_id": "cell_full",
+      "direction": "output",
+      "value_type": "boolean",
+      "edge_trigger": "on_change",
+      "retention": "latest_value",
+      "default_value": false,
+      "semantic": "货位已满状态。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
+    },
+    {
+      "port_id": "stored",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "入库完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
+    },
+    {
+      "port_id": "released",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "出库释放事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
+    }
   ],
   "interface_bindings": [
-    { "process_port": "flow_input", "physical_interface": "cell_input" },
-    { "process_port": "flow_output", "physical_interface": "cell_output" }
+    {
+      "process_port": "flow_input",
+      "physical_interface": "cell_input",
+      "binding_id": "bind_flow_input_cell_input",
+      "binding_role": "entry",
+      "signal_ports": [
+        "cell_available",
+        "cell_full",
+        "stored"
+      ],
+      "transport_behaviors": [
+        "reserve_cell",
+        "store_to_cell"
+      ]
+    },
+    {
+      "process_port": "flow_output",
+      "physical_interface": "cell_output",
+      "binding_id": "bind_flow_output_cell_output",
+      "binding_role": "exit",
+      "signal_ports": [
+        "released"
+      ],
+      "transport_behaviors": [
+        "release_from_cell"
+      ]
+    }
   ],
   "transport_behaviors": [
     {
       "behavior_id": "reserve_cell",
       "behavior_type": "storage_reservation",
-      "output_signals": ["cell_available"]
+      "output_signals": [
+        "cell_available"
+      ]
     },
     {
       "behavior_id": "store_to_cell",
       "behavior_type": "storage",
       "input_physical_interface": "cell_input",
-      "output_signals": ["stored", "cell_full"]
+      "output_signals": [
+        "stored",
+        "cell_full"
+      ]
     },
     {
       "behavior_id": "release_from_cell",
       "behavior_type": "storage_release",
       "output_physical_interface": "cell_output",
-      "output_signals": ["released"]
+      "output_signals": [
+        "released"
+      ]
     }
   ],
   "runtime_contract": {
@@ -95,18 +314,29 @@
       "error"
     ],
     "default_state": "idle",
-    "resources": [{ "resource_id": "storage_cells", "exclusive": false }],
-    "capacity": { "max_active_materials": "rows*columns_required" }
+    "resources": [
+      {
+        "resource_id": "storage_cells",
+        "exclusive": false
+      }
+    ],
+    "capacity": {
+      "max_active_materials": "rows*columns_required"
+    }
   },
   "type_specific_contract": {
     "cells": {
       "rows": "行数_required",
       "columns": "列数_required",
-      "cell_ids": ["库位ID_required"]
+      "cell_ids": [
+        "库位ID_required"
+      ]
     },
     "capacity": {
       "total_cells": "总库位数_required",
-      "material_classes": ["workpiece_required"]
+      "material_classes": [
+        "workpiece_required"
+      ]
     },
     "reservation_policy": {
       "strategy": "first_available|nearest|required",

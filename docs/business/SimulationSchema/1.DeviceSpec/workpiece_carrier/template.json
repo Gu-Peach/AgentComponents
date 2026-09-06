@@ -1,7 +1,7 @@
-﻿{
+{
   "schema_id": "workpiece_carrier_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "物料载具 / 承载托盘设备本体填写模板",
   "description": "用于新增承载物料并参与运输的载具 DeviceSpec。",
   "source": {
@@ -14,7 +14,9 @@
     "schema.json",
     "carrier_tray_1.json"
   ],
-  "notes": ["载具可表示托盘、载盘、夹具或移动承载板。"],
+  "notes": [
+    "载具可表示托盘、载盘、夹具或移动承载板。"
+  ],
   "device_spec_id": "carrier_id_required",
   "device_type": "workpiece_carrier",
   "display_name": "物料载具展示名_required",
@@ -23,7 +25,10 @@
     "model_key": "assets/models/carrier/{file}.glb_optional"
   },
   "params_schema": {
-    "slot_count": { "type": "integer", "default": "槽位数量_required" }
+    "slot_count": {
+      "type": "integer",
+      "default": "槽位数量_required"
+    }
   },
   "physical_interfaces": [
     {
@@ -31,47 +36,250 @@
       "kind": "support",
       "direction": "input",
       "node_name": "LoadSurface_optional",
-      "material_classes": ["workpiece"]
+      "material_classes": [
+        "workpiece"
+      ],
+      "local_frame": {
+        "position": [
+          "x_load_surface_optional",
+          "y_load_surface_optional",
+          "z_load_surface_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "carrier_bottom",
       "kind": "support",
       "direction": "bidirectional",
       "node_name": "CarrierBottom_optional",
-      "material_classes": ["workpiece_carrier"]
+      "material_classes": [
+        "workpiece_carrier"
+      ],
+      "local_frame": {
+        "position": [
+          "x_carrier_bottom_optional",
+          "y_carrier_bottom_optional",
+          "z_carrier_bottom_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_carrier",
+          "match_rule": "intersects"
+        }
+      ]
     }
   ],
   "process_ports": [
-    { "port_id": "flow_input", "direction": "input", "label": "Load" },
-    { "port_id": "flow_output", "direction": "output", "label": "Unload" }
+    {
+      "port_id": "flow_input",
+      "direction": "input",
+      "label": "Load",
+      "role": "flow_input",
+      "bound_physical_interface": "load_surface",
+      "local_frame": {
+        "position": [
+          "x_load_surface_optional",
+          "y_load_surface_optional",
+          "z_load_surface_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece"
+      ],
+      "bound_signal_ports": [
+        "loaded"
+      ]
+    },
+    {
+      "port_id": "flow_output",
+      "direction": "output",
+      "label": "Unload",
+      "role": "flow_output",
+      "bound_physical_interface": "load_surface",
+      "local_frame": {
+        "position": [
+          "x_load_surface_optional",
+          "y_load_surface_optional",
+          "z_load_surface_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece"
+      ],
+      "bound_signal_ports": [
+        "unloaded"
+      ]
+    }
   ],
   "signal_ports": [
-    { "port_id": "loaded", "direction": "output", "value_type": "event" },
-    { "port_id": "unloaded", "direction": "output", "value_type": "event" }
+    {
+      "port_id": "loaded",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "载具装载完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
+    },
+    {
+      "port_id": "unloaded",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "载具卸载完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
+    }
   ],
   "interface_bindings": [
-    { "process_port": "flow_input", "physical_interface": "load_surface" },
-    { "process_port": "flow_output", "physical_interface": "load_surface" }
+    {
+      "process_port": "flow_input",
+      "physical_interface": "load_surface",
+      "binding_id": "bind_flow_input_load_surface",
+      "binding_role": "entry",
+      "signal_ports": [
+        "loaded"
+      ],
+      "transport_behaviors": [
+        "carry_material",
+        "release_material"
+      ]
+    },
+    {
+      "process_port": "flow_output",
+      "physical_interface": "load_surface",
+      "binding_id": "bind_flow_output_load_surface",
+      "binding_role": "exit",
+      "signal_ports": [
+        "unloaded"
+      ],
+      "transport_behaviors": [
+        "carry_material",
+        "release_material"
+      ]
+    }
   ],
   "transport_behaviors": [
     {
       "behavior_id": "carry_material",
       "behavior_type": "passive_carry",
       "input_physical_interface": "load_surface",
-      "output_signals": ["loaded"]
+      "output_signals": [
+        "loaded"
+      ]
     },
     {
       "behavior_id": "release_material",
       "behavior_type": "passive_release",
       "output_physical_interface": "load_surface",
-      "output_signals": ["unloaded"]
+      "output_signals": [
+        "unloaded"
+      ]
     }
   ],
   "runtime_contract": {
-    "fsm_states": ["empty", "loaded", "in_transport"],
+    "fsm_states": [
+      "empty",
+      "loaded",
+      "in_transport"
+    ],
     "default_state": "empty",
-    "resources": [{ "resource_id": "carrier_slots", "exclusive": false }],
-    "capacity": { "max_active_materials": "槽位数量_required" }
+    "resources": [
+      {
+        "resource_id": "carrier_slots",
+        "exclusive": false
+      }
+    ],
+    "capacity": {
+      "max_active_materials": "槽位数量_required"
+    }
   },
   "type_specific_contract": {
     "carrier_geometry": {
@@ -86,7 +294,9 @@
       "columns": "列数_optional"
     },
     "load_policy": {
-      "accepted_material_classes": ["workpiece"],
+      "accepted_material_classes": [
+        "workpiece"
+      ],
       "allow_partial_load": "是否允许部分装载_optional"
     }
   }

@@ -1,6 +1,6 @@
 # 4. SceneBehaviorGraph
 
-`SceneBehaviorGraph` 是当前 v0.2 基线中的核心 Agent 行为建模结果。
+`SceneBehaviorGraph` 是当前 v0.3 基线中的核心 Agent 行为建模结果。
 
 它描述的是：**在给定 `DeviceSpec`、`SceneDocument` 和用户目标后，这个场景实际应该如何运行。**
 

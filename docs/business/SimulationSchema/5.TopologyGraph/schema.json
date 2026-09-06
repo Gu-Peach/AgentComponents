@@ -1,0 +1,103 @@
+{
+  "schema_id": "topology_graph_schema_v0_1",
+  "schema_type": "TopologyGraphSchema",
+  "version": "0.1.0",
+  "name": "TopologyGraph 派生拓扑图规范",
+  "description": "由 DeviceSpec 与 SceneDocument 编译得到的派生图索引，统一表达物理连接、工艺流、信号传播和运输可达性，供校验、调度、Runtime 和 Agent 摘要使用。",
+  "source": {
+    "kind": "manual_design",
+    "path": "docs/business/SimulationSchema/5.TopologyGraph/schema.json"
+  },
+  "created_for": "VC 风格端口化建模后的场景拓扑编译与运行时查询",
+  "references": [
+    "../common_schema_contract.json",
+    "../1.DeviceSpec/schema.json",
+    "../2.SceneDocument/schema.json",
+    "../../vc_runtime_signal_schema_research.md"
+  ],
+  "notes": [
+    "TopologyGraph 是派生产物，不是用户手写事实源。",
+    "连接事实仍由 SceneDocument.process_edges、physical_edges、signal_edges 保存。",
+    "TopologyGraph 类似编译器 IR 或数据库索引：为 Agent、Validator、Scheduler 和 Runtime 提供快速、确定性的全局关系查询。"
+  ],
+  "required_sections": [
+    "graph_id",
+    "source_scene",
+    "compiler",
+    "nodes",
+    "physical_graph",
+    "process_graph",
+    "signal_graph",
+    "transport_graph",
+    "warnings"
+  ],
+  "source_scene_contract": {
+    "required_fields": ["scene_id", "scene_revision"],
+    "recommended_fields": ["device_spec_revisions", "compiled_at", "scene_hash"],
+    "invalidates_when": [
+      "SceneDocument.instances 变化",
+      "SceneDocument.materials 变化且影响初始位置或物料类型",
+      "SceneDocument.process_edges 变化",
+      "SceneDocument.physical_edges 变化",
+      "SceneDocument.signal_edges 变化",
+      "任一引用 DeviceSpec 的端口、绑定、行为或 runtime_contract 变化"
+    ]
+  },
+  "node_contract": {
+    "description": "图节点按实例和端口拆分，既保留设备级节点，也保留 port/interface 级节点。",
+    "required_fields": ["node_id", "node_type"],
+    "node_type_values": ["device_instance", "physical_interface", "process_port", "signal_port", "material", "resource"],
+    "recommended_fields": ["instance_id", "spec_id", "device_type", "port_id", "interface_id", "world_frame", "metadata"]
+  },
+  "physical_graph_contract": {
+    "description": "真实接口连接图，对标 VC vcSimInterface/canConnect/connect 后的连接结果。",
+    "required_fields": ["nodes", "edges"],
+    "edge_required_fields": ["edge_id", "source", "target", "status"],
+    "edge_recommended_fields": ["source_scene_edge", "connection_method", "compatibility_result", "snap_result", "is_inferred", "confidence"],
+    "status_values": ["valid", "warning", "invalid", "candidate"],
+    "queries_to_support": ["get_connected_interfaces", "find_nearest_compatible_interfaces", "find_physical_component_groups"]
+  },
+  "process_graph_contract": {
+    "description": "工艺/物料流图，对标 VC Process Flow / FlowTable2。",
+    "required_fields": ["nodes", "edges"],
+    "edge_required_fields": ["edge_id", "source", "target", "status"],
+    "edge_recommended_fields": ["source_scene_edge", "material_classes", "compiled_physical_edges", "compiled_signal_edges"],
+    "status_values": ["valid", "warning", "invalid", "candidate"],
+    "queries_to_support": ["get_upstream", "get_downstream", "topological_sort", "find_process_chains", "detect_process_cycles"]
+  },
+  "signal_graph_contract": {
+    "description": "信号传播图，对标 VC vcSignal.Connections / vcBooleanSignalMap.connect，并可编译为 SceneBehaviorGraph.event_bus.routes。",
+    "required_fields": ["nodes", "edges"],
+    "edge_required_fields": ["edge_id", "source", "target", "delivery", "trigger", "status"],
+    "edge_recommended_fields": ["source_scene_edge", "route_id", "transform", "timeout_ms", "on_timeout", "value_type_check"],
+    "status_values": ["valid", "warning", "invalid", "candidate"],
+    "queries_to_support": ["get_signal_consumers", "get_signal_producers", "detect_unconsumed_outputs", "detect_missing_input_drivers", "detect_signal_cycles"]
+  },
+  "transport_graph_contract": {
+    "description": "可运输/可达性图，对标 VC vcTransportSystem / vcTransportNode / vcTransportLink。由 process_graph、physical_graph、DeviceSpec.transport_behaviors 与资源约束共同派生。",
+    "required_fields": ["nodes", "links"],
+    "link_required_fields": ["link_id", "source", "target", "implementer", "status"],
+    "link_recommended_fields": ["source_process_edge", "source_physical_edge", "required_behavior", "material_classes", "resource_requirements", "capacity_constraints", "signal_interlocks"],
+    "status_values": ["valid", "warning", "invalid", "candidate"],
+    "queries_to_support": ["find_solution", "find_all_links_between_node_sets", "check_transport_reachability", "propagate_blocked_upstream"]
+  },
+  "warning_contract": {
+    "description": "编译和校验过程中发现的问题，用于前端高亮、Agent 解释和 Guardian 修复。",
+    "required_fields": ["warning_id", "severity", "message"],
+    "recommended_fields": ["graph", "source_scene_edge", "instance_id", "port_id", "suggested_fix"],
+    "severity_values": ["info", "warning", "error"],
+    "warning_type_values": [
+      "dangling_physical_interface",
+      "dangling_process_port",
+      "unconsumed_signal_output",
+      "missing_signal_driver",
+      "direction_mismatch",
+      "value_type_mismatch",
+      "compatibility_field_mismatch",
+      "snap_tolerance_exceeded",
+      "transport_unreachable",
+      "capacity_deadlock_risk",
+      "resource_cycle_risk"
+    ]
+  }
+}

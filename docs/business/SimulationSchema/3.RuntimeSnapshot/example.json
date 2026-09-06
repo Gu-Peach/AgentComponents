@@ -1,7 +1,7 @@
 {
-  "schema_id": "runtime_snapshot_example_figure_1_v0_1",
+  "schema_id": "runtime_snapshot_example_figure_1_v0_2",
   "schema_type": "RuntimeSnapshot",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Figure 1 RuntimeSnapshot Example",
   "description": "机械臂等待传送带物料到达时的运行时状态示例，包含传送带停留点占用。",
   "source": {
@@ -10,19 +10,26 @@
   },
   "created_for": "运行时状态快照示例",
   "references": [
-    "../4.SceneBehaviorGraph/example.json"
+    "../4.SceneBehaviorGraph/example.json",
+    "../5.TopologyGraph/schema.json"
   ],
   "notes": [
     "该状态适合 Redis 存储，关键事件摘要另行落 Postgres。",
-    "停留点坐标由 Runtime 根据 conveyor DeviceSpec.stop_point_model 派生；这里保存当前占用事实。"
+    "停留点坐标由 Runtime 根据 conveyor DeviceSpec.stop_point_model 和 TopologyGraph 派生；这里保存当前占用事实。"
   ],
   "run_id": "run_figure_1_001",
   "clock": 12.5,
+  "topology_graph_ref": {
+    "graph_id": "topology_graph_scene_figure_1_v0_1",
+    "source_scene_id": "scene_figure_1",
+    "source_scene_revision": 1
+  },
   "signal_values": {
     "conveyor_1.part_ready": true,
     "robot_1.busy": false,
     "robot_1.done": false
   },
+  "event_queue": [],
   "device_fsm_states": {
     "conveyor_1": "idle",
     "robot_1": "idle"

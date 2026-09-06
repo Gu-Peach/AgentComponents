@@ -156,10 +156,10 @@ common_device_spec.schema.json -> base_device_spec.schema.json
 | `display_name` | 前端或文档中展示的设备名称。 |
 | `asset` | 设备三维资产引用，如 GLB 路径、模型格式、根节点。 |
 | `params_schema` | 设备可配置参数定义，包括默认值、范围和单位。 |
-| `physical_interfaces` | 真实空间中的物理接口、抓取区、放置区、入口、出口等锚点。 |
-| `process_ports` | 工艺流程画布使用的抽象入口/出口。 |
-| `signal_ports` | 设备可接收或发出的运行时信号。 |
-| `interface_bindings` | `process_ports` 到 `physical_interfaces` 的绑定关系。 |
+| `physical_interfaces` | 真实空间中的物理接口、抓取区、放置区、入口、出口等锚点；包含 `local_frame`、`snap_tolerance`、`compatibility_fields`。 |
+| `process_ports` | 工艺/物料流端口，可有独立 `local_frame`，描述物料从哪里进、出、加工、等待或交接。 |
+| `signal_ports` | 设备可接收或发出的运行时命令、状态和事件；抽象信号可绑定到工艺端口、物理接口或不绑定空间对象。 |
+| `interface_bindings` | 关联 `physical_interfaces`、`process_ports`、`signal_ports` 与 `transport_behaviors`，不把三类接口合并成一种接口。 |
 | `transport_behaviors` | 设备本体支持的物料流转行为能力。 |
 | `runtime_contract` | FSM 状态、资源、容量和错误策略等运行契约。 |
 | `type_specific_contract` | 设备类型专属能力，例如机械臂关节、传送带运动模型、货架库位。 |
@@ -173,10 +173,17 @@ common_device_spec.schema.json -> base_device_spec.schema.json
 | `direction` | 接口方向，常见为 `input`、`output`、`bidirectional`。 |
 | `node_name` | GLB/场景节点名，用于把接口锚定到模型节点。 |
 | `material_classes` | 该接口支持的物料类型。 |
+| `local_frame` | 推荐新字段，表示端口/接口在设备局部坐标系中的位置和朝向。 |
 | `local_position` | 接口在设备局部坐标系中的位置。 |
 | `local_forward` | 接口在设备局部坐标系中的朝向。 |
+| `snap_tolerance` | 物理接口吸附/对齐容差，对应距离和角度校验。 |
+| `compatibility_fields` | 接口语义兼容字段，例如物料类型、接口类别、信号字段、处理器字段。 |
 | `port_id` | 流程口或信号口 ID。 |
+| `role` | 工艺端口角色，例如 `material_entry`、`material_exit`、`pick_position`、`storage_cell`。 |
 | `value_type` | 信号值类型，例如 `event`、`boolean`、`command`。 |
+| `edge_trigger` | 信号触发方式，例如 `on_rising_edge`、`on_change`、`level`。 |
+| `retention` | 信号保留策略，例如 `latest_value`、`event_log`、`checkpoint_only`。 |
+| `bound_to` | 信号端口绑定目标，可指向 `process_port`、`physical_interface` 或 `none`。 |
 | `behavior_id` | 设备行为能力 ID。 |
 | `behavior_type` | 行为类别，例如 `material_transfer`、`continuous_transport`、`rotary_motion`。 |
 | `input_physical_interface` | 行为使用的输入物理接口。 |

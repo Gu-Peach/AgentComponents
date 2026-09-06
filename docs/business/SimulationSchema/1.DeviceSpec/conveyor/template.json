@@ -1,7 +1,7 @@
-﻿{
+{
   "schema_id": "conveyor_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "传送带设备本体填写模板",
   "description": "用于新增传送带 DeviceSpec。",
   "source": {
@@ -14,7 +14,9 @@
     "schema.json",
     "conveyor_1.json"
   ],
-  "notes": ["entry/exit 是传送带最小必填物理接口。"],
+  "notes": [
+    "entry/exit 是传送带最小必填物理接口。"
+  ],
   "device_spec_id": "conveyor_id_required",
   "device_type": "conveyor",
   "display_name": "传送带展示名_required",
@@ -48,77 +50,307 @@
       "kind": "material",
       "direction": "input",
       "node_name": "EntryAnchor_required",
-      "material_classes": ["workpiece_required"],
-      "local_position": ["x_optional", "y_optional", "z_optional"],
-      "local_forward": ["x_optional", "y_optional", "z_optional"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_position": [
+        "x_optional",
+        "y_optional",
+        "z_optional"
+      ],
+      "local_forward": [
+        "x_optional",
+        "y_optional",
+        "z_optional"
+      ],
+      "local_frame": {
+        "position": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "exit",
       "kind": "material",
       "direction": "output",
       "node_name": "ExitAnchor_required",
-      "material_classes": ["workpiece_required"],
-      "local_position": ["x_optional", "y_optional", "z_optional"],
-      "local_forward": ["x_optional", "y_optional", "z_optional"]
+      "material_classes": [
+        "workpiece_required"
+      ],
+      "local_position": [
+        "x_optional",
+        "y_optional",
+        "z_optional"
+      ],
+      "local_forward": [
+        "x_optional",
+        "y_optional",
+        "z_optional"
+      ],
+      "local_frame": {
+        "position": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece_required",
+          "match_rule": "intersects"
+        }
+      ]
     }
   ],
   "process_ports": [
     {
       "port_id": "flow_input",
       "direction": "input",
-      "label": "Input"
+      "label": "Input",
+      "role": "flow_input",
+      "bound_physical_interface": "entry",
+      "local_frame": {
+        "position": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "capacity_available",
+        "stop_point_occupied"
+      ]
     },
     {
       "port_id": "flow_output",
       "direction": "output",
-      "label": "Output"
+      "label": "Output",
+      "role": "flow_output",
+      "bound_physical_interface": "exit",
+      "local_frame": {
+        "position": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "x_optional",
+          "y_optional",
+          "z_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece_required"
+      ],
+      "bound_signal_ports": [
+        "part_ready",
+        "blocked",
+        "done",
+        "stop_point_released",
+        "release_waiting_material"
+      ]
     }
   ],
   "signal_ports": [
     {
       "port_id": "part_ready",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "物料已到达输出工艺口，可触发下游释放或抓取。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     },
     {
       "port_id": "blocked",
       "direction": "output",
-      "value_type": "boolean"
+      "value_type": "boolean",
+      "edge_trigger": "on_change",
+      "retention": "latest_value",
+      "default_value": false,
+      "semantic": "下游或内部容量阻塞状态。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     },
     {
       "port_id": "capacity_available",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "设备重新具备接收容量。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
     },
     {
       "port_id": "stop_point_occupied",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "停留点被占用事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_input"
+      }
     },
     {
       "port_id": "stop_point_released",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "停留点释放事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     },
     {
       "port_id": "done",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "当前动作完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     },
     {
       "port_id": "release_waiting_material",
       "direction": "input",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "释放等待物料的输入命令。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     }
   ],
   "interface_bindings": [
     {
       "process_port": "flow_input",
-      "physical_interface": "entry"
+      "physical_interface": "entry",
+      "binding_id": "bind_flow_input_entry",
+      "binding_role": "entry",
+      "signal_ports": [
+        "capacity_available",
+        "stop_point_occupied"
+      ],
+      "transport_behaviors": [
+        "accept_material",
+        "advance_to_next_stop_point",
+        "transport_to_exit"
+      ]
     },
     {
       "process_port": "flow_output",
-      "physical_interface": "exit"
+      "physical_interface": "exit",
+      "binding_id": "bind_flow_output_exit",
+      "binding_role": "exit",
+      "signal_ports": [
+        "part_ready",
+        "blocked",
+        "stop_point_released",
+        "done",
+        "release_waiting_material"
+      ],
+      "transport_behaviors": [
+        "advance_to_next_stop_point",
+        "transport_to_exit",
+        "release_material"
+      ]
     }
   ],
   "transport_behaviors": [
@@ -126,7 +358,9 @@
       "behavior_id": "accept_material",
       "behavior_type": "material_transfer",
       "input_physical_interface": "entry",
-      "output_signals": ["stop_point_occupied"]
+      "output_signals": [
+        "stop_point_occupied"
+      ]
     },
     {
       "behavior_id": "advance_to_next_stop_point",
@@ -134,7 +368,10 @@
       "input_physical_interface": "entry",
       "output_physical_interface": "exit",
       "default_algorithm": "linear_stop_point_motion",
-      "output_signals": ["stop_point_occupied", "stop_point_released"]
+      "output_signals": [
+        "stop_point_occupied",
+        "stop_point_released"
+      ]
     },
     {
       "behavior_id": "transport_to_exit",
@@ -142,17 +379,29 @@
       "input_physical_interface": "entry",
       "output_physical_interface": "exit",
       "default_algorithm": "linear_stop_point_motion",
-      "output_signals": ["part_ready", "done", "stop_point_released"]
+      "output_signals": [
+        "part_ready",
+        "done",
+        "stop_point_released"
+      ]
     },
     {
       "behavior_id": "release_material",
       "behavior_type": "handoff",
-      "input_signals": ["release_waiting_material"],
+      "input_signals": [
+        "release_waiting_material"
+      ],
       "output_physical_interface": "exit"
     }
   ],
   "runtime_contract": {
-    "fsm_states": ["idle", "moving", "waiting_downstream", "blocked", "error"],
+    "fsm_states": [
+      "idle",
+      "moving",
+      "waiting_downstream",
+      "blocked",
+      "error"
+    ],
     "default_state": "idle",
     "resources": [
       {
@@ -177,7 +426,11 @@
     },
     "motion_model": {
       "type": "linear",
-      "axis": [1, 0, 0],
+      "axis": [
+        1,
+        0,
+        0
+      ],
       "speed_param": "speed_mps"
     },
     "stop_point_model": {

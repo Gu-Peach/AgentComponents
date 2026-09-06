@@ -1,14 +1,14 @@
-﻿{
-  "schema_id": "pallet_sorting_line_scene_behavior_demo_v0_2",
+{
+  "schema_id": "pallet_sorting_line_scene_behavior_demo_v0_3",
   "schema_type": "SceneBehaviorGraphDemo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "Pallet Sorting Line SceneBehaviorGraph Demo",
-  "description": "基于 docs/business/test/1.png 的托盘分拣线 v0.2 基线 demo：用 SceneBehaviorGraph 描述共享工件池、事件总线、backpressure 和运行状态更新。",
+  "description": "基于 docs/business/test/1.png 的托盘分拣线 v0.3 基线 demo：用 TopologyGraph + SceneBehaviorGraph 描述共享工件池、事件总线、backpressure 和运行状态更新。",
   "source": {
     "kind": "image_inferred_demo",
     "path": "docs/business/test/1.png"
   },
-  "created_for": "展示 DeviceSpec + SceneDocument + 用户目标 -> SceneBehaviorGraph -> RuntimeSnapshot 的基线链路。",
+  "created_for": "展示 DeviceSpec + SceneDocument + TopologyGraph + 用户目标 -> SceneBehaviorGraph -> RuntimeSnapshot 的基线链路。",
   "references": [
     "docs/business/SimulationSchema/device_data_structure.md",
     "docs/business/SimulationSchema/4.SceneBehaviorGraph/schema.json",
@@ -23,7 +23,7 @@
     "SignalBusRuntime 是 Runtime 内部模块，执行 scene_behavior_graph.event_bus 中定义的事件路由。",
     "RuntimeSnapshot 是运行时状态事实，不负责定义行为模型。",
     "当前基线不处理用户中途改需求。",
-    "该文件是早期一体化展示快照，仅用于字段关系参考；最新图 1 benchmark 以 docs/test/case/scene_01/ 和 docs/business/SimulationSchema/2.SceneDocument/example.json 为准。"
+    "该文件是一体化展示快照，用于说明 DeviceSpec、SceneDocument、TopologyGraph、SceneBehaviorGraph、RuntimeSnapshot 的字段关系；最新图 1 benchmark 以 docs/test/case/scene_01/ 和 docs/business/SimulationSchema/2.SceneDocument/example.json 为准。"
   ],
   "user_goal": {
     "goal_id": "goal_sort_pallet_parts_v0_1",
@@ -38,6 +38,41 @@
   },
   "device_specs": {
     "conveyor_1": {
+      "device_spec_id": "conveyor_1",
+      "device_type": "conveyor",
+      "display_name": "传送带 1",
+      "version": "0.2.0",
+      "asset": {
+        "model_format": "glb",
+        "model_key": "assets/models/conveyor/conveyor.glb"
+      },
+      "params_schema": {
+        "speed_mps": {
+          "type": "number",
+          "default": 0.4,
+          "min": 0.05,
+          "max": 2,
+          "unit": "m/s"
+        },
+        "capacity": {
+          "type": "integer",
+          "default": 3,
+          "min": 1,
+          "max": 20
+        },
+        "resume_threshold": {
+          "type": "integer",
+          "default": 2,
+          "min": 0,
+          "max": 20
+        },
+        "stop_point_count": {
+          "type": "integer",
+          "default": 4,
+          "min": 2,
+          "max": 20
+        }
+      },
       "physical_interfaces": [
         {
           "interface_id": "entry",
@@ -57,6 +92,41 @@
             -1,
             0,
             0
+          ],
+          "local_frame": {
+            "position": [
+              -0.8,
+              0,
+              0.45
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              -1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         },
         {
@@ -77,6 +147,41 @@
             1,
             0,
             0
+          ],
+          "local_frame": {
+            "position": [
+              0.8,
+              0,
+              0.45
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         }
       ],
@@ -84,44 +189,201 @@
         {
           "port_id": "flow_input",
           "direction": "input",
-          "label": "Input"
+          "label": "Input",
+          "role": "flow_input",
+          "bound_physical_interface": "entry",
+          "local_frame": {
+            "position": [
+              -0.8,
+              0,
+              0.45
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              -1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece",
+            "workpiece_carrier"
+          ],
+          "bound_signal_ports": [
+            "capacity_available",
+            "stop_point_occupied"
+          ]
         },
         {
           "port_id": "flow_output",
           "direction": "output",
-          "label": "Output"
+          "label": "Output",
+          "role": "flow_output",
+          "bound_physical_interface": "exit",
+          "local_frame": {
+            "position": [
+              0.8,
+              0,
+              0.45
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece",
+            "workpiece_carrier"
+          ],
+          "bound_signal_ports": [
+            "part_ready",
+            "blocked",
+            "done",
+            "stop_point_released",
+            "release_waiting_material"
+          ]
         }
       ],
       "signal_ports": [
         {
           "port_id": "part_ready",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "物料已到达输出工艺口，可触发下游释放或抓取。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
         },
         {
           "port_id": "blocked",
           "direction": "output",
-          "value_type": "boolean"
+          "value_type": "boolean",
+          "edge_trigger": "on_change",
+          "retention": "latest_value",
+          "default_value": false,
+          "semantic": "下游或内部容量阻塞状态。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
+        },
+        {
+          "port_id": "capacity_available",
+          "direction": "output",
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "设备重新具备接收容量。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
         },
         {
           "port_id": "done",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "当前动作完成事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
+        },
+        {
+          "port_id": "stop_point_occupied",
+          "direction": "output",
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "停留点被占用事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
+        },
+        {
+          "port_id": "stop_point_released",
+          "direction": "output",
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "停留点释放事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
         },
         {
           "port_id": "release_waiting_material",
           "direction": "input",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "释放等待物料的输入命令。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
         }
       ],
       "interface_bindings": [
         {
           "process_port": "flow_input",
-          "physical_interface": "entry"
+          "physical_interface": "entry",
+          "binding_id": "bind_flow_input_entry",
+          "binding_role": "entry",
+          "signal_ports": [
+            "capacity_available",
+            "stop_point_occupied"
+          ],
+          "transport_behaviors": [
+            "accept_material",
+            "advance_to_next_stop_point",
+            "transport_to_exit"
+          ]
         },
         {
           "process_port": "flow_output",
-          "physical_interface": "exit"
+          "physical_interface": "exit",
+          "binding_id": "bind_flow_output_exit",
+          "binding_role": "exit",
+          "signal_ports": [
+            "part_ready",
+            "blocked",
+            "done",
+            "stop_point_released",
+            "release_waiting_material"
+          ],
+          "transport_behaviors": [
+            "advance_to_next_stop_point",
+            "transport_to_exit",
+            "release_material"
+          ]
         }
       ],
       "transport_behaviors": [
@@ -129,20 +391,35 @@
           "behavior_id": "accept_material",
           "behavior_type": "material_transfer",
           "input_physical_interface": "entry",
-          "output_signals": [],
+          "output_signals": [
+            "stop_point_occupied"
+          ],
           "preconditions": [
-            "capacity_available == true"
+            "capacity_available == true",
+            "entry_stop_point_available == true"
+          ]
+        },
+        {
+          "behavior_id": "advance_to_next_stop_point",
+          "behavior_type": "stop_point_buffered_transport",
+          "input_physical_interface": "entry",
+          "output_physical_interface": "exit",
+          "default_algorithm": "linear_stop_point_motion",
+          "output_signals": [
+            "stop_point_occupied",
+            "stop_point_released"
           ]
         },
         {
           "behavior_id": "transport_to_exit",
-          "behavior_type": "continuous_transport",
+          "behavior_type": "stop_point_buffered_transport",
           "input_physical_interface": "entry",
           "output_physical_interface": "exit",
-          "default_algorithm": "linear_conveyor_motion",
+          "default_algorithm": "linear_stop_point_motion",
           "output_signals": [
             "part_ready",
-            "done"
+            "done",
+            "stop_point_released"
           ]
         },
         {
@@ -171,7 +448,8 @@
         ],
         "capacity": {
           "max_active_materials": 3,
-          "queue_id": "exit_queue"
+          "queue_id": "stop_point_queue",
+          "resume_threshold": 2
         },
         "error_policy": {
           "on_downstream_timeout": "emit_observation"
@@ -192,13 +470,55 @@
           ],
           "speed_param": "speed_mps"
         },
+        "stop_point_model": {
+          "type": "linear_interpolation",
+          "start_interface": "entry",
+          "end_interface": "exit",
+          "default_stop_point_count": 4,
+          "include_entry": true,
+          "include_exit": true,
+          "coordinate_formula": "entry + t * (exit - entry)",
+          "spacing_policy": "evenly_spaced"
+        },
         "queue_policy": {
-          "when_downstream_busy": "wait_at_exit",
+          "when_downstream_busy": "wait_at_nearest_upstream_stop_point",
           "release_on_signal": "release_waiting_material"
         }
       }
     },
     "robot_arm_1": {
+      "device_spec_id": "robot_arm_1",
+      "device_type": "robot_arm",
+      "display_name": "Fanuc 机械臂 1",
+      "version": "0.2.0",
+      "asset": {
+        "model_format": "glb",
+        "model_key": "assets/models/robot_arm/fanuc_robot_arm.glb",
+        "root_node_name": "UR10_00Hn"
+      },
+      "params_schema": {
+        "speed": {
+          "type": "number",
+          "default": 1,
+          "min": 0.05,
+          "max": 3,
+          "unit": "m/s"
+        },
+        "payload_kg": {
+          "type": "number",
+          "default": 5,
+          "min": 0,
+          "max": 20,
+          "unit": "kg"
+        },
+        "lift_height": {
+          "type": "number",
+          "default": 0.3,
+          "min": 0,
+          "max": 1.5,
+          "unit": "m"
+        }
+      },
       "physical_interfaces": [
         {
           "interface_id": "pick_area",
@@ -218,6 +538,41 @@
             1,
             0,
             0
+          ],
+          "local_frame": {
+            "position": [
+              0.45,
+              0,
+              0.2
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         },
         {
@@ -238,6 +593,41 @@
             -1,
             0,
             0
+          ],
+          "local_frame": {
+            "position": [
+              -0.45,
+              0,
+              0.2
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              -1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         },
         {
@@ -248,6 +638,41 @@
           "material_classes": [
             "workpiece",
             "workpiece_carrier"
+          ],
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              0.8
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         }
       ],
@@ -255,12 +680,76 @@
         {
           "port_id": "flow_input",
           "direction": "input",
-          "label": "Pick Input"
+          "label": "Pick Input",
+          "role": "flow_input",
+          "bound_physical_interface": "pick_area",
+          "local_frame": {
+            "position": [
+              0.45,
+              0,
+              0.2
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece",
+            "workpiece_carrier"
+          ],
+          "bound_signal_ports": [
+            "start_pick",
+            "pause_pick",
+            "resume_pick"
+          ]
         },
         {
           "port_id": "flow_output",
           "direction": "output",
-          "label": "Place Output"
+          "label": "Place Output",
+          "role": "flow_output",
+          "bound_physical_interface": "place_area",
+          "local_frame": {
+            "position": [
+              -0.45,
+              0,
+              0.2
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              -1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece",
+            "workpiece_carrier"
+          ],
+          "bound_signal_ports": [
+            "done"
+          ]
         }
       ],
       "signal_ports": [
@@ -268,35 +757,108 @@
           "port_id": "start_pick",
           "direction": "input",
           "value_type": "event",
-          "description": "触发抓取动作"
+          "description": "触发抓取动作",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "启动抓取命令。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
+        },
+        {
+          "port_id": "pause_pick",
+          "direction": "input",
+          "value_type": "event",
+          "description": "暂停启动新的抓取任务；通常由出料传送带 blocked 信号触发",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "暂停抓取命令。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
+        },
+        {
+          "port_id": "resume_pick",
+          "direction": "input",
+          "value_type": "event",
+          "description": "恢复启动新的抓取任务；通常由出料传送带 capacity_available 信号触发",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "恢复抓取命令。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
         },
         {
           "port_id": "busy",
           "direction": "output",
           "value_type": "boolean",
-          "description": "机械臂正在执行动作"
+          "description": "机械臂正在执行动作",
+          "edge_trigger": "on_change",
+          "retention": "latest_value",
+          "default_value": false,
+          "semantic": "执行机构忙碌状态。",
+          "bound_to": {
+            "type": "physical_interface",
+            "id": "tool_center_point"
+          }
         },
         {
           "port_id": "done",
           "direction": "output",
           "value_type": "event",
-          "description": "动作完成"
+          "description": "动作完成",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "当前动作完成事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
         },
         {
           "port_id": "error",
           "direction": "output",
           "value_type": "event",
-          "description": "动作失败或目标不可达"
+          "description": "动作失败或目标不可达",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "设备异常事件。",
+          "bound_to": {
+            "type": "physical_interface",
+            "id": "tool_center_point"
+          }
         }
       ],
       "interface_bindings": [
         {
           "process_port": "flow_input",
-          "physical_interface": "pick_area"
+          "physical_interface": "pick_area",
+          "binding_id": "bind_flow_input_pick_area",
+          "binding_role": "entry",
+          "signal_ports": [
+            "start_pick",
+            "pause_pick",
+            "resume_pick"
+          ],
+          "transport_behaviors": [
+            "pick_and_place"
+          ]
         },
         {
           "process_port": "flow_output",
-          "physical_interface": "place_area"
+          "physical_interface": "place_area",
+          "binding_id": "bind_flow_output_place_area",
+          "binding_role": "exit",
+          "signal_ports": [
+            "done"
+          ],
+          "transport_behaviors": [
+            "pick_and_place"
+          ]
         }
       ],
       "transport_behaviors": [
@@ -307,7 +869,11 @@
           "output_physical_interface": "place_area",
           "default_algorithm": "robot_pick_place",
           "input_signals": [
-            "start_pick"
+            "start_pick",
+            "resume_pick"
+          ],
+          "control_signals": [
+            "pause_pick"
           ],
           "output_signals": [
             "busy",
@@ -321,7 +887,8 @@
           "preconditions": [
             "fsm_state == idle",
             "material_at(input_physical_interface)",
-            "gripper.empty == true"
+            "gripper.empty == true",
+            "pause_pick.active != true"
           ],
           "effects": [
             "material_at(output_physical_interface)",
@@ -447,7 +1014,7 @@
         },
         "trajectoryConfig": {
           "liftHeight": 0.3,
-          "speed": 1.0
+          "speed": 1
         },
         "workspace": {
           "shape": "cylinder",
@@ -460,11 +1027,27 @@
             "workpiece",
             "workpiece_carrier"
           ],
-          "max_payload_kg": 5.0
+          "max_payload_kg": 5
         }
       }
     },
     "carrier_tray_1": {
+      "device_spec_id": "carrier_tray_1",
+      "device_type": "workpiece_carrier",
+      "display_name": "物料载具 / 承载托盘 1",
+      "version": "0.2.0",
+      "asset": {
+        "model_format": "glb",
+        "model_key": "assets/models/carrier/carrier_tray.glb"
+      },
+      "params_schema": {
+        "slot_count": {
+          "type": "integer",
+          "default": 12,
+          "min": 1,
+          "max": 64
+        }
+      },
       "physical_interfaces": [
         {
           "interface_id": "load_surface",
@@ -473,6 +1056,41 @@
           "node_name": "LoadSurface",
           "material_classes": [
             "workpiece"
+          ],
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         },
         {
@@ -482,6 +1100,41 @@
           "node_name": "CarrierBottom",
           "material_classes": [
             "workpiece_carrier"
+          ],
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              -0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece_carrier",
+              "match_rule": "intersects"
+            }
           ]
         }
       ],
@@ -489,34 +1142,126 @@
         {
           "port_id": "flow_input",
           "direction": "input",
-          "label": "Load"
+          "label": "Load",
+          "role": "flow_input",
+          "bound_physical_interface": "load_surface",
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece"
+          ],
+          "bound_signal_ports": [
+            "loaded"
+          ]
         },
         {
           "port_id": "flow_output",
           "direction": "output",
-          "label": "Unload"
+          "label": "Unload",
+          "role": "flow_output",
+          "bound_physical_interface": "load_surface",
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "accepted_material_types": [
+            "workpiece"
+          ],
+          "bound_signal_ports": [
+            "unloaded"
+          ]
         }
       ],
       "signal_ports": [
         {
           "port_id": "loaded",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "载具装载完成事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_input"
+          }
         },
         {
           "port_id": "unloaded",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "载具卸载完成事件。",
+          "bound_to": {
+            "type": "process_port",
+            "id": "flow_output"
+          }
         }
       ],
       "interface_bindings": [
         {
           "process_port": "flow_input",
-          "physical_interface": "load_surface"
+          "physical_interface": "load_surface",
+          "binding_id": "bind_flow_input_load_surface",
+          "binding_role": "entry",
+          "signal_ports": [
+            "loaded"
+          ],
+          "transport_behaviors": [
+            "carry_material",
+            "release_material"
+          ]
         },
         {
           "process_port": "flow_output",
-          "physical_interface": "load_surface"
+          "physical_interface": "load_surface",
+          "binding_id": "bind_flow_output_load_surface",
+          "binding_role": "exit",
+          "signal_ports": [
+            "unloaded"
+          ],
+          "transport_behaviors": [
+            "carry_material",
+            "release_material"
+          ]
         }
       ],
       "transport_behaviors": [
@@ -575,6 +1320,22 @@
       }
     },
     "workpiece_1": {
+      "device_spec_id": "workpiece_1",
+      "device_type": "workpiece",
+      "display_name": "圆柱物料 1",
+      "version": "0.2.0",
+      "asset": {
+        "model_format": "glb",
+        "model_key": "assets/models/workpiece/cylindrical_part.glb"
+      },
+      "params_schema": {
+        "mass_kg": {
+          "type": "number",
+          "default": 0.2,
+          "min": 0,
+          "max": 5
+        }
+      },
       "physical_interfaces": [
         {
           "interface_id": "grasp_surface",
@@ -583,6 +1344,41 @@
           "node_name": "GraspSurface",
           "material_classes": [
             "workpiece"
+          ],
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         },
         {
@@ -592,6 +1388,41 @@
           "node_name": "BottomSurface",
           "material_classes": [
             "workpiece"
+          ],
+          "local_frame": {
+            "position": [
+              0,
+              0,
+              -0.05
+            ],
+            "rotation_euler": [
+              0,
+              0,
+              0
+            ],
+            "forward": [
+              1,
+              0,
+              0
+            ],
+            "up": [
+              0,
+              0,
+              1
+            ]
+          },
+          "snap_tolerance": {
+            "distance_m": 0.02,
+            "angle_deg": 3
+          },
+          "compatibility_fields": [
+            {
+              "field_id": "material_class",
+              "type": "material_class",
+              "name": "Material class",
+              "value": "workpiece",
+              "match_rule": "intersects"
+            }
           ]
         }
       ],
@@ -600,12 +1431,26 @@
         {
           "port_id": "picked",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "工件被抓取事件。",
+          "bound_to": {
+            "type": "physical_interface",
+            "id": "grasp_surface"
+          }
         },
         {
           "port_id": "placed",
           "direction": "output",
-          "value_type": "event"
+          "value_type": "event",
+          "edge_trigger": "on_rising_edge",
+          "retention": "event_log",
+          "semantic": "工件被放置事件。",
+          "bound_to": {
+            "type": "physical_interface",
+            "id": "bottom"
+          }
         }
       ],
       "interface_bindings": [],
@@ -689,9 +1534,9 @@
     }
   ],
   "scene_document": {
-    "schema_id": "scene_document_pallet_sorting_line_v0_1",
+    "schema_id": "scene_document_pallet_sorting_line_v0_2",
     "schema_type": "SceneDocument",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "name": "Pallet Sorting Line SceneDocument",
     "description": "显式场景事实：主传送带、两个机械臂、两条输出传送带、托盘和 12 个物料。",
     "source": {
@@ -966,28 +1811,60 @@
         "source": "main_conveyor_1.flow_output",
         "target": "robot_1.flow_input",
         "edge_type": "material_flow",
-        "status": "confirmed"
+        "status": "confirmed",
+        "material_classes": [
+          "workpiece",
+          "workpiece_carrier"
+        ],
+        "priority": 100,
+        "conditions": [],
+        "compiled_physical_edges": [],
+        "compiled_signal_edges": []
       },
       {
         "edge_id": "proc_main_to_robot_2",
         "source": "main_conveyor_1.flow_output",
         "target": "robot_2.flow_input",
         "edge_type": "material_flow",
-        "status": "confirmed"
+        "status": "confirmed",
+        "material_classes": [
+          "workpiece",
+          "workpiece_carrier"
+        ],
+        "priority": 100,
+        "conditions": [],
+        "compiled_physical_edges": [],
+        "compiled_signal_edges": []
       },
       {
         "edge_id": "proc_robot_1_to_upper_out",
         "source": "robot_1.flow_output",
         "target": "upper_out_conveyor_1.flow_input",
         "edge_type": "material_flow",
-        "status": "confirmed"
+        "status": "confirmed",
+        "material_classes": [
+          "workpiece",
+          "workpiece_carrier"
+        ],
+        "priority": 100,
+        "conditions": [],
+        "compiled_physical_edges": [],
+        "compiled_signal_edges": []
       },
       {
         "edge_id": "proc_robot_2_to_lower_out",
         "source": "robot_2.flow_output",
         "target": "lower_out_conveyor_1.flow_input",
         "edge_type": "material_flow",
-        "status": "confirmed"
+        "status": "confirmed",
+        "material_classes": [
+          "workpiece",
+          "workpiece_carrier"
+        ],
+        "priority": 100,
+        "conditions": [],
+        "compiled_physical_edges": [],
+        "compiled_signal_edges": []
       }
     ],
     "physical_edges": [
@@ -997,7 +1874,22 @@
         "target": "robot_1.pick_area",
         "edge_type": "material_transfer",
         "compiled_from": "proc_main_to_robot_1",
-        "status": "confirmed"
+        "status": "confirmed",
+        "connection_method": "compiled_from_process",
+        "is_inferred": true,
+        "confidence": 0.8,
+        "compatibility_result": {
+          "status": "not_checked",
+          "matched_fields": [],
+          "missing_fields": [],
+          "message": "demo placeholder; runtime validator should recompute against DeviceSpec.compatibility_fields"
+        },
+        "snap_result": {
+          "distance_m": null,
+          "angle_deg": null,
+          "within_tolerance": "not_checked",
+          "retain_offset": false
+        }
       },
       {
         "edge_id": "phys_main_exit_to_robot_2_pick",
@@ -1005,7 +1897,22 @@
         "target": "robot_2.pick_area",
         "edge_type": "material_transfer",
         "compiled_from": "proc_main_to_robot_2",
-        "status": "confirmed"
+        "status": "confirmed",
+        "connection_method": "compiled_from_process",
+        "is_inferred": true,
+        "confidence": 0.8,
+        "compatibility_result": {
+          "status": "not_checked",
+          "matched_fields": [],
+          "missing_fields": [],
+          "message": "demo placeholder; runtime validator should recompute against DeviceSpec.compatibility_fields"
+        },
+        "snap_result": {
+          "distance_m": null,
+          "angle_deg": null,
+          "within_tolerance": "not_checked",
+          "retain_offset": false
+        }
       },
       {
         "edge_id": "phys_robot_1_place_to_upper_entry",
@@ -1013,7 +1920,22 @@
         "target": "upper_out_conveyor_1.entry",
         "edge_type": "material_transfer",
         "compiled_from": "proc_robot_1_to_upper_out",
-        "status": "confirmed"
+        "status": "confirmed",
+        "connection_method": "compiled_from_process",
+        "is_inferred": true,
+        "confidence": 0.8,
+        "compatibility_result": {
+          "status": "not_checked",
+          "matched_fields": [],
+          "missing_fields": [],
+          "message": "demo placeholder; runtime validator should recompute against DeviceSpec.compatibility_fields"
+        },
+        "snap_result": {
+          "distance_m": null,
+          "angle_deg": null,
+          "within_tolerance": "not_checked",
+          "retain_offset": false
+        }
       },
       {
         "edge_id": "phys_robot_2_place_to_lower_entry",
@@ -1021,7 +1943,22 @@
         "target": "lower_out_conveyor_1.entry",
         "edge_type": "material_transfer",
         "compiled_from": "proc_robot_2_to_lower_out",
-        "status": "confirmed"
+        "status": "confirmed",
+        "connection_method": "compiled_from_process",
+        "is_inferred": true,
+        "confidence": 0.8,
+        "compatibility_result": {
+          "status": "not_checked",
+          "matched_fields": [],
+          "missing_fields": [],
+          "message": "demo placeholder; runtime validator should recompute against DeviceSpec.compatibility_fields"
+        },
+        "snap_result": {
+          "distance_m": null,
+          "angle_deg": null,
+          "within_tolerance": "not_checked",
+          "retain_offset": false
+        }
       }
     ],
     "signal_edges": [
@@ -1030,41 +1967,86 @@
         "source": "main_conveyor_1.part_ready",
         "target": "robot_1.start_pick",
         "edge_type": "control_signal",
-        "status": "confirmed"
+        "status": "confirmed",
+        "delivery": "event",
+        "trigger": "on_rising_edge",
+        "transform": {
+          "type": "identity"
+        },
+        "timeout_ms": 30000,
+        "on_timeout": "raise_observation",
+        "enabled": true,
+        "route_id": "route_sig_main_pallet_ready_to_robot_1_start"
       },
       {
         "edge_id": "sig_main_pallet_ready_to_robot_2_start",
         "source": "main_conveyor_1.part_ready",
         "target": "robot_2.start_pick",
         "edge_type": "control_signal",
-        "status": "confirmed"
+        "status": "confirmed",
+        "delivery": "event",
+        "trigger": "on_rising_edge",
+        "transform": {
+          "type": "identity"
+        },
+        "timeout_ms": 30000,
+        "on_timeout": "raise_observation",
+        "enabled": true,
+        "route_id": "route_sig_main_pallet_ready_to_robot_2_start"
       },
       {
         "edge_id": "sig_robot_1_done_to_upper_release",
         "source": "robot_1.done",
         "target": "upper_out_conveyor_1.release_waiting_material",
         "edge_type": "control_signal",
-        "status": "confirmed"
+        "status": "confirmed",
+        "delivery": "event",
+        "trigger": "on_rising_edge",
+        "transform": {
+          "type": "identity"
+        },
+        "timeout_ms": 30000,
+        "on_timeout": "raise_observation",
+        "enabled": true,
+        "route_id": "route_sig_robot_1_done_to_upper_release"
       },
       {
         "edge_id": "sig_robot_2_done_to_lower_release",
         "source": "robot_2.done",
         "target": "lower_out_conveyor_1.release_waiting_material",
         "edge_type": "control_signal",
-        "status": "confirmed"
+        "status": "confirmed",
+        "delivery": "event",
+        "trigger": "on_rising_edge",
+        "transform": {
+          "type": "identity"
+        },
+        "timeout_ms": 30000,
+        "on_timeout": "raise_observation",
+        "enabled": true,
+        "route_id": "route_sig_robot_2_done_to_lower_release"
       }
     ],
     "runtime_config": {
       "deadlock_detection": true,
       "default_signal_timeout_s": 30,
       "default_sim_duration_s": 300,
-      "profile_push_interval_s": 0.2
+      "profile_push_interval_s": 0.2,
+      "topology_rebuild_policy": "before_run"
+    },
+    "derived_artifacts": {
+      "topology_graph": {
+        "graph_id": "topology_graph_pallet_sorting_line_v0_1",
+        "schema": "../5.TopologyGraph/schema.json",
+        "source_scene_revision": 1,
+        "status": "valid"
+      }
     }
   },
   "scene_validation_report": {
-    "schema_id": "scene_validation_report_pallet_sorting_line_v0_1",
+    "schema_id": "scene_validation_report_pallet_sorting_line_v0_2",
     "schema_type": "SceneValidationReport",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "name": "Pallet Sorting Line Scene Validation Report",
     "description": "Agent / Backend Validator 在规划前对显式连接场景的校验结果。",
     "source": {
@@ -1078,7 +2060,7 @@
     },
     "created_for": "决定是否允许 Agent 继续生成 SceneBehaviorGraph。",
     "references": [
-      "scene_document_pallet_sorting_line_v0_1"
+      "scene_document_pallet_sorting_line_v0_2"
     ],
     "notes": [
       "当前 demo 校验通过，因此继续后续链路。",
@@ -1131,10 +2113,250 @@
       "用 conveyor_loads 和 backpressure policy 控制出料传送带超载时暂停/恢复机械臂。"
     ]
   },
+  "topology_graph": {
+    "schema_id": "topology_graph_pallet_sorting_line_v0_1",
+    "schema_type": "TopologyGraph",
+    "version": "0.1.0",
+    "name": "Pallet Sorting Line TopologyGraph",
+    "description": "由托盘分拣线 DeviceSpec 与 SceneDocument 编译得到的派生拓扑索引。",
+    "source": {
+      "kind": "compiler_generated_topology",
+      "from": [
+        "device_specs",
+        "scene_document"
+      ]
+    },
+    "created_for": "为 SceneBehaviorGraph 生成、Runtime 调度和 Agent 解释提供确定性拓扑查询。",
+    "references": [
+      "scene_document_pallet_sorting_line_v0_2",
+      "topology_graph_schema_v0_1"
+    ],
+    "notes": [
+      "TopologyGraph 是派生索引，不替代 SceneDocument 中的 process_edges、physical_edges、signal_edges。",
+      "任何连接事实变化后都应重编译该图。"
+    ],
+    "graph_id": "topology_graph_pallet_sorting_line_v0_1",
+    "source_scene": {
+      "scene_id": "scene_pallet_sorting_line_001",
+      "scene_revision": 1,
+      "compiled_at": "demo_static"
+    },
+    "compiler": {
+      "name": "topology_builder",
+      "version": "0.1.0",
+      "mode": "explicit_edges_only"
+    },
+    "nodes": {
+      "device_instances": [
+        "main_conveyor_1",
+        "robot_1",
+        "robot_2",
+        "upper_out_conveyor_1",
+        "lower_out_conveyor_1",
+        "pallet_1"
+      ],
+      "materials": [
+        "part_001",
+        "part_002",
+        "part_003",
+        "part_004",
+        "part_005",
+        "part_006",
+        "part_007",
+        "part_008",
+        "part_009",
+        "part_010",
+        "part_011",
+        "part_012"
+      ]
+    },
+    "physical_graph": {
+      "nodes": [
+        "main_conveyor_1.exit",
+        "robot_1.pick_area",
+        "robot_2.pick_area",
+        "robot_1.place_area",
+        "robot_2.place_area",
+        "upper_out_conveyor_1.entry",
+        "lower_out_conveyor_1.entry"
+      ],
+      "edges": [
+        {
+          "edge_id": "phys_main_exit_to_robot_1_pick",
+          "source": "main_conveyor_1.exit",
+          "target": "robot_1.pick_area",
+          "status": "valid",
+          "source_scene_edge": "phys_main_exit_to_robot_1_pick"
+        },
+        {
+          "edge_id": "phys_main_exit_to_robot_2_pick",
+          "source": "main_conveyor_1.exit",
+          "target": "robot_2.pick_area",
+          "status": "valid",
+          "source_scene_edge": "phys_main_exit_to_robot_2_pick"
+        },
+        {
+          "edge_id": "phys_robot_1_place_to_upper_entry",
+          "source": "robot_1.place_area",
+          "target": "upper_out_conveyor_1.entry",
+          "status": "valid",
+          "source_scene_edge": "phys_robot_1_place_to_upper_entry"
+        },
+        {
+          "edge_id": "phys_robot_2_place_to_lower_entry",
+          "source": "robot_2.place_area",
+          "target": "lower_out_conveyor_1.entry",
+          "status": "valid",
+          "source_scene_edge": "phys_robot_2_place_to_lower_entry"
+        }
+      ]
+    },
+    "process_graph": {
+      "nodes": [
+        "main_conveyor_1.flow_output",
+        "robot_1.flow_input",
+        "robot_2.flow_input",
+        "robot_1.flow_output",
+        "robot_2.flow_output",
+        "upper_out_conveyor_1.flow_input",
+        "lower_out_conveyor_1.flow_input"
+      ],
+      "edges": [
+        {
+          "edge_id": "proc_main_to_robot_1",
+          "source": "main_conveyor_1.flow_output",
+          "target": "robot_1.flow_input",
+          "status": "valid",
+          "source_scene_edge": "proc_main_to_robot_1"
+        },
+        {
+          "edge_id": "proc_main_to_robot_2",
+          "source": "main_conveyor_1.flow_output",
+          "target": "robot_2.flow_input",
+          "status": "valid",
+          "source_scene_edge": "proc_main_to_robot_2"
+        },
+        {
+          "edge_id": "proc_robot_1_to_upper_out",
+          "source": "robot_1.flow_output",
+          "target": "upper_out_conveyor_1.flow_input",
+          "status": "valid",
+          "source_scene_edge": "proc_robot_1_to_upper_out"
+        },
+        {
+          "edge_id": "proc_robot_2_to_lower_out",
+          "source": "robot_2.flow_output",
+          "target": "lower_out_conveyor_1.flow_input",
+          "status": "valid",
+          "source_scene_edge": "proc_robot_2_to_lower_out"
+        }
+      ]
+    },
+    "signal_graph": {
+      "nodes": [
+        "main_conveyor_1.part_ready",
+        "robot_1.start_pick",
+        "robot_2.start_pick",
+        "robot_1.done",
+        "robot_2.done",
+        "upper_out_conveyor_1.release_waiting_material",
+        "lower_out_conveyor_1.release_waiting_material"
+      ],
+      "edges": [
+        {
+          "edge_id": "sig_main_pallet_ready_to_robot_1_start",
+          "source": "main_conveyor_1.part_ready",
+          "target": "robot_1.start_pick",
+          "delivery": "event",
+          "trigger": "on_rising_edge",
+          "status": "valid",
+          "source_scene_edge": "sig_main_pallet_ready_to_robot_1_start"
+        },
+        {
+          "edge_id": "sig_main_pallet_ready_to_robot_2_start",
+          "source": "main_conveyor_1.part_ready",
+          "target": "robot_2.start_pick",
+          "delivery": "event",
+          "trigger": "on_rising_edge",
+          "status": "valid",
+          "source_scene_edge": "sig_main_pallet_ready_to_robot_2_start"
+        },
+        {
+          "edge_id": "sig_robot_1_done_to_upper_release",
+          "source": "robot_1.done",
+          "target": "upper_out_conveyor_1.release_waiting_material",
+          "delivery": "event",
+          "trigger": "on_rising_edge",
+          "status": "valid",
+          "source_scene_edge": "sig_robot_1_done_to_upper_release"
+        },
+        {
+          "edge_id": "sig_robot_2_done_to_lower_release",
+          "source": "robot_2.done",
+          "target": "lower_out_conveyor_1.release_waiting_material",
+          "delivery": "event",
+          "trigger": "on_rising_edge",
+          "status": "valid",
+          "source_scene_edge": "sig_robot_2_done_to_lower_release"
+        }
+      ]
+    },
+    "transport_graph": {
+      "nodes": [
+        "main_conveyor_1",
+        "robot_1",
+        "robot_2",
+        "upper_out_conveyor_1",
+        "lower_out_conveyor_1"
+      ],
+      "links": [
+        {
+          "link_id": "transport_main_to_robot_1",
+          "source": "main_conveyor_1",
+          "target": "robot_1",
+          "implementer": "robot_1.pick_and_place",
+          "status": "valid",
+          "source_process_edge": "proc_main_to_robot_1"
+        },
+        {
+          "link_id": "transport_main_to_robot_2",
+          "source": "main_conveyor_1",
+          "target": "robot_2",
+          "implementer": "robot_2.pick_and_place",
+          "status": "valid",
+          "source_process_edge": "proc_main_to_robot_2"
+        },
+        {
+          "link_id": "transport_robot_1_to_upper_out",
+          "source": "robot_1",
+          "target": "upper_out_conveyor_1",
+          "implementer": "robot_1.pick_and_place",
+          "status": "valid",
+          "source_process_edge": "proc_robot_1_to_upper_out"
+        },
+        {
+          "link_id": "transport_robot_2_to_lower_out",
+          "source": "robot_2",
+          "target": "lower_out_conveyor_1",
+          "implementer": "robot_2.pick_and_place",
+          "status": "valid",
+          "source_process_edge": "proc_robot_2_to_lower_out"
+        }
+      ]
+    },
+    "warnings": [
+      {
+        "warning_id": "shared_pick_area_requires_claim_policy",
+        "severity": "warning",
+        "message": "robot_1 和 robot_2 共享 main_conveyor_1 出口/托盘取料来源，必须由策略和资源锁避免重复 claim。",
+        "suggested_fix": "在 SceneBehaviorGraph.policies 中保留 shared_pool_claim。"
+      }
+    ]
+  },
   "scene_behavior_graph": {
-    "schema_id": "scene_behavior_graph_pallet_sorting_line_v0_2",
+    "schema_id": "scene_behavior_graph_pallet_sorting_line_v0_3",
     "schema_type": "SceneBehaviorGraph",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "name": "Pallet Sorting Line SceneBehaviorGraph",
     "description": "Agent 基于设备能力、显式场景事实和用户目标生成的场景行为图：主传送带送托盘到位，两个机械臂共享工件池并行分拣，出料传送带通过 backpressure 控制机械臂节奏。",
     "source": {
@@ -1149,8 +2371,8 @@
     },
     "created_for": "作为 Simulation Runtime 的运行依据，替代旧拆分链路中的多个中间产物。",
     "references": [
-      "scene_document_pallet_sorting_line_v0_1",
-      "scene_behavior_graph_schema_contract_v0_2"
+      "scene_document_pallet_sorting_line_v0_2",
+      "scene_behavior_graph_schema_contract_v0_3"
     ],
     "notes": [
       "不是固定批次分拣；两个机械臂从共享工件池动态 claim 物料。",
@@ -1165,6 +2387,12 @@
         "目标传送带可持续运行，负载阈值由 behavior graph 的 policy 定义。",
         "机械臂 pause 采用 pause_before_next_pick 策略，不强行中断已经抓取中的动作。"
       ]
+    },
+    "source_topology_graph": {
+      "graph_id": "topology_graph_pallet_sorting_line_v0_1",
+      "source_scene_id": "scene_pallet_sorting_line_001",
+      "source_scene_revision": 1,
+      "warnings_accepted": []
     },
     "modules": [
       {
@@ -1506,9 +2734,9 @@
         },
         "guard": {
           "all": [
-          "device_states.main_conveyor_1 == idle",
-          "material_at(pallet_1, main_conveyor_1.entry)"
-        ],
+            "device_states.main_conveyor_1 == idle",
+            "material_at(pallet_1, main_conveyor_1.entry)"
+          ],
           "any": [],
           "none": []
         },
@@ -1537,11 +2765,11 @@
         },
         "guard": {
           "all": [
-          "workpiece_pool.pallet_1.remaining_parts.empty == false",
+            "workpiece_pool.pallet_1.remaining_parts.empty == false",
             "device_states[trigger.payload.robot_id] == idle",
             "target_conveyors.blocked_for_robot(trigger.payload.robot_id) == false",
             "resource(trigger.payload.robot_id.gripper).locked_by == null"
-        ],
+          ],
           "any": [],
           "none": []
         },
@@ -1576,7 +2804,7 @@
           "all": [
             "device_states[trigger.payload.robot_id] == idle",
             "material_claims[trigger.payload.material_id].claimed_by == trigger.payload.robot_id"
-        ],
+          ],
           "any": [],
           "none": [
             "target_conveyors.blocked_for_robot(trigger.payload.robot_id) == true"
@@ -1614,7 +2842,7 @@
           "all": [
             "device_states[trigger.payload.conveyor_id] in [idle, moving]",
             "conveyor_loads[trigger.payload.conveyor_id].current_load > 0"
-        ],
+          ],
           "any": [],
           "none": []
         },
@@ -1860,19 +3088,27 @@
       "run_id": "run_pallet_sorting_line_002",
       "from": [
         "scene_behavior_graph",
-        "scene_document.materials"
+        "scene_document.materials",
+        "topology_graph"
       ]
     },
     "created_for": "作为基线运行循环的状态事实源。",
     "references": [
-      "scene_behavior_graph_pallet_sorting_line_v0_2"
+      "scene_behavior_graph_pallet_sorting_line_v0_3",
+      "topology_graph_pallet_sorting_line_v0_1"
     ],
     "notes": [
       "RuntimeSnapshot 不定义行为模型，只保存当前状态值。"
     ],
     "run_id": "run_pallet_sorting_line_002",
     "clock": 0,
+    "topology_graph_ref": {
+      "graph_id": "topology_graph_pallet_sorting_line_v0_1",
+      "source_scene_id": "scene_pallet_sorting_line_001",
+      "source_scene_revision": 1
+    },
     "signal_values": {},
+    "event_queue": [],
     "device_states": {
       "main_conveyor_1": "idle",
       "robot_1": "idle",

@@ -1,16 +1,48 @@
 ﻿{
-  "schema_id": "lift_table_device_spec_schema_v0_1",
+  "schema_id": "lift_table_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Lift Table DeviceSpec 规范",
   "description": "升降台设备本体规范，适用于不同高度接口之间的物料对接。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/lift_table/schema.json" },
   "created_for": "图 7 中升降台设备建模",
-  "references": ["../common_device_spec.schema.json", "lift_table_1.json"],
-  "notes": ["升降台通过高度到位信号与上下游设备协作。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "lift_table_1.json"],
+  "notes": [
+    "升降台通过高度到位信号与上下游设备协作。",
+    "v0.2 要求 lower_dock/upper_dock/platform 的空间接口与 load/release 工艺端口、move/at_level 信号分层绑定。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["height_levels", "lift_motion", "dock_policy"],
   "required_behaviors": ["lift_to_level", "accept_material", "release_material"],
-  "required_signals": ["at_level", "moving", "done", "error"]
+  "required_signals": ["move_to_level", "at_level", "moving", "done", "error"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_ids": ["lower_dock", "upper_dock", "platform"],
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields"]
+    },
+    "process_ports": {
+      "required_port_ids": ["flow_input", "flow_output"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "bound_signal_ports"],
+      "port_roles": { "flow_input": "load_position", "flow_output": "unload_position" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "move_to_level": "输入命令，要求升降台移动到指定 level。",
+        "at_level": "到位事件，payload 应包含 level_id。",
+        "moving": "运动状态，保留 latest_value。",
+        "done": "本次搬运/升降循环完成事件。",
+        "error": "高度不可达、超时或互锁失败事件。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_bindings": [
+        { "binding_role": "load", "physical_interface": "lower_dock", "process_port": "flow_input" },
+        { "binding_role": "unload", "physical_interface": "upper_dock", "process_port": "flow_output" }
+      ]
+    }
+  }
 }
-

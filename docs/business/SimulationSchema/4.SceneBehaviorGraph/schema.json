@@ -1,7 +1,7 @@
 {
-  "schema_id": "scene_behavior_graph_schema_contract_v0_2",
+  "schema_id": "scene_behavior_graph_schema_contract_v0_3",
   "schema_type": "SceneBehaviorGraphSchemaContract",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "SceneBehaviorGraph 场景行为图规范",
   "description": "Agent 基于 DeviceSpec、SceneDocument 和用户目标生成的场景行为建模结果，描述模块、事件总线、状态变量、行为触发、状态迁移、策略和完成条件。",
   "source": {
@@ -12,15 +12,18 @@
   "references": [
     "../common_schema_contract.json",
     "../1.DeviceSpec/schema.json",
-    "../2.SceneDocument/schema.json"
+    "../2.SceneDocument/schema.json",
+    "../5.TopologyGraph/schema.json"
   ],
   "notes": [
-    "SceneBehaviorGraph 是当前 v0.2 基线的一等建模结果。",
+    "SceneBehaviorGraph 是当前 v0.3 基线的一等建模结果。",
     "它替代旧拆分链路中的多个中间产物，作为当前唯一持久化场景行为建模结果。",
-    "SignalBusRuntime 是 Runtime 内部模块，执行 event_bus 中定义的事件投递规则。"
+    "SignalBusRuntime 是 Runtime 内部模块，执行 event_bus 中定义的事件投递规则。",
+    "v0.3 明确 event_bus.routes 可由 SceneDocument.signal_edges 编译得到；TopologyGraph 是行为图生成前的推荐输入索引。"
   ],
   "required_sections": [
     "goal",
+    "source_topology_graph",
     "modules",
     "event_bus",
     "state_model",
@@ -30,6 +33,11 @@
     "completion_conditions",
     "failure_observations"
   ],
+  "source_topology_graph_contract": {
+    "description": "SceneBehaviorGraph 推荐记录生成时使用的 TopologyGraph，以便行为规则、事件路由和运行时可达性校验可追溯。",
+    "required_fields": ["graph_id", "source_scene_id", "source_scene_revision"],
+    "recommended_fields": ["graph_hash", "compiled_at", "warnings_accepted"]
+  },
   "behavior_rule_contract": {
     "description": "behavior_rules 必须显式区分 trigger、guard、policy 和 action，供 Runtime Scheduler 解释执行。",
     "required_fields": [
@@ -51,7 +59,7 @@
     }
   },
   "policy_type_catalog": {
-    "description": "当前 v0.2 基线建议优先支持的策略类型。",
+    "description": "当前 v0.3 基线建议优先支持的策略类型。",
     "types": [
       "deterministic_priority",
       "shared_pool_claim",
@@ -139,12 +147,19 @@
     "semantics": "当 routes[].to.type == topic 时，SignalBusRuntime 查找 subscriptions[topic_id]，为每个订阅者生成一次投递；message_event_id 表示该订阅者收到的事件 ID，如果省略则默认沿用原始 route.from 事件。"
   },
   "event_bus_route_contract": {
-    "description": "event_bus.routes 表达事件到消费者的投递规则，不表达事件到事件的转换。",
+    "description": "event_bus.routes 表达事件到消费者的投递规则，可由 SceneDocument.signal_edges 编译得到；复杂转换应显式写 transform 或 payload_template。",
     "required_fields": [
       "route_id",
       "from",
       "to",
       "delivery"
+    ],
+    "recommended_fields": [
+      "compiled_from_signal_edge",
+      "trigger",
+      "transform",
+      "timeout_ms",
+      "on_timeout"
     ],
     "target_format": {
       "to": {
@@ -165,6 +180,36 @@
         "binding",
         "subscription"
       ]
+    },
+    "signal_edge_mapping": {
+      "description": "从 SceneDocument.signal_edges 编译 event_bus.routes 时的字段映射。",
+      "mapping": {
+        "signal_edges.edge_id": "routes[].compiled_from_signal_edge",
+        "signal_edges.source": "routes[].from",
+        "signal_edges.target": "routes[].to.id when to.type == device or rule-resolved device input",
+        "signal_edges.delivery": "routes[].delivery",
+        "signal_edges.trigger": "routes[].trigger",
+        "signal_edges.transform": "routes[].transform",
+        "signal_edges.timeout_ms": "routes[].timeout_ms",
+        "signal_edges.on_timeout": "routes[].on_timeout"
+      },
+      "validation_rules": [
+        "每条启用的 signal_edge 必须能编译出 route，或显式标记 enabled=false。",
+        "route.from 必须能追溯到 event_bus.events 中注册的 event_id 或 device_signal。",
+        "route.to.type=device 时，目标必须映射到 DeviceSpec.signal_ports 中的 input/bidirectional 端口。"
+      ]
     }
+  },
+  "topology_dependency_contract": {
+    "description": "BehaviorGraph 不直接替代 TopologyGraph；它消费 TopologyGraph 的可达性、上下游、信号消费者和 warnings 结果。",
+    "required_compiler_inputs": ["DeviceSpec", "SceneDocument", "TopologyGraph"],
+    "queries_expected_from_topology_graph": [
+      "get_upstream",
+      "get_downstream",
+      "get_signal_consumers",
+      "find_solution",
+      "check_transport_reachability",
+      "propagate_blocked_upstream"
+    ]
   }
 }

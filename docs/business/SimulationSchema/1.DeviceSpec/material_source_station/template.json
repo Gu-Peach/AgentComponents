@@ -1,7 +1,7 @@
-﻿{
+{
   "schema_id": "material_source_station_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "物料生产 / 上料台设备本体填写模板",
   "description": "用于新增物料来源工位 DeviceSpec。",
   "source": {
@@ -14,7 +14,9 @@
     "schema.json",
     "material_source_station_1.json"
   ],
-  "notes": ["强调物料来源或上料，不默认建模复杂加工工艺。"],
+  "notes": [
+    "强调物料来源或上料，不默认建模复杂加工工艺。"
+  ],
   "device_spec_id": "material_source_station_id_required",
   "device_type": "material_source_station",
   "display_name": "物料来源工位展示名_required",
@@ -28,7 +30,10 @@
       "default": "生产节拍_required",
       "unit": "s"
     },
-    "buffer_capacity": { "type": "integer", "default": "缓存容量_required" }
+    "buffer_capacity": {
+      "type": "integer",
+      "default": "缓存容量_required"
+    }
   },
   "physical_interfaces": [
     {
@@ -36,55 +41,223 @@
       "kind": "material",
       "direction": "output",
       "node_name": "OutputAnchor_required",
-      "material_classes": ["workpiece"]
+      "material_classes": [
+        "workpiece"
+      ],
+      "local_frame": {
+        "position": [
+          "x_output_optional",
+          "y_output_optional",
+          "z_output_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece",
+          "match_rule": "intersects"
+        }
+      ]
     },
     {
       "interface_id": "buffer_area",
       "kind": "storage",
       "direction": "bidirectional",
       "node_name": "BufferArea_optional",
-      "material_classes": ["workpiece"]
+      "material_classes": [
+        "workpiece"
+      ],
+      "local_frame": {
+        "position": [
+          "x_buffer_area_optional",
+          "y_buffer_area_optional",
+          "z_buffer_area_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": "distance_m_optional",
+        "angle_deg": "angle_deg_optional"
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "material_class",
+          "type": "material_class",
+          "name": "Material class",
+          "value": "workpiece",
+          "match_rule": "intersects"
+        }
+      ]
     }
   ],
   "process_ports": [
     {
       "port_id": "flow_output",
       "direction": "output",
-      "label": "Material Output"
+      "label": "Material Output",
+      "role": "flow_output",
+      "bound_physical_interface": "output",
+      "local_frame": {
+        "position": [
+          "x_output_optional",
+          "y_output_optional",
+          "z_output_optional"
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          "fx_optional",
+          "fy_optional",
+          "fz_optional"
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "accepted_material_types": [
+        "workpiece"
+      ],
+      "bound_signal_ports": [
+        "material_available",
+        "empty",
+        "done"
+      ]
     }
   ],
   "signal_ports": [
     {
       "port_id": "material_available",
       "direction": "output",
-      "value_type": "event"
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "料站输出口已有物料可取。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
     },
-    { "port_id": "empty", "direction": "output", "value_type": "boolean" },
-    { "port_id": "done", "direction": "output", "value_type": "event" }
+    {
+      "port_id": "empty",
+      "direction": "output",
+      "value_type": "boolean",
+      "edge_trigger": "on_change",
+      "retention": "latest_value",
+      "default_value": false,
+      "semantic": "料站无可用物料状态。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
+    },
+    {
+      "port_id": "done",
+      "direction": "output",
+      "value_type": "event",
+      "edge_trigger": "on_rising_edge",
+      "retention": "event_log",
+      "semantic": "当前动作完成事件。",
+      "bound_to": {
+        "type": "process_port",
+        "id": "flow_output"
+      }
+    }
   ],
   "interface_bindings": [
-    { "process_port": "flow_output", "physical_interface": "output" }
+    {
+      "process_port": "flow_output",
+      "physical_interface": "output",
+      "binding_id": "bind_flow_output_output",
+      "binding_role": "exit",
+      "signal_ports": [
+        "material_available",
+        "empty",
+        "done"
+      ],
+      "transport_behaviors": [
+        "produce_material",
+        "present_material"
+      ]
+    }
   ],
   "transport_behaviors": [
     {
       "behavior_id": "produce_material",
       "behavior_type": "material_generation",
       "output_physical_interface": "buffer_area",
-      "output_signals": ["material_available", "done"]
+      "output_signals": [
+        "material_available",
+        "done"
+      ]
     },
     {
       "behavior_id": "present_material",
       "behavior_type": "material_handoff",
       "input_physical_interface": "buffer_area",
       "output_physical_interface": "output",
-      "output_signals": ["material_available"]
+      "output_signals": [
+        "material_available"
+      ]
     }
   ],
   "runtime_contract": {
-    "fsm_states": ["idle", "producing", "material_ready", "empty", "error"],
+    "fsm_states": [
+      "idle",
+      "producing",
+      "material_ready",
+      "empty",
+      "error"
+    ],
     "default_state": "idle",
-    "resources": [{ "resource_id": "source_buffer", "exclusive": false }],
-    "capacity": { "max_active_materials": "buffer_capacity_required" }
+    "resources": [
+      {
+        "resource_id": "source_buffer",
+        "exclusive": false
+      }
+    ],
+    "capacity": {
+      "max_active_materials": "buffer_capacity_required"
+    }
   },
   "type_specific_contract": {
     "production_policy": {

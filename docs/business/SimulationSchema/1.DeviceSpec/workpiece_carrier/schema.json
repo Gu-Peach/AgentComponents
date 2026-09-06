@@ -1,16 +1,42 @@
 ﻿{
-  "schema_id": "workpiece_carrier_device_spec_schema_v0_1",
+  "schema_id": "workpiece_carrier_device_spec_schema_v0_2",
   "schema_type": "DeviceTypeSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Workpiece Carrier DeviceSpec 规范",
   "description": "物料载具/承载托盘设备本体规范，表示可承载物料并参与输送或搬运的载体。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/workpiece_carrier/schema.json" },
   "created_for": "图 1 中承载物料并运输的托盘/载具建模",
-  "references": ["../common_device_spec.schema.json", "carrier_tray_1.json"],
-  "notes": ["技术名使用 workpiece_carrier，展示名可为物料载具或承载托盘。"],
-  "extends": "common_device_spec_schema_v0_1",
+  "references": ["../common_device_spec.schema.json", "../schema.json", "carrier_tray_1.json"],
+  "notes": [
+    "技术名使用 workpiece_carrier，展示名可为物料载具或承载托盘。",
+    "v0.2 将载具插槽作为 process/storage anchor，把 loaded/unloaded 信号绑定到对应 slot 或 carrier-level process_port。"
+  ],
+  "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["carrier_geometry", "slots", "load_policy"],
   "required_behaviors": ["carry_material", "release_material"],
-  "required_signals": ["loaded", "unloaded"]
+  "required_signals": ["loaded", "unloaded"],
+  "vc_aligned_port_requirements": {
+    "physical_interfaces": {
+      "required_interface_patterns": ["slot_*", "support_surface"],
+      "required_fields": ["interface_id", "kind", "direction", "local_frame"],
+      "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields"]
+    },
+    "process_ports": {
+      "required_port_patterns": ["slot_*"],
+      "required_fields": ["port_id", "direction", "role"],
+      "recommended_fields": ["local_frame", "accepted_material_types", "capacity", "bound_signal_ports"],
+      "port_roles": { "slot_*": "buffer_position" }
+    },
+    "signal_ports": {
+      "required_fields": ["port_id", "direction", "value_type", "edge_trigger", "retention"],
+      "required_semantics": {
+        "loaded": "载具或 slot 装载完成事件。",
+        "unloaded": "载具或 slot 卸载完成事件。"
+      }
+    },
+    "interface_bindings": {
+      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports"],
+      "required_binding_pattern": "slot physical_interface 绑定同名 process_port，并绑定 loaded/unloaded 信号。"
+    }
+  }
 }
-

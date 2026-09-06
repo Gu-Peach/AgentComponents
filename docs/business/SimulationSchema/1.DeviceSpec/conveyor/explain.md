@@ -36,7 +36,7 @@ point(t) = entry + t * (exit - entry)
 {
   "schema_id": "conveyor_template_required",
   "schema_type": "DeviceSpecTemplate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "传送带设备本体填写模板",
   "description": "用于新增传送带 DeviceSpec。",
   "source": {},

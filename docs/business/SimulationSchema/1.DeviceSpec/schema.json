@@ -1,13 +1,17 @@
 {
-  "schema_id": "device_spec_schema_v0_1",
+  "schema_id": "device_spec_schema_v0_2",
   "schema_type": "DeviceSpecSchema",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "DeviceSpec 板块通用规范",
   "description": "定义设备本体行为模型的通用结构。具体设备类型应在该规范基础上扩展 type_specific_contract。",
   "source": { "kind": "manual_design", "path": "docs/business/SimulationSchema/1.DeviceSpec/schema.json" },
   "created_for": "设备本体行为建模与场景级工艺仿真编译",
-  "references": ["../common_schema_contract.json", "../device_data_structure.md"],
-  "notes": ["该文件是可读规范，不是严格 JSON Schema Draft。", "设备本体不保存场景连接关系，也不保存运行时状态。"],
+  "references": ["../common_schema_contract.json", "../device_data_structure.md", "common_device_spec.schema.json", "../../vc_runtime_signal_schema_research.md"],
+  "notes": [
+    "该文件是可读规范，不是严格 JSON Schema Draft。",
+    "设备本体不保存场景连接关系，也不保存运行时状态。",
+    "v0.2 明确 physical_interfaces、process_ports、signal_ports 不是同一种接口；它们通过 interface_bindings 关联，并由场景 compiler 编译为 topology_graph。"
+  ],
   "required_sections": [
     "asset",
     "params_schema",
@@ -22,13 +26,28 @@
   "section_contract": {
     "asset": "GLB 等设备资产引用。",
     "params_schema": "设备可配置参数定义。",
-    "physical_interfaces": "真实物理锚点与连接能力。",
-    "process_ports": "工艺流程抽象口。",
-    "signal_ports": "运行时信号输入输出能力。",
-    "interface_bindings": "流程口到物理接口的绑定。",
+    "physical_interfaces": "真实物理锚点与连接能力，对标 VC vcSimInterface；应定义 local_frame、snap_tolerance 和 compatibility_fields。",
+    "process_ports": "工艺/物料流端口，对标 VC vcFlow/vcConnector；可有 local_frame，用于物料进出、加工、等待或交接位置。",
+    "signal_ports": "运行时信号输入输出能力，对标 VC vcSignal/vcBooleanSignalMap；抽象信号可绑定到 process_port、physical_interface 或不绑定空间对象。",
+    "interface_bindings": "设备内部绑定层，声明 physical_interface、process_port、signal_ports 与 transport_behaviors 的关联。",
     "transport_behaviors": "设备本体支持的物料流转行为。",
     "runtime_contract": "FSM、资源、容量、错误策略等运行契约。",
     "type_specific_contract": "设备类型专属运动、控制或容量特性。"
+  },
+  "port_model_contract": {
+    "physical_interface_required_fields": ["interface_id", "kind", "direction", "local_frame"],
+    "physical_interface_recommended_fields": ["node_name", "material_classes", "snap_tolerance", "compatibility_fields", "connection_cardinality", "is_abstract"],
+    "process_port_required_fields": ["port_id", "direction", "role"],
+    "process_port_recommended_fields": ["label", "local_frame", "accepted_material_types", "capacity", "bound_physical_interface", "bound_signal_ports"],
+    "signal_port_required_fields": ["port_id", "direction", "value_type"],
+    "signal_port_recommended_fields": ["payload_schema", "edge_trigger", "retention", "default_value", "debounce_ms", "semantic", "bound_to"],
+    "interface_binding_required_fields": ["binding_id"],
+    "interface_binding_recommended_fields": ["physical_interface", "process_port", "signal_ports", "transport_behaviors", "binding_role"]
+  },
+  "validation_contract": {
+    "port_reference_integrity": "interface_bindings 和 transport_behaviors 引用的 physical_interfaces/process_ports/signal_ports 必须存在。",
+    "edge_direction_integrity": "process output 只能连接 input/bidirectional；signal output 只能连接 input/bidirectional；physical edge 需通过 compatibility_fields 和 snap_tolerance 校验。",
+    "frame_alias_policy": "local_position/local_forward 为旧字段别名；新 schema 推荐 local_frame.position/local_frame.forward/local_frame.rotation_euler。",
+    "runtime_boundary": "DeviceSpec 只定义能力和端口契约，不保存 SceneDocument 中的连接事实，也不保存 RuntimeSnapshot 中的运行状态。"
   }
 }
-
