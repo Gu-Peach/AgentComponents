@@ -19,6 +19,8 @@ emit source signal
 
 核心原则：先验证信号路由链路本身，不把资源锁、guard、完整 FSM、动作执行和调度器混在第一版里。
 
+前端行为播放先采用轻量事件流方案：后端每产生一个设备行为事件，就写入 Redis Stream；前端按接收顺序逐条消费，每收到一条就立即 dispatch 到对应设备动画 runtime，不等待上一条动画完成，也不强制实现并行同步。
+
 ## 2. 分阶段 TODO
 
 ### Phase 1：最小单向事件投递链路
@@ -38,6 +40,23 @@ emit source signal
 - [x] 写入 routed signal event。
 - [x] 写入 `event_queue` 或等价 Redis stream。
 - [x] 生成最小 `device_task`，但不执行真实设备动作。
+
+### Phase 1.5：前端行为事件推送
+
+状态：后续增强，当前先确定方案，不强制实现并行动画调度。
+
+- [ ] 复用 Redis Stream 作为后端到前端的运行态事件流。
+- [ ] 新增前端可消费的行为事件类型，例如 `device_behavior_triggered` 或 `device_task_created`。
+- [ ] 每条行为事件至少包含 `run_id`、`task_id`、`instance_id`、`behavior_id`、`payload`。
+- [ ] 可选增加 `sequence`、`sim_time_s`，用于前端按事件顺序回放和调试。
+- [ ] 可选增加 `dispatch_batch_id`，表达同一次 source signal fan-out 产生的一组事件，但当前不要求前端强制同帧并行。
+- [ ] 后端每生成一个可播放行为，就逐条写入 Redis Stream。
+- [ ] 前端按 Redis Stream / SSE / WebSocket 的接收顺序逐条消费事件。
+- [ ] 前端每收到一条行为事件就立即调用 `play(instance_id, behavior_id, payload)`。
+- [ ] 前端消费事件时不等待上一条动画完成；队列顺序只表示事件到达顺序，不表示动画完成顺序。
+- [ ] 多设备动画并行是前端非阻塞 dispatch 的自然结果，当前阶段不实现强并行同步器。
+- [ ] 同一设备的连续行为默认由信号闭环约束：设备完成当前行为后再 emit 下一阶段信号。
+- [ ] 前端仍保留最小防御：按 `task_id` 去重，按 `instance_id` 做状态覆盖/冲突保护。
 
 ### Phase 2：切换到 TopologyGraph
 
@@ -79,6 +98,7 @@ emit source signal
 - 不实现完整设备 FSM。
 - 不实现真实动作耗时、运动学、碰撞检测或连续时间仿真。
 - 不做资源锁、容量互斥、死锁检测。
+- 不强制实现前端并行动画同步；Redis Stream 只是顺序事件流，不是阻塞式动画执行队列。
 - 不允许 signal edge 直接绑定任意函数名；必须通过受控 handler registry 分发。
 
 ## 4. 最小链路示例
@@ -129,6 +149,41 @@ SignalBusRuntime.emit(source_signal, value, payload)
   -> SignalBusRuntime 解析 target device signal
   -> 生成 device_task
 ```
+
+后续前端行为推送链路：
+
+```text
+SignalBusRuntime / DeviceRuntime 生成可播放行为
+  -> Redis Stream 逐条写入 device_behavior_triggered
+  -> SSE / WebSocket / 轮询层逐条推给前端
+  -> 前端收到一条就立即执行 play(instance_id, behavior_id, payload)
+  -> 不等待上一条动画结束
+```
+
+示例：托盘到达后广播给两个机械臂。
+
+```text
+conveyor_1.part_ready = true
+  -> robot_1.start_pick -> device_behavior_triggered(robot_1, pick_and_place)
+  -> robot_2.start_pick -> device_behavior_triggered(robot_2, pick_and_place)
+```
+
+Redis Stream 中仍然会有线性顺序：
+
+```text
+101: robot_1 / pick_and_place
+102: robot_2 / pick_and_place
+```
+
+但前端消费语义是：
+
+```text
+收到 101 -> 立即让 robot_1 播放 pick_and_place
+收到 102 -> 立即让 robot_2 播放 pick_and_place
+继续监听下一条事件，不等待 robot_1 播放完成
+```
+
+因此，当前阶段不需要专门实现“并行行为调度”。多个设备看起来能并行，是因为事件被快速逐条 dispatch 到不同设备实例；同一设备的下一步行为则由该设备动作完成后继续 emit 信号来驱动。
 
 ## 6. 验收标准
 
