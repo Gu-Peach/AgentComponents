@@ -13,6 +13,7 @@ from app.services.runtime_state import RuntimeStateStore
 
 
 class SimulationService:
+    # 初始化仿真服务：保存数据库会话，创建项目/场景/仿真仓储，并注入运行时状态存储。
     def __init__(self, db: Session, runtime_store: RuntimeStateStore) -> None:
         self.db = db
         self.projects = ProjectRepository(db)
@@ -20,6 +21,7 @@ class SimulationService:
         self.simulations = SimulationRepository(db)
         self.runtime_store = runtime_store
 
+    # 创建仿真运行：校验项目和场景，生成初始快照，保存仿真记录并写入运行时状态。
     def create_run(self, project_id: str, payload: SimulationRunCreate) -> models.SimulationRun:
         if not self.projects.get(project_id):
             raise NotFoundError("Project", project_id)
@@ -44,16 +46,19 @@ class SimulationService:
         self.runtime_store.put_snapshot(run.id, snapshot)
         return run
 
+    # 查询仿真运行：按 run_id 读取仿真记录，不存在则抛出 NotFoundError。
     def get_run(self, run_id: str) -> models.SimulationRun:
         run = self.simulations.get_run(run_id)
         if not run:
             raise NotFoundError("SimulationRun", run_id)
         return run
 
+    # 获取运行时快照：先确认仿真运行存在，再从运行时状态存储中读取 snapshot。
     def get_snapshot(self, run_id: str) -> dict[str, Any] | None:
         self.get_run(run_id)
         return self.runtime_store.get_snapshot(run_id)
 
+    # 写入运行时快照：更新数据库中的 snapshot，同时同步写入运行时状态存储。
     def put_snapshot(self, run_id: str, payload: RuntimeSnapshotPut) -> dict[str, Any]:
         run = self.get_run(run_id)
         run.runtime_snapshot = payload.snapshot
@@ -61,6 +66,7 @@ class SimulationService:
         self.runtime_store.put_snapshot(run_id, payload.snapshot, payload.ttl_seconds)
         return payload.snapshot
 
+    # 发送信号事件：保存信号最新状态，记录仿真事件，并返回本次信号事件。
     def emit_signal(self, run_id: str, signal_id: str, payload: SignalEmitRequest) -> dict[str, Any]:
         self.get_run(run_id)
         event = self.runtime_store.set_signal(run_id, signal_id, payload.value, payload.payload, payload.ttl_seconds)
@@ -68,11 +74,13 @@ class SimulationService:
         self.db.commit()
         return event
 
+    # 清空运行时状态：确认仿真运行存在后，删除该 run_id 对应的临时运行数据。
     def clear_runtime_state(self, run_id: str) -> dict[str, Any]:
         self.get_run(run_id)
         self.runtime_store.clear_run(run_id)
         return {"run_id": run_id, "cleared": True}
 
+    # 生成初始快照：根据场景文档创建仿真启动时的默认运行状态。
     @staticmethod
     def _initial_snapshot(scene: models.Scene) -> dict[str, Any]:
         document = scene.current_document
