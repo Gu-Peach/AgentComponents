@@ -150,6 +150,12 @@ class RuntimeSnapshotPut(BaseModel):
     ttl_seconds: int | None = Field(default=None, ge=1)
 
 
+class DeviceTaskDispatchRequest(BaseModel):
+    task_ids: list[str] | None = None
+    sim_time_s: float | None = None
+    ttl_seconds: int | None = Field(default=None, ge=1)
+
+
 class SignalEmitRequest(BaseModel):
     value: Any = None
     payload: JsonDict = Field(default_factory=dict)
@@ -163,4 +169,3 @@ class ValidationIssue(BaseModel):
     message: str
     path: str | None = None
     details: JsonDict = Field(default_factory=dict)
-

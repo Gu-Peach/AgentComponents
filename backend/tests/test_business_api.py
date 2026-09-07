@@ -89,6 +89,17 @@ def test_project_scene_edges_compile_topology_and_runtime() -> None:
     assert signal.status_code == 200
     assert signal.json()["signal_id"] == "conveyor_1.part_ready"
 
+    frontend_events = client.get(f"/api/simulation-runs/{run_id}/frontend-events")
+    assert frontend_events.status_code == 200
+    assert frontend_events.json()["events"][0]["type"] == "device_behavior_triggered"
+    assert frontend_events.json()["events"][0]["instance_id"] == "robot_1"
+    assert frontend_events.json()["events"][0]["behavior_id"] == "pick_and_place"
+
+    dispatch = client.post(f"/api/simulation-runs/{run_id}/device-tasks/dispatch", json={"sim_time_s": 1.6})
+    assert dispatch.status_code == 200
+    assert dispatch.json()["dispatched_actions"][0]["instance_id"] == "robot_1"
+    assert dispatch.json()["snapshot"]["device_states"]["robot_1"] == "busy"
+
     snapshot = client.put(f"/api/simulation-runs/{run_id}/runtime-snapshot", json={"snapshot": {"clock": 2, "signal_values": {"conveyor_1.part_ready": True}}})
     assert snapshot.status_code == 200
     assert snapshot.json()["snapshot"]["clock"] == 2
@@ -104,4 +115,3 @@ def test_supabase_migration_contains_required_tables_and_no_agent_tables() -> No
         assert f"public.{table}" in migration
     assert "agent_runs" not in migration
     assert "agent_threads" not in migration
-

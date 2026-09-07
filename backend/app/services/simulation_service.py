@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError, NotFoundError
 from app.db import models
-from app.repositories.sql import ProjectRepository, SceneRepository, SimulationRepository
-from app.schemas.domain import RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate
+from app.repositories.sql import DeviceSpecRepository, ProjectRepository, SceneRepository, SimulationRepository
+from app.schemas.domain import DeviceTaskDispatchRequest, RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate
+from app.services.device_runtime import DeviceRuntime
 from app.services.ids import new_id
 from app.services.runtime_state import RuntimeStateStore
+from app.services.scene_service import SceneService
 from app.services.signal_bus_runtime import SignalBusRuntime
 
 
@@ -20,6 +23,7 @@ class SimulationService:
         self.projects = ProjectRepository(db)
         self.scenes = SceneRepository(db)
         self.simulations = SimulationRepository(db)
+        self.device_specs = DeviceSpecRepository(db)
         self.runtime_store = runtime_store
 
     # 创建仿真运行：校验项目和场景，生成初始快照，保存仿真记录并写入运行时状态。
@@ -31,6 +35,7 @@ class SimulationService:
             raise NotFoundError("Scene", project_id)
         if payload.base_scene_revision is not None and payload.base_scene_revision != scene.revision:
             raise AppError("SCENE_REVISION_CONFLICT", "Simulation run base revision does not match current scene revision.", 409, {"expected_revision": payload.base_scene_revision, "current_revision": scene.revision})
+        scene = self._ensure_topology_before_run(project_id, scene)
         run_id = new_id("simrun")
         snapshot = payload.initial_snapshot or self._initial_snapshot(scene)
         snapshot["run_id"] = run_id
@@ -47,6 +52,17 @@ class SimulationService:
         self.runtime_store.put_snapshot(run.id, snapshot)
         return run
 
+    # 根据场景运行配置，在创建 run 前确保当前 revision 的 topology_graph 可用。
+    def _ensure_topology_before_run(self, project_id: str, scene: models.Scene) -> models.Scene:
+        runtime_config = scene.current_document.get("runtime_config", {})
+        if runtime_config.get("topology_rebuild_policy") != "before_run":
+            return scene
+        topology_ref = scene.current_document.get("derived_artifacts", {}).get("topology_graph", {})
+        if topology_ref.get("status") == "valid" and topology_ref.get("source_scene_revision") == scene.revision:
+            return scene
+        SceneService(self.db).rebuild_topology(project_id)
+        return self.scenes.get(scene.id) or scene
+
     # 查询仿真运行：按 run_id 读取仿真记录，不存在则抛出 NotFoundError。
     def get_run(self, run_id: str) -> models.SimulationRun:
         run = self.simulations.get_run(run_id)
@@ -58,6 +74,11 @@ class SimulationService:
     def get_snapshot(self, run_id: str) -> dict[str, Any] | None:
         self.get_run(run_id)
         return self.runtime_store.get_snapshot(run_id)
+
+    # 获取前端行为事件：用于前端按 stream 顺序逐条消费并立即触发设备动画。
+    def get_frontend_events(self, run_id: str) -> list[dict[str, Any]]:
+        self.get_run(run_id)
+        return self.runtime_store.get_frontend_events(run_id)
 
     # 写入运行时快照：更新数据库中的 snapshot，同时同步写入运行时状态存储。
     def put_snapshot(self, run_id: str, payload: RuntimeSnapshotPut) -> dict[str, Any]:
@@ -73,6 +94,26 @@ class SimulationService:
         result = SignalBusRuntime(self.db, self.runtime_store).emit(run, signal_id, payload)
         self.db.commit()
         return result
+
+    # 分发设备任务：消费 snapshot 中的 pending device_task，生成 active_action 并推进设备状态。
+    def dispatch_device_tasks(self, run_id: str, payload: DeviceTaskDispatchRequest) -> dict[str, Any]:
+        run = self.get_run(run_id)
+        snapshot = deepcopy(self.runtime_store.get_snapshot(run_id) or run.runtime_snapshot or {})
+        result = DeviceRuntime(self.device_specs).dispatch_pending_tasks(snapshot, task_ids=payload.task_ids, sim_time_s=payload.sim_time_s)
+        self.runtime_store.put_snapshot(run_id, snapshot, payload.ttl_seconds)
+        run.runtime_snapshot = snapshot
+        for action in result["dispatched_actions"]:
+            self.simulations.add_event(
+                models.SimulationEvent(
+                    id=new_id("simevt"),
+                    simulation_run_id=run.id,
+                    sim_time_s=payload.sim_time_s,
+                    event_type="device_action_started",
+                    payload=action,
+                )
+            )
+        self.db.commit()
+        return {"run_id": run_id, **result, "snapshot": snapshot}
 
     # 清空运行时状态：确认仿真运行存在后，删除该 run_id 对应的临时运行数据。
     def clear_runtime_state(self, run_id: str) -> dict[str, Any]:

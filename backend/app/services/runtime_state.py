@@ -27,6 +27,8 @@ class RuntimeStateStore(Protocol):
     def get_events(self, run_id: str) -> list[dict[str, Any]]: ...
     def enqueue_device_task(self, run_id: str, task: dict[str, Any], ttl_seconds: int | None = None) -> dict[str, Any]: ...
     def get_device_tasks(self, run_id: str) -> list[dict[str, Any]]: ...
+    def publish_frontend_event(self, run_id: str, event: dict[str, Any], ttl_seconds: int | None = None) -> dict[str, Any]: ...
+    def get_frontend_events(self, run_id: str) -> list[dict[str, Any]]: ...
     def clear_run(self, run_id: str) -> None: ...
 
 
@@ -91,9 +93,32 @@ class RedisRuntimeStateStore:
             tasks.append({"stream_id": stream_id, **task})
         return tasks
 
+    def publish_frontend_event(self, run_id: str, event: dict[str, Any], ttl_seconds: int | None = None) -> dict[str, Any]:
+        ttl = ttl_seconds or settings.runtime_state_ttl_seconds
+        sequence = self.client.incr(self._frontend_sequence_key(run_id))
+        event = {"sequence": sequence, **event}
+        stream_id = self.client.xadd(self._frontend_events_key(run_id), {"event": json.dumps(event)})
+        self.client.expire(self._frontend_sequence_key(run_id), ttl)
+        self.client.expire(self._frontend_events_key(run_id), ttl)
+        return {"stream_id": stream_id, **event}
+
+    def get_frontend_events(self, run_id: str) -> list[dict[str, Any]]:
+        events: list[dict[str, Any]] = []
+        for stream_id, fields in self.client.xrange(self._frontend_events_key(run_id), "-", "+"):
+            event = json.loads(fields["event"])
+            events.append({"stream_id": stream_id, **event})
+        return events
+
     # 清空运行数据：删除指定 run_id 对应的快照、信号状态和事件流。
     def clear_run(self, run_id: str) -> None:
-        self.client.delete(self._snapshot_key(run_id), self._signals_key(run_id), self._stream_key(run_id), self._device_tasks_key(run_id))
+        self.client.delete(
+            self._snapshot_key(run_id),
+            self._signals_key(run_id),
+            self._stream_key(run_id),
+            self._device_tasks_key(run_id),
+            self._frontend_events_key(run_id),
+            self._frontend_sequence_key(run_id),
+        )
 
     # 生成快照存储键：统一 Redis 中 snapshot 的 key 命名。
     @staticmethod
@@ -114,6 +139,14 @@ class RedisRuntimeStateStore:
     def _device_tasks_key(run_id: str) -> str:
         return f"runtime:simulation:{run_id}:device_tasks"
 
+    @staticmethod
+    def _frontend_events_key(run_id: str) -> str:
+        return f"stream:simulation:{run_id}:frontend_events"
+
+    @staticmethod
+    def _frontend_sequence_key(run_id: str) -> str:
+        return f"runtime:simulation:{run_id}:frontend_events:sequence"
+
 
 class InMemoryRuntimeStateStore:
     # 初始化内存存储：用 Python 字典临时保存快照和信号状态。
@@ -122,6 +155,7 @@ class InMemoryRuntimeStateStore:
         self.signals: dict[str, dict[str, Any]] = {}
         self.events: dict[str, list[dict[str, Any]]] = {}
         self.device_tasks: dict[str, list[dict[str, Any]]] = {}
+        self.frontend_events: dict[str, list[dict[str, Any]]] = {}
 
     # 写入运行时快照：把指定 run_id 的 snapshot 保存到内存字典。
     def put_snapshot(self, run_id: str, snapshot: dict[str, Any], ttl_seconds: int | None = None) -> None:
@@ -166,9 +200,19 @@ class InMemoryRuntimeStateStore:
     def get_device_tasks(self, run_id: str) -> list[dict[str, Any]]:
         return self.device_tasks.get(run_id, [])
 
+    def publish_frontend_event(self, run_id: str, event: dict[str, Any], ttl_seconds: int | None = None) -> dict[str, Any]:
+        sequence = len(self.frontend_events.get(run_id, [])) + 1
+        stored = {"stream_id": str(sequence), "sequence": sequence, **event}
+        self.frontend_events.setdefault(run_id, []).append(stored)
+        return stored
+
+    def get_frontend_events(self, run_id: str) -> list[dict[str, Any]]:
+        return self.frontend_events.get(run_id, [])
+
     # 清空运行数据：从内存中删除指定 run_id 的快照和信号状态。
     def clear_run(self, run_id: str) -> None:
         self.snapshots.pop(run_id, None)
         self.signals.pop(run_id, None)
         self.events.pop(run_id, None)
         self.device_tasks.pop(run_id, None)
+        self.frontend_events.pop(run_id, None)

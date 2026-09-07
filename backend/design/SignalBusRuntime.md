@@ -1,32 +1,34 @@
 # SignalBusRuntime 设计归档
 
 更新时间：2026-09-07  
-阶段定位：Phase 1 Runtime 基础能力已落地，不引入 Agent / LLM / 自动规划能力。
+阶段定位：Phase 1-4 Runtime 基础能力已落地，不引入 Agent / LLM / 自动规划能力。
 
 ## 1. 结论
 
-当前 `backend/` 已经完成了信号系统的**建模层**、**记录层**和 Phase 1 **运行时单向投递链路**。
+当前 `backend/` 已经完成了信号系统的**建模层**、**记录层**、**运行时投递链路**、**前端行为事件流**、**设备 runtime 入口**和 `SceneBehaviorGraph` 的基础调度语义。
 
 一句话概括：
 
 ```text
 现在能发 signal、保存 latest value、写事件日志；
-也能让 signal 沿 SceneDocument.signal_edges[] fan-out 到 target signal，并生成最小 device_task。
+也能优先沿 TopologyGraph.signal_graph fan-out 到 target signal，生成 device_task / frontend behavior event，并由 DeviceRuntime / BehaviorGraphRuntime 推进基础运行态。
 ```
 
 已落地的最小运行时链路：
 
 ```text
 emit(source_signal)
-  -> 匹配 SceneDocument.signal_edges[]
+  -> 优先匹配 TopologyGraph.signal_graph.edges[]
+  -> topology 缺失或 revision 不匹配时回退 SceneDocument.signal_edges[]
   -> fan-out 到 target signal
   -> 写目标信号值 / 事件队列
   -> 写 Redis stream / simulation_events
   -> 生成 pending device_task
+  -> 写 frontend_events stream 中的 device_behavior_triggered
   -> 更新 RuntimeSnapshot.signal_values/event_queue/device_fsm_states
 ```
 
-后续重点从“能投递”转为“能执行”：接入 TopologyGraph 索引、DeviceRuntime handler registry、FSM guard、resource locks 和 ActionExecutor。
+后续重点从“基础可执行”转为“更完整调度”：扩展 transform/payload_template、持久化 SceneBehaviorGraph、完善设备真实耗时、SSE/WebSocket 推送、复杂资源仲裁和死锁恢复策略。
 
 ## 2. 当前已实现功能
 
@@ -56,14 +58,15 @@ emit(source_signal)
 
 - `POST /api/simulation-runs/{run_id}/signals/{signal_id}/emit`：对外暴露发信号入口。
 - `SimulationService.emit_signal()`：校验 run 存在，委托 `SignalBusRuntime.emit()` 统一处理 source 记录、路由投递、任务生成和 snapshot 更新。
-- `SignalBusRuntime.emit()`：直接读取 `SceneDocument.signal_edges[]`，支持启用边匹配、一对多 fan-out、trigger 判断、`identity` transform、target latest value、routed event、pending device task。
+- `SignalBusRuntime.emit()`：优先读取当前 revision 的 `TopologyGraph.signal_graph.edges[]`，过期或缺失时回退 `SceneDocument.signal_edges[]`，支持启用边匹配、一对多 fan-out、trigger 判断、`identity` transform、target latest value、routed event、pending device task。
 - `RedisRuntimeStateStore.set_signal()`：
   - 用 Redis hash 保存最新信号值。
   - 用 Redis TTL 控制运行态过期。
   - 用 Redis stream 追加 `signal_event` / `routed_signal_event`。
 - `RedisRuntimeStateStore.enqueue_device_task()`：用 Redis stream 保存设备待执行任务。
+- `RedisRuntimeStateStore.publish_frontend_event()`：用 Redis stream 保存前端可逐条消费的 `device_behavior_triggered` 事件。
 - `RedisRuntimeStateStore.get_signals()`：读取当前 run 下的最新信号值。
-- `RedisRuntimeStateStore.clear_run()`：清理 snapshot、signals、events stream、device task stream。
+- `RedisRuntimeStateStore.clear_run()`：清理 snapshot、signals、events stream、device task stream 和 frontend event stream。
 
 相关文件：
 
@@ -80,45 +83,62 @@ HTTP POST /signals/{signal_id}/emit
   -> SimulationService.emit_signal(run_id, signal_id, payload)
   -> SignalBusRuntime.emit(run, source_signal, payload)
   -> RuntimeStateStore.set_signal(source_signal)
-  -> match SceneDocument.signal_edges[]
+  -> match TopologyGraph.signal_graph.edges[] / fallback SceneDocument.signal_edges[]
   -> RuntimeStateStore.set_signal(target_signal)
   -> RuntimeStateStore.enqueue_device_task(target_device)
+  -> RuntimeStateStore.publish_frontend_event(device_behavior_triggered)
   -> Redis hash/stream + Supabase/Postgres simulation_events
-  -> RuntimeSnapshot.signal_values/event_queue/device_tasks/device_fsm_states
+  -> RuntimeSnapshot.signal_values/event_queue/device_tasks/frontend_events/device_fsm_states
 ```
 
-## 3. 当前待完成功能
+### 2.3 Phase 1.5-4 已落地功能
+
+已实现内容：
+
+- Phase 1.5：设备任务生成后同步发布 `device_behavior_triggered`，事件包含 `run_id`、`task_id`、`instance_id`、`behavior_id`、`payload`、`sequence`、`sim_time_s`，并提供 `GET /api/simulation-runs/{run_id}/frontend-events`。
+- Phase 2：`SignalBusRuntime` 路由源优先使用 `TopologyGraph.signal_graph.edges[]`，`SimulationService.create_run()` 会根据 `topology_rebuild_policy=before_run` 自动重建当前 topology，且保留 scene fallback。
+- Phase 3：新增 `DeviceRuntime.on_signal()` 和 `RuntimeHandlerRegistry`，把 target signal 受控解析为 behavior；`dispatch_device_tasks()` 可将 pending task 推进为 running action，并写入 `RuntimeSnapshot.active_actions`。
+- Phase 4：新增 `BehaviorGraphRuntime` 和 `ActionExecutor`，支持 `SceneBehaviorGraph.event_bus.routes/topics/subscriptions`、trigger fallback、guard 检查、resource locks、capacity check、wait queues、backpressure、timeout/retry、deadlock detection 和动作完成后的下游事件闭环。
+- scene_01：新增 `SceneBehaviorGraph` runtime 校验器，`backend/tests/scene_01/scene_behavior_graph.golden.json` 当前 runtime 可用；唯一兼容性警告是缺少 v0.3 推荐字段 `source_topology_graph`。
+
+相关新增文件：
+
+- `backend/app/services/device_runtime.py`
+- `backend/app/services/runtime_handlers.py`
+- `backend/app/services/action_executor.py`
+- `backend/app/services/behavior_graph_runtime.py`
+- `backend/app/services/scene_behavior_graph_validator.py`
+- `backend/tests/test_scene_01_behavior_runtime.py`
+
+## 3. 后续增强功能
 
 ### 3.1 SignalBusRuntime 后续增强
 
 待实现内容：
 
-- 将路由数据源从 `SceneDocument.signal_edges[]` 切换到 `TopologyGraph.signal_graph.edges[]`。
-- 支持 `payload_template`、字段映射、条件过滤等非 identity transform。
-- 将 `timeout_ms` / `on_timeout` 从记录字段升级为真实超时处理。
-- 为 runtime 构建按 source signal 缓存的 route index，降低高频 emit 查询成本。
+- 在 `SignalBusRuntime` 中补齐 `payload_template`、字段映射、条件过滤等非 identity transform。
+- 将 signal edge 的 `timeout_ms` / `on_timeout` 和 `ActionExecutor.check_timeouts()` 统一到同一套超时调度语义。
+- 将 route index 从每次 emit 内部构建升级为 run 级缓存，并在 topology revision 变化时失效。
 
 ### 3.2 消费者回调机制
 
 待实现内容：
 
-- 定义 `DeviceRuntime.on_signal(signal_event)`，对应 VC 的 `OnSignal(signal)`。
 - 定义 `DeviceRuntime.on_signal_trigger(map, port, value)` 的抽象等价形式，支持未来 PLC I/O map。
-- 定义 handler registry：按 `device_type + signal_id` 或 `behavior_id` 找到处理函数。
-- 把当前 Phase 1 生成的 `device_task` 交给受控 handler，而不是停留在 pending 队列。
+- 扩展 handler registry，从当前通用 handler / robot handler 增加 conveyor、lift_table、storage_rack 等设备类型专用 handler。
+- 将 handler 输出从基础 `behavior_id` 扩展为可携带动作参数校验、资源需求和错误恢复策略的结构化 dispatch result。
 
 ### 3.3 设备行为触发
 
 待实现内容：
 
-- 从 `DeviceSpec.transport_behaviors[]` / `runtime_contract` 中找到信号对应的行为。
-- 根据输入信号触发设备行为，例如：
+- 深化输入信号到行为的设备专用映射，例如：
   - `robot.start_pick` -> `pick_and_place`
   - `conveyor.release_waiting_material` -> `release_material`
   - `conveyor.pause` -> 暂停传送
   - `conveyor.resume` -> 恢复传送
-- 写入 `RuntimeSnapshot.active_actions[]`，并把 pending task 推进为 running/done/failed。
-- 后续由 `ActionExecutor` 执行动作，再由 `SnapshotManager` 更新状态。
+- 将当前 `ActionExecutor` 的基础状态推进升级为真实动作耗时、完成事件、失败事件和 retry 策略。
+- 后续可拆出 `SnapshotManager`，集中处理 RuntimeSnapshot 的状态更新和审计。
 
 ### 3.4 RuntimeSnapshot 状态更新
 
@@ -126,9 +146,9 @@ HTTP POST /signals/{signal_id}/emit
 
 - 进一步规范 `signal_values`：从当前简单 latest value 升级为带 sequence、producer、retention 的结构化条目。
 - 进一步规范 `event_queue`：补齐 queued/delivered/consumed/failed/expired 状态流转。
-- 扩展 `device_fsm_states`：从当前 idle -> queued 升级为 idle -> busy -> done/failed。
-- 更新 `active_actions`：记录被触发但尚未完成的动作。
-- 更新 `wait_queues` / `resource_locks`：后续用于 backpressure、资源互斥、死锁检测。
+- 扩展 `device_fsm_states`：从当前 idle/queued/busy/waiting_downstream 升级为完整设备 FSM。
+- 进一步规范 `active_actions`：补齐 owner、deadline、retry policy、completion signal、failure signal。
+- 进一步规范 `wait_queues` / `resource_locks`：从基础互斥升级为公平队列、优先级和死锁恢复。
 
 ## 4. VC 中的信号事件处理方案
 
@@ -508,12 +528,12 @@ sequenceDiagram
 | 事件审计 | 主要在 VC runtime/script 内部，外部不易统一追踪 | `simulation_events` 表 + Redis stream |
 | 可测试性 | 依赖 VC runtime 和脚本环境 | 后端 service 单测 + Redis/Supabase 集成测试 |
 
-## 9. 已落地的最小版本
+## 9. 已落地版本
 
-本轮已实现一个轻量版本，不碰复杂调度：
+Phase 1 历史最小版本先验证了信号单向投递链路：
 
 1. 新增 `SignalBusRuntime.emit()`，替代 `SimulationService.emit_signal()` 里直接调用 `runtime_store.set_signal()`。
-2. `SignalBusRuntime` 只读取 `SceneDocument.signal_edges[]`，暂不依赖完整 `SceneBehaviorGraph.event_bus`。
+2. `SignalBusRuntime` 最初只读取 `SceneDocument.signal_edges[]`，当前已升级为优先读取 `TopologyGraph.signal_graph.edges[]`。
 3. 支持 source -> target fan-out，先实现 `identity` transform。
 4. 对每个 target signal 写 Redis latest value 和 Redis stream / InMemory 等价事件流。
 5. 对 target device signal 生成 `device_tasks`，不执行真实动作。
@@ -533,7 +553,7 @@ sequenceDiagram
 cd backend
 python -m compileall app
 python -m pytest -q
-# 11 passed
+# 当前以实际测试输出为准，见最终验收记录。
 ```
 
 最小链路：
@@ -545,6 +565,17 @@ emit source signal
   -> write target latest value
   -> append routed event
   -> create device task
+```
+
+Phase 1.5-4 新增链路：
+
+```text
+create device task
+  -> publish frontend device_behavior_triggered
+  -> DeviceRuntime dispatch pending task
+  -> ActionExecutor create active_action / lock resources / update FSM
+  -> BehaviorGraphRuntime interpret SceneBehaviorGraph rules
+  -> action complete emits downstream runtime event
 ```
 
 ## 10. 后续增强版本

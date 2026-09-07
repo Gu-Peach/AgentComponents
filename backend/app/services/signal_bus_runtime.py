@@ -9,6 +9,7 @@ from app.core.errors import NotFoundError
 from app.db import models
 from app.repositories.sql import DeviceSpecRepository, SceneRepository, SimulationRepository
 from app.schemas.domain import SignalEmitRequest
+from app.services.device_runtime import DeviceRuntime
 from app.services.ids import new_id
 from app.services.runtime_state import RuntimeStateStore
 
@@ -58,21 +59,36 @@ class SignalBusRuntime:
         # 分别收集成功路由的事件、创建出的设备任务，以及被跳过的路由原因。
         routed_events: list[dict[str, Any]] = []
         device_tasks: list[dict[str, Any]] = []
+        frontend_events: list[dict[str, Any]] = []
         skipped_routes: list[dict[str, Any]] = []
+        route_edges, route_source = self._signal_routes_for_run(scene, run)
+        route_index = self._signal_route_index(route_edges)
+        device_runtime = DeviceRuntime(self.device_specs)
 
-        # 遍历场景文档中的信号边，只有 source 匹配当前 signal_id 且启用的边才会参与路由。
-        for edge in scene.current_document.get("signal_edges", []):
-            if edge.get("source") != signal_id or edge.get("enabled", True) is False:
+        # 遍历当前路由源中的信号边，只有 source 匹配当前 signal_id 且启用的边才会参与路由。
+        for edge in route_index.get(signal_id, []):
+            if edge.get("enabled", True) is False:
+                continue
+            if edge.get("status", "valid") == "invalid":
+                skipped_routes.append(
+                    {
+                        "edge_id": edge.get("edge_id"),
+                        "route_id": edge.get("route_id"),
+                        "reason": "invalid_topology_edge",
+                        "route_source": route_source,
+                    }
+                )
                 continue
 
             # 根据边上的 trigger 配置判断是否触发；不满足则记录跳过原因。
             if not self._trigger_matches(edge.get("trigger", "on_rising_edge"), previous_signals.get(signal_id), payload.value):
                 skipped_routes.append(
                     {
-                        "edge_id": edge.get("edge_id"),
-                        "route_id": edge.get("route_id"),
-                        "reason": "trigger_not_matched",
-                    }
+                    "edge_id": edge.get("edge_id"),
+                    "route_id": edge.get("route_id"),
+                    "route_source": route_source,
+                    "reason": "trigger_not_matched",
+                }
                 )
                 continue
 
@@ -83,6 +99,7 @@ class SignalBusRuntime:
                     {
                         "edge_id": edge.get("edge_id"),
                         "route_id": edge.get("route_id"),
+                        "route_source": route_source,
                         "reason": "unsupported_transform",
                         "transform": edge.get("transform"),
                     }
@@ -96,6 +113,7 @@ class SignalBusRuntime:
                     {
                         "edge_id": edge.get("edge_id"),
                         "route_id": edge.get("route_id"),
+                        "route_source": route_source,
                         "reason": "missing_target_signal",
                     }
                 )
@@ -117,6 +135,7 @@ class SignalBusRuntime:
                     "delivery": edge.get("delivery"),
                     "trigger": edge.get("trigger"),
                     "transform": edge.get("transform", {"type": "identity"}),
+                    "route_source": route_source,
                 },
             )
             routed_events.append(routed_event)
@@ -126,13 +145,16 @@ class SignalBusRuntime:
             self._append_snapshot_event(snapshot, {"type": "routed_signal_event", **routed_event})
 
             # 如果目标信号能对应到设备输入，则生成一个等待执行的设备任务。
-            task = self._device_task_for_target(run, scene.current_document, target_signal, transformed["payload"], edge, routed_event)
+            task = device_runtime.on_signal(run, scene.current_document, target_signal, transformed["payload"], edge, routed_event)
             if task:
                 self.runtime_store.enqueue_device_task(run.id, task, payload.ttl_seconds)
                 self._record_db_event(run, payload, "device_task_created", task)
                 self._append_snapshot_task(snapshot, task)
                 self._mark_device_queued(snapshot, task["instance_id"])
                 device_tasks.append(task)
+                frontend_event = self._publish_frontend_behavior_event(run, task, payload, snapshot)
+                if frontend_event:
+                    frontend_events.append(frontend_event)
 
         # 保存更新后的运行快照，同时同步到数据库模型对象，等待外层提交事务。
         self.runtime_store.put_snapshot(run.id, snapshot, payload.ttl_seconds)
@@ -146,9 +168,33 @@ class SignalBusRuntime:
             "source_event": source_event,
             "routed_events": routed_events,
             "device_tasks": device_tasks,
+            "frontend_events": frontend_events,
             "skipped_routes": skipped_routes,
+            "route_source": route_source,
             "event_queue_count": len(snapshot.get("event_queue", [])),
         }
+
+    def get_signal_consumers(self, run: models.SimulationRun, source_signal: str) -> list[dict[str, Any]]:
+        scene = self.scenes.get(run.scene_id)
+        if not scene:
+            raise NotFoundError("Scene", run.scene_id)
+        route_edges, _ = self._signal_routes_for_run(scene, run)
+        return self._signal_route_index(route_edges).get(source_signal, [])
+
+    def _signal_routes_for_run(self, scene: models.Scene, run: models.SimulationRun) -> tuple[list[dict[str, Any]], str]:
+        topology = self.scenes.latest_topology(scene.id)
+        if topology and topology.scene_revision == run.base_scene_revision:
+            return topology.document.get("signal_graph", {}).get("edges", []), "topology_graph"
+        return scene.current_document.get("signal_edges", []), "scene_document"
+
+    @staticmethod
+    def _signal_route_index(edges: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+        index: dict[str, list[dict[str, Any]]] = {}
+        for edge in edges:
+            source = edge.get("source")
+            if source:
+                index.setdefault(source, []).append(edge)
+        return index
 
     # 记录信号事件：写入运行时信号状态，并同步创建一条数据库事件。
     def _record_signal(
@@ -225,6 +271,11 @@ class SignalBusRuntime:
     def _append_snapshot_task(snapshot: dict[str, Any], task: dict[str, Any]) -> None:
         snapshot.setdefault("device_tasks", []).append(task)
 
+    # 追加前端事件：把可播放行为事件放入 snapshot.frontend_events，方便调试和快照回放。
+    @staticmethod
+    def _append_snapshot_frontend_event(snapshot: dict[str, Any], event: dict[str, Any]) -> None:
+        snapshot.setdefault("frontend_events", []).append(event)
+
     # 标记设备排队：当设备当前为空闲状态时，把设备状态更新为 queued。
     @staticmethod
     def _mark_device_queued(snapshot: dict[str, Any], instance_id: str) -> None:
@@ -234,6 +285,39 @@ class SignalBusRuntime:
         fsm_states = snapshot.setdefault("device_fsm_states", {})
         if fsm_states.get(instance_id) in {None, "idle"}:
             fsm_states[instance_id] = "queued"
+
+    def _publish_frontend_behavior_event(
+        self,
+        run: models.SimulationRun,
+        task: dict[str, Any],
+        request: SignalEmitRequest,
+        snapshot: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        behavior_id = task.get("behavior_id")
+        if not behavior_id:
+            return None
+
+        event = {
+            "event_id": new_id("fevt"),
+            "type": "device_behavior_triggered",
+            "run_id": run.id,
+            "task_id": task["task_id"],
+            "instance_id": task["instance_id"],
+            "device_type": task.get("device_type"),
+            "behavior_id": behavior_id,
+            "payload": deepcopy(task.get("payload", {})),
+            "status": "queued",
+            "sim_time_s": request.sim_time_s,
+            "source_signal": task.get("source_signal"),
+            "trigger_signal": task.get("trigger_signal"),
+            "signal_port": task.get("signal_port"),
+            "route_id": task.get("route_id"),
+            "edge_id": task.get("edge_id"),
+        }
+        published = self.runtime_store.publish_frontend_event(run.id, event, request.ttl_seconds)
+        self._record_db_event(run, request, "device_behavior_triggered", published)
+        self._append_snapshot_frontend_event(snapshot, published)
+        return published
 
     # 判断触发条件：根据旧值和新值判断 manual/level/on_change/falling/rising 是否满足。
     @staticmethod

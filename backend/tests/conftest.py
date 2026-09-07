@@ -27,7 +27,8 @@ def pytest_configure() -> None:
 def pytest_runtest_setup() -> None:
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    app.dependency_overrides[get_runtime_store] = lambda: InMemoryRuntimeStateStore()
+    runtime_store = InMemoryRuntimeStateStore()
+    app.dependency_overrides[get_runtime_store] = lambda: runtime_store
 
 
 def pytest_runtest_teardown() -> None:
