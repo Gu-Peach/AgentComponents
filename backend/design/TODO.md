@@ -19,7 +19,7 @@ emit source signal
 
 核心原则：先验证信号路由链路本身，不把资源锁、guard、完整 FSM、动作执行和调度器混在第一版里。
 
-前端行为播放先采用轻量事件流方案：后端每产生一个设备行为事件，就写入 Redis Stream；前端按接收顺序逐条消费，每收到一条就立即 dispatch 到对应设备动画 runtime，不等待上一条动画完成，也不强制实现并行同步。
+前端行为播放采用轻量单向推送方案：后端每产生一个设备行为事件，先写入 Redis Stream 作为可靠缓冲，再通过 SSE 推给浏览器；前端按 SSE 接收顺序逐条消费，每收到一条就立即 dispatch 到对应设备动画 runtime，不等待上一条动画完成，也不强制实现并行同步。当前不选 WebSocket，行为完成通知由前端通过普通 HTTP POST 回调后端。
 
 ## 2. 分阶段 TODO
 
@@ -51,11 +51,15 @@ emit source signal
 - [x] 可选增加 `sequence`、`sim_time_s`，用于前端按事件顺序回放和调试。
 - [ ] 可选增加 `dispatch_batch_id`，表达同一次 source signal fan-out 产生的一组事件，但当前不要求前端强制同帧并行。
 - [x] 后端每生成一个可播放行为，就逐条写入 Redis Stream。
-- [ ] 前端按 Redis Stream / SSE / WebSocket 的接收顺序逐条消费事件。
+- [x] 后端推送方案确定为 `Redis Stream + SSE`：Redis Stream 是后端可靠事件队列，SSE 是浏览器单向实时接收通道。
+- [ ] 新增 `GET /api/simulation-runs/{run_id}/frontend-events/stream` SSE endpoint，从 Redis Stream 读取并推送前端行为事件。
+- [ ] 前端用 `EventSource` 按 SSE 接收顺序逐条消费事件；浏览器不直接连接 Redis。
 - [ ] 前端每收到一条行为事件就立即调用 `play(instance_id, behavior_id, payload)`。
 - [ ] 前端消费事件时不等待上一条动画完成；队列顺序只表示事件到达顺序，不表示动画完成顺序。
 - [ ] 多设备动画并行是前端非阻塞 dispatch 的自然结果，当前阶段不实现强并行同步器。
 - [ ] 同一设备的连续行为默认由信号闭环约束：设备完成当前行为后再 emit 下一阶段信号。
+- [ ] 新增 `POST /api/simulation-runs/{run_id}/actions/{action_id}/complete`，用于前端动画完成后通知后端推进下游事件。
+- [ ] 前端行为完成后通过 HTTP POST 上报 `action_id`、`task_id`、`instance_id`、`behavior_id`、`status` 和可选 `payload`。
 - [ ] 前端仍保留最小防御：按 `task_id` 去重，按 `instance_id` 做状态覆盖/冲突保护。
 - [x] 后端提供 `GET /api/simulation-runs/{run_id}/frontend-events` 读取当前前端事件流。
 
@@ -159,9 +163,11 @@ SignalBusRuntime.emit(source_signal, value, payload)
 ```text
 SignalBusRuntime / DeviceRuntime 生成可播放行为
   -> Redis Stream 逐条写入 device_behavior_triggered
-  -> SSE / WebSocket / 轮询层逐条推给前端
+  -> SSE endpoint 逐条推给前端
   -> 前端收到一条就立即执行 play(instance_id, behavior_id, payload)
   -> 不等待上一条动画结束
+  -> 当前 action 动画完成后 HTTP POST /actions/{action_id}/complete 回调后端
+  -> 后端释放资源、写 device_action_completed、继续 emit 下游事件
 ```
 
 示例：托盘到达后广播给两个机械臂。
