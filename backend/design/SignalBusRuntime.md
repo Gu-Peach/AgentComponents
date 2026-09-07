@@ -1,30 +1,32 @@
 # SignalBusRuntime 设计归档
 
 更新时间：2026-09-07  
-阶段定位：下一阶段 Runtime 基础能力设计，不引入 Agent / LLM / 自动规划能力。
+阶段定位：Phase 1 Runtime 基础能力已落地，不引入 Agent / LLM / 自动规划能力。
 
 ## 1. 结论
 
-当前 `backend/` 已经完成了信号系统的**建模层**和**记录层**，但还没有完成真正的 `SignalBusRuntime` 消费者路由和回调触发。
+当前 `backend/` 已经完成了信号系统的**建模层**、**记录层**和 Phase 1 **运行时单向投递链路**。
 
 一句话概括：
 
 ```text
 现在能发 signal、保存 latest value、写事件日志；
-还不能让 signal 自动沿 signal_edges 投递给消费者，并触发设备行为回调。
+也能让 signal 沿 SceneDocument.signal_edges[] fan-out 到 target signal，并生成最小 device_task。
 ```
 
-所以，后续要补的核心不是 CRUD，而是运行时信号链路：
+已落地的最小运行时链路：
 
 ```text
 emit(source_signal)
-  -> 匹配 signal_edges / event_bus.routes
+  -> 匹配 SceneDocument.signal_edges[]
   -> fan-out 到 target signal
   -> 写目标信号值 / 事件队列
-  -> 触发 DeviceRuntime.on_signal(...)
-  -> 分发到设备行为 handler
-  -> 更新 RuntimeSnapshot
+  -> 写 Redis stream / simulation_events
+  -> 生成 pending device_task
+  -> 更新 RuntimeSnapshot.signal_values/event_queue/device_fsm_states
 ```
+
+后续重点从“能投递”转为“能执行”：接入 TopologyGraph 索引、DeviceRuntime handler registry、FSM guard、resource locks 和 ActionExecutor。
 
 ## 2. 当前已实现功能
 
@@ -48,23 +50,26 @@ emit(source_signal)
 - `docs/business/SimulationSchema/2.SceneDocument/schema.json`
 - `docs/business/SimulationSchema/5.TopologyGraph/schema.json`
 
-### 2.2 运行态信号记录
+### 2.2 运行态信号记录与投递
 
 已实现内容：
 
 - `POST /api/simulation-runs/{run_id}/signals/{signal_id}/emit`：对外暴露发信号入口。
-- `SimulationService.emit_signal()`：校验 run 存在，调用 runtime store 写 signal，并记录 `simulation_events`。
+- `SimulationService.emit_signal()`：校验 run 存在，委托 `SignalBusRuntime.emit()` 统一处理 source 记录、路由投递、任务生成和 snapshot 更新。
+- `SignalBusRuntime.emit()`：直接读取 `SceneDocument.signal_edges[]`，支持启用边匹配、一对多 fan-out、trigger 判断、`identity` transform、target latest value、routed event、pending device task。
 - `RedisRuntimeStateStore.set_signal()`：
   - 用 Redis hash 保存最新信号值。
   - 用 Redis TTL 控制运行态过期。
-  - 用 Redis stream 追加 `signal_event`。
+  - 用 Redis stream 追加 `signal_event` / `routed_signal_event`。
+- `RedisRuntimeStateStore.enqueue_device_task()`：用 Redis stream 保存设备待执行任务。
 - `RedisRuntimeStateStore.get_signals()`：读取当前 run 下的最新信号值。
-- `RedisRuntimeStateStore.clear_run()`：清理 snapshot、signals、stream。
+- `RedisRuntimeStateStore.clear_run()`：清理 snapshot、signals、events stream、device task stream。
 
 相关文件：
 
 - `backend/app/api/simulation.py`
 - `backend/app/services/simulation_service.py`
+- `backend/app/services/signal_bus_runtime.py`
 - `backend/app/services/runtime_state.py`
 - `backend/app/db/models.py`
 
@@ -73,27 +78,25 @@ emit(source_signal)
 ```text
 HTTP POST /signals/{signal_id}/emit
   -> SimulationService.emit_signal(run_id, signal_id, payload)
-  -> RuntimeStateStore.set_signal(...)
-  -> Redis hash: runtime:simulation:{run_id}:signals
-  -> Redis stream: stream:simulation:{run_id}:events
-  -> Supabase/Postgres table: simulation_events
+  -> SignalBusRuntime.emit(run, source_signal, payload)
+  -> RuntimeStateStore.set_signal(source_signal)
+  -> match SceneDocument.signal_edges[]
+  -> RuntimeStateStore.set_signal(target_signal)
+  -> RuntimeStateStore.enqueue_device_task(target_device)
+  -> Redis hash/stream + Supabase/Postgres simulation_events
+  -> RuntimeSnapshot.signal_values/event_queue/device_tasks/device_fsm_states
 ```
 
 ## 3. 当前待完成功能
 
-### 3.1 SignalBusRuntime 路由执行
+### 3.1 SignalBusRuntime 后续增强
 
 待实现内容：
 
-- 根据 `run_id` 找到 simulation run、scene、scene revision。
-- 加载当前 scene document 和最新 topology graph。
-- 读取 `signal_edges[]` 或 `TopologyGraph.signal_graph.edges[]`。
-- 当 source signal 被 emit 时，找到所有启用的下游 target signal。
-- 支持一对一、一对多 fan-out。
-- 支持 `delivery`：`event`、`latest_value`、`command`、`broadcast`。
-- 支持 `trigger`：`on_rising_edge`、`on_falling_edge`、`on_change`、`level`、`manual`。
-- 支持 `transform`：至少先支持 `identity` 和简单 `payload_template`。
-- 支持 `timeout_ms` / `on_timeout` 的最小记录机制。
+- 将路由数据源从 `SceneDocument.signal_edges[]` 切换到 `TopologyGraph.signal_graph.edges[]`。
+- 支持 `payload_template`、字段映射、条件过滤等非 identity transform。
+- 将 `timeout_ms` / `on_timeout` 从记录字段升级为真实超时处理。
+- 为 runtime 构建按 source signal 缓存的 route index，降低高频 emit 查询成本。
 
 ### 3.2 消费者回调机制
 
@@ -102,7 +105,7 @@ HTTP POST /signals/{signal_id}/emit
 - 定义 `DeviceRuntime.on_signal(signal_event)`，对应 VC 的 `OnSignal(signal)`。
 - 定义 `DeviceRuntime.on_signal_trigger(map, port, value)` 的抽象等价形式，支持未来 PLC I/O map。
 - 定义 handler registry：按 `device_type + signal_id` 或 `behavior_id` 找到处理函数。
-- 把 target signal 投递给消费者后，写入设备任务队列或状态机输入。
+- 把当前 Phase 1 生成的 `device_task` 交给受控 handler，而不是停留在 pending 队列。
 
 ### 3.3 设备行为触发
 
@@ -114,16 +117,16 @@ HTTP POST /signals/{signal_id}/emit
   - `conveyor.release_waiting_material` -> `release_material`
   - `conveyor.pause` -> 暂停传送
   - `conveyor.resume` -> 恢复传送
-- 写入 `RuntimeSnapshot.active_actions[]` 或 `event_queue[]`。
+- 写入 `RuntimeSnapshot.active_actions[]`，并把 pending task 推进为 running/done/failed。
 - 后续由 `ActionExecutor` 执行动作，再由 `SnapshotManager` 更新状态。
 
 ### 3.4 RuntimeSnapshot 状态更新
 
 待实现内容：
 
-- 更新 `signal_values`：保存 source 和 target signal 的最新值。
-- 更新 `event_queue`：保存待消费事件。
-- 更新 `device_fsm_states`：例如 idle -> busy -> done。
+- 进一步规范 `signal_values`：从当前简单 latest value 升级为带 sequence、producer、retention 的结构化条目。
+- 进一步规范 `event_queue`：补齐 queued/delivered/consumed/failed/expired 状态流转。
+- 扩展 `device_fsm_states`：从当前 idle -> queued 升级为 idle -> busy -> done/failed。
 - 更新 `active_actions`：记录被触发但尚未完成的动作。
 - 更新 `wait_queues` / `resource_locks`：后续用于 backpressure、资源互斥、死锁检测。
 
@@ -252,28 +255,38 @@ Robot digital output port changed
 - 设备行为不要硬编码在 signal edge 上，而是由 `DeviceRuntime` 根据 `DeviceSpec` 分发。
 - 当前阶段不引入 Agent，不做 LLM 规划，不自动生成复杂行为图。
 
-### 5.2 建议新增文件
+### 5.2 文件落地状态
 
-建议下一阶段新增以下文件：
+本轮已新增 / 修改以下核心文件：
 
 ```text
 backend/app/services/signal_bus_runtime.py
+backend/app/services/simulation_service.py
+backend/app/services/runtime_state.py
+backend/tests/test_signal_bus_runtime.py
+```
+
+后续增强阶段再拆出以下文件：
+
+```text
 backend/app/services/device_runtime.py
 backend/app/services/runtime_handlers.py
 backend/app/services/snapshot_manager.py
 backend/app/schemas/runtime.py
-backend/tests/test_signal_bus_runtime.py
 ```
 
 职责划分：
 
 | 文件 | 职责 |
 | --- | --- |
-| `signal_bus_runtime.py` | emit、路由匹配、trigger 判断、payload transform、fan-out、写 target events |
-| `device_runtime.py` | 类似 VC `OnSignal` 的设备级入口，根据设备类型和 signal 分发行为 |
-| `runtime_handlers.py` | conveyor、robot、lift_table、storage_rack 等设备类型的最小 handler |
-| `snapshot_manager.py` | 统一修改 RuntimeSnapshot 的 `signal_values/event_queue/device_fsm_states/active_actions` |
-| `schemas/runtime.py` | `SignalEvent`、`RoutedSignalEvent`、`DeviceTask`、`RuntimeDispatchResult` 等 DTO |
+| `signal_bus_runtime.py` | emit、路由匹配、trigger 判断、identity transform、fan-out、写 target events、生成 pending device task |
+| `simulation_service.py` | 保持 HTTP/API service 入口，委托 `SignalBusRuntime.emit()` 并统一 commit |
+| `runtime_state.py` | 保存 snapshot、latest signals、events stream、device task stream，提供 Redis 和 InMemory 两套实现 |
+| `test_signal_bus_runtime.py` | 覆盖无消费者、单消费者、fan-out、disabled edge、identity transform、DB 事件落库 |
+| `device_runtime.py` | 后续类似 VC `OnSignal` 的设备级入口，根据设备类型和 signal 分发行为 |
+| `runtime_handlers.py` | 后续 conveyor、robot、lift_table、storage_rack 等设备类型的最小 handler |
+| `snapshot_manager.py` | 后续统一修改 RuntimeSnapshot 的结构化状态与动作流转 |
+| `schemas/runtime.py` | 后续沉淀 `SignalEvent`、`RoutedSignalEvent`、`DeviceTask`、`RuntimeDispatchResult` 等 DTO |
 
 ### 5.3 数据结构建议
 
@@ -374,7 +387,8 @@ vcBooleanSignalMap.getConnectedExternalPorts(index)
 for each matched route:
   target_signal = route.target
   RuntimeStateStore.set_signal(target_signal, transformed_value, transformed_payload)
-  RuntimeStateStore.enqueue_event(target_signal_event)
+  RuntimeStateStore.set_signal(...) 自动追加 routed_signal_event 到事件流
+  SignalBusRuntime 生成 pending device_task
   simulation_events 写 routed_signal_event
 ```
 
@@ -384,10 +398,12 @@ for each matched route:
 signal.signal(value) 广播给所有 Connections
 ```
 
-### 6.4 第四阶段：消费者回调
+### 6.4 第四阶段：消费者回调（Phase 2）
+
+当前 Phase 1 只把 target signal 转换成 pending `device_task`；真正的设备回调和 handler registry 放到下一阶段。
 
 ```text
-SignalBusRuntime.dispatch(target_signal_event)
+SignalBusRuntime.dispatch(target_signal_event)  # Phase 2
   -> DeviceRuntime.on_signal(target_signal_event)
   -> resolve instance_id + signal_port
   -> resolve DeviceSpec.runtime_contract / transport_behaviors
@@ -487,29 +503,38 @@ sequenceDiagram
 | 信号连接 | `vcSignal.Connections` / `vcBooleanSignalMap.connect()` | `SceneDocument.signal_edges[]` + `TopologyGraph.signal_graph` |
 | 发信号 | `vcBoolSignal.signal(value)` | `SignalBusRuntime.emit(...)` |
 | 最新值 | `vcBoolSignal.Value` | Redis hash `runtime:simulation:{run_id}:signals` + `RuntimeSnapshot.signal_values` |
-| 消费者回调 | `OnSignal(signal)` / `OnSignalTrigger(map, port, value)` | `DeviceRuntime.on_signal(event)` / handler registry |
-| 任务队列 | PythonScript 内部 `tasks[]` | Redis event queue / device task queue + RuntimeSnapshot.active_actions |
+| 消费者回调 | `OnSignal(signal)` / `OnSignalTrigger(map, port, value)` | Phase 1 先由 `SignalBusRuntime` 生成 pending device task；后续接 `DeviceRuntime.on_signal(event)` / handler registry |
+| 任务队列 | PythonScript 内部 `tasks[]` | Redis event stream / device task stream + `RuntimeSnapshot.device_tasks` |
 | 事件审计 | 主要在 VC runtime/script 内部，外部不易统一追踪 | `simulation_events` 表 + Redis stream |
 | 可测试性 | 依赖 VC runtime 和脚本环境 | 后端 service 单测 + Redis/Supabase 集成测试 |
 
-## 9. 最小可落地版本
+## 9. 已落地的最小版本
 
-下一阶段可以先实现一个轻量版本，不碰复杂调度：
+本轮已实现一个轻量版本，不碰复杂调度：
 
 1. 新增 `SignalBusRuntime.emit()`，替代 `SimulationService.emit_signal()` 里直接调用 `runtime_store.set_signal()`。
 2. `SignalBusRuntime` 只读取 `SceneDocument.signal_edges[]`，暂不依赖完整 `SceneBehaviorGraph.event_bus`。
 3. 支持 source -> target fan-out，先实现 `identity` transform。
-4. 对每个 target signal 写 Redis latest value 和 Redis stream。
-5. 新增 `DeviceRuntime.on_signal()`，先只生成 `device_tasks`，不执行真实动作。
-6. `SimulationService.emit_signal()` 返回 source event、routed events、device tasks。
+4. 对每个 target signal 写 Redis latest value 和 Redis stream / InMemory 等价事件流。
+5. 对 target device signal 生成 `device_tasks`，不执行真实动作。
+6. `SimulationService.emit_signal()` 返回 source event、routed events、device tasks，并保留顶层 `signal_id/value/payload` 兼容字段。
 7. 补充 `test_signal_bus_runtime.py`，覆盖：
    - 单个 signal 无消费者。
    - 单个 signal 投递到一个消费者。
    - 单个 signal fan-out 到多个消费者。
    - disabled edge 不投递。
    - identity transform 保留 value/payload。
-   - target signal 被写入 Redis。
+   - target signal 被写入 Redis / RuntimeStateStore。
    - device task 被生成但不执行。
+
+校验结果：
+
+```text
+cd backend
+python -m compileall app
+python -m pytest -q
+# 11 passed
+```
 
 最小链路：
 

@@ -1,11 +1,11 @@
 # VC Simulation Backend 设计与校验记录
 
-更新时间：2026-09-06  
-当前阶段：基础业务后端，不包含 Agent、LLM 调用、自动规划或复杂调度编排。
+更新时间：2026-09-07  
+当前阶段：基础业务后端 + Phase 1 信号事件投递，不包含 Agent、LLM 调用、自动规划或复杂调度编排。
 
 ## 1. 当前实现范围
 
-`backend/` 目前实现的是 VC 风格仿真建模的基础服务层：项目、设备规范、资产元数据、场景文档、接口编译、拓扑派生、仿真运行记录与 Redis 运行态缓存。它的边界是“保存和校验显式建模事实，并生成运行时查询索引”，不是在本阶段生成智能体行为图。
+`backend/` 目前实现的是 VC 风格仿真建模的基础服务层：项目、设备规范、资产元数据、场景文档、接口编译、拓扑派生、仿真运行记录、Redis 运行态缓存，以及 Phase 1 信号事件投递。它的边界是“保存和校验显式建模事实，并验证信号能沿显式连线流动”，不是在本阶段生成智能体行为图或执行复杂调度。
 
 已实现模块：
 
@@ -16,6 +16,7 @@
 - 业务服务：`ProjectService`、`DeviceSpecService`、`AssetService`、`SceneService`、`SimulationService`
 - 编译/校验服务：`InterfaceCompiler`、`TopologyBuilder`、`validation.py`
 - 运行态存储：`RedisRuntimeStateStore` 与测试用 `InMemoryRuntimeStateStore`
+- 信号运行时：`SignalBusRuntime`
 
 ## 2. VC 对齐关系
 
@@ -45,7 +46,7 @@
 | 信号连接边 | VC 中 `vcSignal.connect()`、`vcSignal.Connections`、`vcBooleanSignalMap.connect()` 表达信号/端口连接 | `SceneService.create_edge(..., "signal")` 保存信号边，校验方向和值类型；编译器可生成互锁/触发边 | `POST /scene/signal-edges`、`POST /interfaces/compile` | `SceneDocument.signal_edges[]` |
 | 拓扑派生 | VC 没有全场景 topology API；需要遍历 `Component -> Behaviour/Flow -> Connector -> Connection` 重建端口图 | `TopologyBuilder.build()` 从 SceneDocument + DeviceSpec 生成 `physical_graph/process_graph/signal_graph/transport_graph` | `POST /topology/rebuild`、`GET /topology/reachability` | `scene_topologies.document` |
 | 仿真运行记录 | VC Runtime 运行在应用内部，状态分散在 component behaviour、signals、script tasks 中 | `SimulationService.create_run()` 固化场景版本并初始化 snapshot | `POST /api/projects/{project_id}/simulation-runs` | `simulation_runs`、Redis snapshot |
-| 运行态信号/快照 | VC `vcBoolSignal.Value` 保存最新值，`signal()` 触发 `OnSignal/OnSignalTrigger`；脚本可把事件放入任务队列 | `RedisRuntimeStateStore` 用 key 保存 snapshot、hash 保存最新 signal、stream 记录 signal event | `/runtime-snapshot` GET/PUT/DELETE、`/signals/{signal_id}/emit` | Redis `runtime:simulation:*`、`stream:simulation:*`；`simulation_events` |
+| 运行态信号/快照 | VC `vcBoolSignal.Value` 保存最新值，`signal()` 触发 `OnSignal/OnSignalTrigger`；脚本可把事件放入任务队列 | `SignalBusRuntime` 沿 `SceneDocument.signal_edges[]` 投递信号，`RedisRuntimeStateStore` 保存 snapshot、latest signal、event stream、device task stream | `/runtime-snapshot` GET/PUT/DELETE、`/signals/{signal_id}/emit` | Redis `runtime:simulation:*`、`stream:simulation:*`；`simulation_events` |
 
 ## 4. 数据库设计
 
@@ -91,7 +92,7 @@ Supabase 负责低频、可持久化事实：项目、资产、设备规范、�
 - `/api/projects/{project_id}/simulation-runs`：创建仿真运行。
 - `/api/simulation-runs/{run_id}`：读取仿真运行及 Redis snapshot/signals。
 - `/api/simulation-runs/{run_id}/runtime-snapshot`：读取/写入/清除运行快照。
-- `/api/simulation-runs/{run_id}/signals/{signal_id}/emit`：写入信号值并记录仿真事件。
+- `/api/simulation-runs/{run_id}/signals/{signal_id}/emit`：写入 source signal，按 `SceneDocument.signal_edges[]` 投递 target signal，记录 routed event，并生成 pending device task。
 
 核心请求/响应格式：
 
@@ -163,7 +164,8 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - JSON 语法校验：`docs/business/SimulationSchema` 与 `backend` 下 38 个 JSON 文件全部可解析。
 - Schema 契约一致性：8 个默认 DeviceSpec、`2.SceneDocument/example.json`、`demo/pallet_sorting_line/full_chain_schema.json` 的端口、接口、绑定、边端点和 TopologyGraph 映射通过自定义一致性校验，0 error、0 warning。
 - Python 编译：`python -m compileall backend/app` 通过。
-- 单元测试：`cd backend; python -m pytest -q` 通过，结果 `6 passed`。
+- 单元测试：`cd backend; python -m pytest -q` 通过，结果 `11 passed`。
+- 已新增 `backend/app/services/signal_bus_runtime.py` 与 `backend/tests/test_signal_bus_runtime.py`，覆盖无消费者、单消费者、fan-out、disabled edge、identity transform、DB 事件落库。
 - 已新增 `backend/tests/test_schema_contracts.py`，将 DeviceSpec 分层接口、SceneDocument 三类 edge、demo TopologyGraph 映射纳入自动化回归。
 - Redis：`vc-simulation-redis` 通过 `PONG`，并验证 snapshot 写/读、signal set/get、runtime clear。
 - Supabase：`supabase start` 成功，migration 与 seed 已执行；`projects`、`assets`、`device_specs`、`scenes`、`scene_events`、`scene_topologies`、`simulation_runs`、`simulation_events` 均存在。

@@ -10,6 +10,7 @@ from app.repositories.sql import ProjectRepository, SceneRepository, SimulationR
 from app.schemas.domain import RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate
 from app.services.ids import new_id
 from app.services.runtime_state import RuntimeStateStore
+from app.services.signal_bus_runtime import SignalBusRuntime
 
 
 class SimulationService:
@@ -68,11 +69,10 @@ class SimulationService:
 
     # 发送信号事件：保存信号最新状态，记录仿真事件，并返回本次信号事件。
     def emit_signal(self, run_id: str, signal_id: str, payload: SignalEmitRequest) -> dict[str, Any]:
-        self.get_run(run_id)
-        event = self.runtime_store.set_signal(run_id, signal_id, payload.value, payload.payload, payload.ttl_seconds)
-        self.simulations.add_event(models.SimulationEvent(id=new_id("simevt"), simulation_run_id=run_id, sim_time_s=payload.sim_time_s, event_type="signal_event", payload=event))
+        run = self.get_run(run_id)
+        result = SignalBusRuntime(self.db, self.runtime_store).emit(run, signal_id, payload)
         self.db.commit()
-        return event
+        return result
 
     # 清空运行时状态：确认仿真运行存在后，删除该 run_id 对应的临时运行数据。
     def clear_runtime_state(self, run_id: str) -> dict[str, Any]:
