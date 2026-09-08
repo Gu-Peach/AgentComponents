@@ -79,6 +79,22 @@
         "resume_threshold": 1
       },
       "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.start_position",
+            "position": [2.619, 0.15, -1.197],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.end_position",
+            "position": [0.719, 0.15, -1.197],
+            "needs_calibration": true
+          }
+        },
         "transport_path": {
           "coordinate_space": "scene",
           "source": "manual_placeholder_from_process_ports",
@@ -86,33 +102,33 @@
           "start_position": [2.619, 0.15, -1.197],
           "end_position": [0.719, 0.15, -1.197],
           "waypoints": [
-            [-2.6, 0.0, 0.45],
-            [-1.0, 0.0, 0.45]
+            [2.619, 0.15, -1.197],
+            [0.719, 0.15, -1.197]
           ],
           "stop_points": [
             {
               "point_id": "main_conveyor_1.sp_01",
               "role": "entry",
               "t": 0.0,
-              "position": [-2.6, 0.0, 0.45]
+              "position": [2.619, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_1.sp_02",
               "role": "middle",
               "t": 0.3333,
-              "position": [-2.0667, 0.0, 0.45]
+              "position": [1.9857, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_1.sp_03",
               "role": "middle",
               "t": 0.6667,
-              "position": [-1.5333, 0.0, 0.45]
+              "position": [1.3523, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_1.sp_04",
               "role": "exit",
               "t": 1.0,
-              "position": [-1.0, 0.0, 0.45]
+              "position": [0.719, 0.15, -1.197]
             }
           ],
           "start_process_port": "flow_input",
@@ -149,6 +165,22 @@
         "resume_threshold": 1
       },
       "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.start_position",
+            "position": [0.618, 0.15, -1.197],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.end_position",
+            "position": [-0.649, 0.15, -1.197],
+            "needs_calibration": true
+          }
+        },
         "transport_path": {
           "coordinate_space": "scene",
           "source": "manual_placeholder_from_process_ports",
@@ -156,33 +188,33 @@
           "start_position": [0.618, 0.15, -1.197],
           "end_position": [-0.649, 0.15, -1.197],
           "waypoints": [
-            [-1.0, 0.0, 0.45],
-            [0.6, 0.0, 0.45]
+            [0.618, 0.15, -1.197],
+            [-0.649, 0.15, -1.197]
           ],
           "stop_points": [
             {
               "point_id": "main_conveyor_2.sp_01",
               "role": "entry",
               "t": 0.0,
-              "position": [-1.0, 0.0, 0.45]
+              "position": [0.618, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_2.sp_02",
               "role": "middle",
               "t": 0.3333,
-              "position": [-0.4667, 0.0, 0.45]
+              "position": [0.1957, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_2.sp_03",
               "role": "middle",
               "t": 0.6667,
-              "position": [0.0667, 0.0, 0.45]
+              "position": [-0.2267, 0.15, -1.197]
             },
             {
               "point_id": "main_conveyor_2.sp_04",
               "role": "exit",
               "t": 1.0,
-              "position": [0.6, 0.0, 0.45]
+              "position": [-0.649, 0.15, -1.197]
             }
           ],
           "start_process_port": "flow_input",
@@ -220,6 +252,22 @@
         "accepted_class": "TODO"
       },
       "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.start_position",
+            "position": [-1.093, 0.7, -0.173],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.end_position",
+            "position": [-2.493, 0.7, -0.173],
+            "needs_calibration": true
+          }
+        },
         "transport_path": {
           "coordinate_space": "scene",
           "source": "manual_placeholder_from_process_ports",
@@ -227,33 +275,33 @@
           "start_position": [-1.093, 0.7, -0.173],
           "end_position": [-2.493, 0.7, -0.173],
           "waypoints": [
-            [0.3, 0.55, 0.45],
-            [1.9, 0.55, 0.45]
+            [-1.093, 0.7, -0.173],
+            [-2.493, 0.7, -0.173]
           ],
           "stop_points": [
             {
               "point_id": "upper_out_conveyor_1.sp_01",
               "role": "entry",
               "t": 0.0,
-              "position": [0.3, 0.55, 0.45]
+              "position": [-1.093, 0.7, -0.173]
             },
             {
               "point_id": "upper_out_conveyor_1.sp_02",
               "role": "middle",
               "t": 0.3333,
-              "position": [0.8333, 0.55, 0.45]
+              "position": [-1.5597, 0.7, -0.173]
             },
             {
               "point_id": "upper_out_conveyor_1.sp_03",
               "role": "middle",
               "t": 0.6667,
-              "position": [1.3667, 0.55, 0.45]
+              "position": [-2.0263, 0.7, -0.173]
             },
             {
               "point_id": "upper_out_conveyor_1.sp_04",
               "role": "exit",
               "t": 1.0,
-              "position": [1.9, 0.55, 0.45]
+              "position": [-2.493, 0.7, -0.173]
             }
           ],
           "start_process_port": "flow_input",
@@ -291,6 +339,22 @@
         "accepted_class": "TODO"
       },
       "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.start_position",
+            "position": [-1.093, 0.7, -2.235],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_transport_path",
+            "source_ref": "runtime_geometry.transport_path.end_position",
+            "position": [-2.493, 0.7, -2.235],
+            "needs_calibration": true
+          }
+        },
         "transport_path": {
           "coordinate_space": "scene",
           "source": "manual_placeholder_from_process_ports",
@@ -298,33 +362,33 @@
           "start_position": [-1.093, 0.7, -2.235],
           "end_position": [-2.493, 0.7, -2.235],
           "waypoints": [
-            [0.3, -0.55, 0.45],
-            [1.9, -0.55, 0.45]
+            [-1.093, 0.7, -2.235],
+            [-2.493, 0.7, -2.235]
           ],
           "stop_points": [
             {
               "point_id": "lower_out_conveyor_1.sp_01",
               "role": "entry",
               "t": 0.0,
-              "position": [0.3, -0.55, 0.45]
+              "position": [-1.093, 0.7, -2.235]
             },
             {
               "point_id": "lower_out_conveyor_1.sp_02",
               "role": "middle",
               "t": 0.3333,
-              "position": [0.8333, -0.55, 0.45]
+              "position": [-1.5597, 0.7, -2.235]
             },
             {
               "point_id": "lower_out_conveyor_1.sp_03",
               "role": "middle",
               "t": 0.6667,
-              "position": [1.3667, -0.55, 0.45]
+              "position": [-2.0263, 0.7, -2.235]
             },
             {
               "point_id": "lower_out_conveyor_1.sp_04",
               "role": "exit",
               "t": 1.0,
-              "position": [1.9, -0.55, 0.45]
+              "position": [-2.493, 0.7, -2.235]
             }
           ],
           "start_process_port": "flow_input",
@@ -408,55 +472,48 @@
           "source": "compiled_from_device_spec_type_specific_contract",
           "compiled_from": "robot_arm_1.type_specific_contract.urdf",
           "needs_calibration": true,
-          "root_node_name": "UR10_00Hn",
-          "end_effector_node_name": "Link6_00Nn",
+          "root_node_name": "Link1_00dn",
+          "end_effector_node_name": "Axis_6_00kn",
           "joints": [
             {
               "name": "joint_1",
-              "nodeName": "Link1_00In",
+              "nodeName": "Axis_1_00fn",
               "type": "revolute",
               "axis": { "x": 0, "y": 1, "z": 0 },
               "limit": { "lower": -3.14, "upper": 3.14 }
             },
             {
               "name": "joint_2",
-              "nodeName": "Link2_00Jn",
+              "nodeName": "Axis_2_00gn",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_3",
-              "nodeName": "Link3_00Kn",
+              "nodeName": "Axis_3_00hn",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_4",
-              "nodeName": "Link4_00Ln",
+              "nodeName": "Axis_4_00in",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_5",
-              "nodeName": "Link5_00Mn",
+              "nodeName": "Axis_5_00jn",
               "type": "revolute",
               "axis": { "x": 1, "y": 0, "z": 0 },
-              "limit": { "lower": -1.57, "upper": 2.36 }
-            },
-            {
-              "name": "joint_6",
-              "nodeName": "Link6_00Nn",
-              "type": "revolute",
-              "axis": { "x": 0, "y": 1, "z": 0 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             }
           ]
         },
         "tooling": {
-          "tcp_node_name": "Link6_00Nn",
+          "tcp_node_name": "Axis_6_00kn",
           "tcp_local_frame": {
             "position": [0, 0, 0.8],
             "rotation_euler": [0, 0, 0],
@@ -542,55 +599,48 @@
           "source": "compiled_from_device_spec_type_specific_contract",
           "compiled_from": "robot_arm_1.type_specific_contract.urdf",
           "needs_calibration": true,
-          "root_node_name": "UR10_00Hn",
-          "end_effector_node_name": "Link6_00Nn",
+          "root_node_name": "robot(2)",
+          "end_effector_node_name": "Axis_6_00An",
           "joints": [
             {
               "name": "joint_1",
-              "nodeName": "Link1_00In",
+              "nodeName": "Axis_1_005n",
               "type": "revolute",
               "axis": { "x": 0, "y": 1, "z": 0 },
               "limit": { "lower": -3.14, "upper": 3.14 }
             },
             {
               "name": "joint_2",
-              "nodeName": "Link2_00Jn",
+              "nodeName": "Axis_2_006n",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_3",
-              "nodeName": "Link3_00Kn",
+              "nodeName": "Axis_3_007n",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_4",
-              "nodeName": "Link4_00Ln",
+              "nodeName": "Axis_4_008n",
               "type": "revolute",
               "axis": { "x": 0, "y": 0, "z": 1 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             },
             {
               "name": "joint_5",
-              "nodeName": "Link5_00Mn",
+              "nodeName": "Axis_5_009n",
               "type": "revolute",
               "axis": { "x": 1, "y": 0, "z": 0 },
-              "limit": { "lower": -1.57, "upper": 2.36 }
-            },
-            {
-              "name": "joint_6",
-              "nodeName": "Link6_00Nn",
-              "type": "revolute",
-              "axis": { "x": 0, "y": 1, "z": 0 },
               "limit": { "lower": -1.57, "upper": 2.36 }
             }
           ]
         },
         "tooling": {
-          "tcp_node_name": "Link6_00Nn",
+          "tcp_node_name": "Axis_6_00An",
           "tcp_local_frame": {
             "position": [0, 0, 0.8],
             "rotation_euler": [0, 0, 0],
@@ -650,7 +700,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 213,
-        "glb_node_name": "Lathe Comp 3 [00On]",
+        "glb_node_name": "Lathe_Comp_3_00On",
         "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.0077]
       }
     },
@@ -664,7 +714,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 217,
-        "glb_node_name": "Lathe Comp 3 [00Pn]",
+        "glb_node_name": "Lathe_Comp_3_00Pn",
         "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.1967]
       }
     },
@@ -678,7 +728,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 221,
-        "glb_node_name": "Lathe Comp 3 [00Qn]",
+        "glb_node_name": "Lathe_Comp_3_00Qn",
         "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.3857]
       }
     },
@@ -692,7 +742,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 225,
-        "glb_node_name": "Lathe Comp 3 [00Rn]",
+        "glb_node_name": "Lathe_Comp_3_00Rn",
         "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.0077]
       }
     },
@@ -706,7 +756,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 229,
-        "glb_node_name": "Lathe Comp 3 [00Sn]",
+        "glb_node_name": "Lathe_Comp_3_00Sn",
         "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.1967]
       }
     },
@@ -720,7 +770,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 233,
-        "glb_node_name": "Lathe Comp 3 [00Tn]",
+        "glb_node_name": "Lathe_Comp_3_00Tn",
         "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.0077]
       }
     },
@@ -734,7 +784,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 237,
-        "glb_node_name": "Lathe Comp 3 [00Un]",
+        "glb_node_name": "Lathe_Comp_3_00Un",
         "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.0077]
       }
     },
@@ -748,7 +798,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 241,
-        "glb_node_name": "Lathe Comp 3 [00Vn]",
+        "glb_node_name": "Lathe_Comp_3_00Vn",
         "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.1967]
       }
     },
@@ -762,7 +812,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 245,
-        "glb_node_name": "Lathe Comp 3 [00Wn]",
+        "glb_node_name": "Lathe_Comp_3_00Wn",
         "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.1967]
       }
     },
@@ -776,7 +826,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 249,
-        "glb_node_name": "Lathe Comp 3 [00Xn]",
+        "glb_node_name": "Lathe_Comp_3_00Xn",
         "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.3857]
       }
     },
@@ -790,7 +840,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 253,
-        "glb_node_name": "Lathe Comp 3 [00Yn]",
+        "glb_node_name": "Lathe_Comp_3_00Yn",
         "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.3857]
       }
     },
@@ -804,7 +854,7 @@
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 257,
-        "glb_node_name": "Lathe Comp 3 [00Zn]",
+        "glb_node_name": "Lathe_Comp_3_00Zn",
         "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.3857]
       }
     }
