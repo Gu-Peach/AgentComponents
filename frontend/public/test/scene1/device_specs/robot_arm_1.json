@@ -3,7 +3,7 @@
   "schema_type": "DeviceSpec",
   "version": "0.2.0",
   "name": "Fanuc 机械臂 1",
-  "description": "6 轴工业机械臂，负责物料抓取、搬运和放置。",
+  "description": "Six-axis robot arm. Physical interfaces describe base/layout anchors; process ports describe pick/place material points.",
   "source": {
     "kind": "image_and_existing_driver_config",
     "path": "docs/business/SimulationSchema/1.DeviceSpec/robot_arm/robot_arm_1.json"
@@ -16,8 +16,9 @@
     "../../../test/11.png"
   ],
   "notes": [
-    "保留原驱动器标准格式：rootNodeName、urdf.joints、trajectoryConfig。",
-    "该 DeviceSpec 是设备本体，不保存与具体场景中其他设备的连接关系。"
+    "Physical interfaces are reserved for base/model connection anchors and are not used as material pick/place points.",
+    "Pick and place points are process_ports with local_frame coordinates.",
+    "TCP and IK node mapping remain in type_specific_contract, not physical_interfaces."
   ],
   "id": "robot_arm_1",
   "device_spec_id": "robot_arm_1",
@@ -53,29 +54,15 @@
   },
   "physical_interfaces": [
     {
-      "interface_id": "pick_area",
-      "kind": "material",
-      "direction": "input",
-      "node_name": "PickAnchor",
-      "material_classes": [
-        "workpiece",
-        "workpiece_carrier"
-      ],
-      "local_position": [
-        0.45,
-        0,
-        0.2
-      ],
-      "local_forward": [
-        1,
-        0,
-        0
-      ],
+      "interface_id": "bbox_bottom_front_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontLeft",
       "local_frame": {
         "position": [
-          0.45,
-          0,
-          0.2
+          -0.4,
+          -0.4,
+          0
         ],
         "rotation_euler": [
           0,
@@ -83,14 +70,14 @@
           0
         ],
         "forward": [
-          1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -99,38 +86,24 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "robot_base_mount",
+          "match_rule": "equals"
         }
       ]
     },
     {
-      "interface_id": "place_area",
-      "kind": "material",
-      "direction": "output",
-      "node_name": "PlaceAnchor",
-      "material_classes": [
-        "workpiece",
-        "workpiece_carrier"
-      ],
-      "local_position": [
-        -0.45,
-        0,
-        0.2
-      ],
-      "local_forward": [
-        -1,
-        0,
-        0
-      ],
+      "interface_id": "bbox_bottom_front_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontRight",
       "local_frame": {
         "position": [
-          -0.45,
-          0,
-          0.2
+          0.4,
+          -0.4,
+          0
         ],
         "rotation_euler": [
           0,
@@ -138,14 +111,14 @@
           0
         ],
         "forward": [
-          -1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -154,28 +127,24 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "robot_base_mount",
+          "match_rule": "equals"
         }
       ]
     },
     {
-      "interface_id": "tool_center_point",
-      "kind": "tool",
-      "direction": "bidirectional",
-      "node_name": "Link6_00Nn",
-      "material_classes": [
-        "workpiece",
-        "workpiece_carrier"
-      ],
+      "interface_id": "bbox_bottom_back_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackLeft",
       "local_frame": {
         "position": [
-          0,
-          0,
-          0.8
+          -0.4,
+          0.4,
+          0
         ],
         "rotation_euler": [
           0,
@@ -183,14 +152,14 @@
           0
         ],
         "forward": [
-          1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -199,11 +168,52 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "robot_base_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_back_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackRight",
+      "local_frame": {
+        "position": [
+          0.4,
+          0.4,
+          0
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "robot_base_mount",
+          "match_rule": "equals"
         }
       ]
     }
@@ -212,9 +222,8 @@
     {
       "port_id": "flow_input",
       "direction": "input",
-      "label": "Pick Input",
+      "label": "Pick Process Point",
       "role": "flow_input",
-      "bound_physical_interface": "pick_area",
       "local_frame": {
         "position": [
           0.45,
@@ -245,14 +254,14 @@
         "start_pick",
         "pause_pick",
         "resume_pick"
-      ]
+      ],
+      "process_frame_role": "pick_point"
     },
     {
       "port_id": "flow_output",
       "direction": "output",
-      "label": "Place Output",
+      "label": "Place Process Point",
       "role": "flow_output",
-      "bound_physical_interface": "place_area",
       "local_frame": {
         "position": [
           -0.45,
@@ -281,7 +290,8 @@
       ],
       "bound_signal_ports": [
         "done"
-      ]
+      ],
+      "process_frame_role": "place_point"
     }
   ],
   "signal_ports": [
@@ -332,11 +342,7 @@
       "edge_trigger": "on_change",
       "retention": "latest_value",
       "default_value": false,
-      "semantic": "执行机构忙碌状态。",
-      "bound_to": {
-        "type": "physical_interface",
-        "id": "tool_center_point"
-      }
+      "semantic": "执行机构忙碌状态。"
     },
     {
       "port_id": "done",
@@ -358,19 +364,14 @@
       "description": "动作失败或目标不可达",
       "edge_trigger": "on_rising_edge",
       "retention": "event_log",
-      "semantic": "设备异常事件。",
-      "bound_to": {
-        "type": "physical_interface",
-        "id": "tool_center_point"
-      }
+      "semantic": "设备异常事件。"
     }
   ],
   "interface_bindings": [
     {
       "process_port": "flow_input",
-      "physical_interface": "pick_area",
-      "binding_id": "bind_flow_input_pick_area",
-      "binding_role": "entry",
+      "binding_id": "bind_flow_input_pick_point",
+      "binding_role": "pick_point",
       "signal_ports": [
         "start_pick",
         "pause_pick",
@@ -382,9 +383,8 @@
     },
     {
       "process_port": "flow_output",
-      "physical_interface": "place_area",
-      "binding_id": "bind_flow_output_place_area",
-      "binding_role": "exit",
+      "binding_id": "bind_flow_output_place_point",
+      "binding_role": "place_point",
       "signal_ports": [
         "done"
       ],
@@ -397,8 +397,6 @@
     {
       "behavior_id": "pick_and_place",
       "behavior_type": "material_transfer",
-      "input_physical_interface": "pick_area",
-      "output_physical_interface": "place_area",
       "default_algorithm": "robot_pick_place",
       "input_signals": [
         "start_pick",
@@ -418,14 +416,16 @@
       ],
       "preconditions": [
         "fsm_state == idle",
-        "material_at(input_physical_interface)",
+        "material_at(input_process_port)",
         "gripper.empty == true",
         "pause_pick.active != true"
       ],
       "effects": [
-        "material_at(output_physical_interface)",
+        "material_at(output_process_port)",
         "emit done"
-      ]
+      ],
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output"
     }
   ],
   "runtime_contract": {
@@ -463,15 +463,36 @@
     ],
     "behavior_payloads": {
       "pick_and_place": {
-        "subject_fields": ["material_id", "workpiece_id", "subject_id"],
-        "target_fields": ["target_conveyor_id", "target_object_id", "to_instance_id"],
-        "recommended_fields": ["pick_position", "place_position", "waypoints", "lift_height", "duration_s"]
+        "subject_fields": [
+          "material_id",
+          "workpiece_id",
+          "subject_id"
+        ],
+        "target_fields": [
+          "target_conveyor_id",
+          "target_object_id",
+          "to_instance_id"
+        ],
+        "recommended_fields": [
+          "pick_position",
+          "place_position",
+          "waypoints",
+          "lift_height",
+          "duration_s"
+        ]
       },
       "pause_pick": {
-        "recommended_fields": ["reason", "source_signal", "conveyor_id"]
+        "recommended_fields": [
+          "reason",
+          "source_signal",
+          "conveyor_id"
+        ]
       },
       "resume_pick": {
-        "recommended_fields": ["source_signal", "conveyor_id"]
+        "recommended_fields": [
+          "source_signal",
+          "conveyor_id"
+        ]
       }
     },
     "ik_solver": {
@@ -586,6 +607,32 @@
         "workpiece_carrier"
       ],
       "max_payload_kg": 5
+    },
+    "tooling": {
+      "tcp_node_name": "Link6_00Nn",
+      "tcp_local_frame": {
+        "position": [
+          0,
+          0,
+          0.8
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          1,
+          0,
+          0
+        ],
+        "up": [
+          0,
+          0,
+          1
+        ]
+      },
+      "note": "TCP is used for IK and animation; it is not a physical connection interface in this scene schema split."
     }
   }
 }

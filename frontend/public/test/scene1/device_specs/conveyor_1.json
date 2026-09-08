@@ -3,7 +3,7 @@
   "schema_type": "DeviceSpec",
   "version": "0.2.0",
   "name": "传送带 1",
-  "description": "连续输送设备，负责将物料或物料载具从 entry 输送到 exit。",
+  "description": "Continuous conveyor device. Physical interfaces describe layout/mount anchors; process ports describe material entry/exit points.",
   "source": {
     "kind": "image_inferred",
     "path": "docs/business/SimulationSchema/1.DeviceSpec/conveyor/conveyor_1.json"
@@ -16,8 +16,9 @@
     "../../../test/7.png"
   ],
   "notes": [
-    "传送带通过 part_ready 通知下游设备物料到达出口。",
-    "该设备本体默认支持基于 entry/exit 坐标线性插值生成停留点。"
+    "Physical interfaces are reserved for model/device connection anchors, represented here as four bottom bounding-box points.",
+    "Material transport uses process_ports.flow_input / flow_output and their local_frame coordinates.",
+    "Stop points are generated from process port coordinates, not from physical interface coordinates."
   ],
   "device_spec_id": "conveyor_1",
   "device_type": "conveyor",
@@ -55,29 +56,15 @@
   },
   "physical_interfaces": [
     {
-      "interface_id": "entry",
-      "kind": "material",
-      "direction": "input",
-      "node_name": "EntryAnchor",
-      "material_classes": [
-        "workpiece",
-        "workpiece_carrier"
-      ],
-      "local_position": [
-        -0.8,
-        0,
-        0.45
-      ],
-      "local_forward": [
-        -1,
-        0,
-        0
-      ],
+      "interface_id": "bbox_bottom_front_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontLeft",
       "local_frame": {
         "position": [
           -0.8,
-          0,
-          0.45
+          -0.175,
+          0
         ],
         "rotation_euler": [
           0,
@@ -85,14 +72,14 @@
           0
         ],
         "forward": [
-          -1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -101,38 +88,24 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "conveyor_mount",
+          "match_rule": "equals"
         }
       ]
     },
     {
-      "interface_id": "exit",
-      "kind": "material",
-      "direction": "output",
-      "node_name": "ExitAnchor",
-      "material_classes": [
-        "workpiece",
-        "workpiece_carrier"
-      ],
-      "local_position": [
-        0.8,
-        0,
-        0.45
-      ],
-      "local_forward": [
-        1,
-        0,
-        0
-      ],
+      "interface_id": "bbox_bottom_front_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontRight",
       "local_frame": {
         "position": [
           0.8,
-          0,
-          0.45
+          -0.175,
+          0
         ],
         "rotation_euler": [
           0,
@@ -140,14 +113,14 @@
           0
         ],
         "forward": [
-          1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -156,11 +129,93 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "conveyor_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_back_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackLeft",
+      "local_frame": {
+        "position": [
+          -0.8,
+          0.175,
+          0
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "conveyor_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_back_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackRight",
+      "local_frame": {
+        "position": [
+          0.8,
+          0.175,
+          0
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "conveyor_mount",
+          "match_rule": "equals"
         }
       ]
     }
@@ -169,9 +224,8 @@
     {
       "port_id": "flow_input",
       "direction": "input",
-      "label": "Input",
+      "label": "Material Entry",
       "role": "flow_input",
-      "bound_physical_interface": "entry",
       "local_frame": {
         "position": [
           -0.8,
@@ -201,14 +255,14 @@
       "bound_signal_ports": [
         "capacity_available",
         "stop_point_occupied"
-      ]
+      ],
+      "process_frame_role": "transport_start"
     },
     {
       "port_id": "flow_output",
       "direction": "output",
-      "label": "Output",
+      "label": "Material Exit",
       "role": "flow_output",
-      "bound_physical_interface": "exit",
       "local_frame": {
         "position": [
           0.8,
@@ -241,7 +295,8 @@
         "done",
         "stop_point_released",
         "release_waiting_material"
-      ]
+      ],
+      "process_frame_role": "transport_end"
     }
   ],
   "signal_ports": [
@@ -334,9 +389,8 @@
   "interface_bindings": [
     {
       "process_port": "flow_input",
-      "physical_interface": "entry",
-      "binding_id": "bind_flow_input_entry",
-      "binding_role": "entry",
+      "binding_id": "bind_flow_input_transport_start",
+      "binding_role": "transport_start",
       "signal_ports": [
         "capacity_available",
         "stop_point_occupied"
@@ -349,9 +403,8 @@
     },
     {
       "process_port": "flow_output",
-      "physical_interface": "exit",
-      "binding_id": "bind_flow_output_exit",
-      "binding_role": "exit",
+      "binding_id": "bind_flow_output_transport_end",
+      "binding_role": "transport_end",
       "signal_ports": [
         "part_ready",
         "blocked",
@@ -370,37 +423,37 @@
     {
       "behavior_id": "accept_material",
       "behavior_type": "material_transfer",
-      "input_physical_interface": "entry",
       "output_signals": [
         "stop_point_occupied"
       ],
       "preconditions": [
         "capacity_available == true",
         "entry_stop_point_available == true"
-      ]
+      ],
+      "input_process_port": "flow_input"
     },
     {
       "behavior_id": "advance_to_next_stop_point",
       "behavior_type": "stop_point_buffered_transport",
-      "input_physical_interface": "entry",
-      "output_physical_interface": "exit",
       "default_algorithm": "linear_stop_point_motion",
       "output_signals": [
         "stop_point_occupied",
         "stop_point_released"
-      ]
+      ],
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output"
     },
     {
       "behavior_id": "transport_to_exit",
       "behavior_type": "stop_point_buffered_transport",
-      "input_physical_interface": "entry",
-      "output_physical_interface": "exit",
       "default_algorithm": "linear_stop_point_motion",
       "output_signals": [
         "part_ready",
         "done",
         "stop_point_released"
-      ]
+      ],
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output"
     },
     {
       "behavior_id": "release_material",
@@ -408,7 +461,7 @@
       "input_signals": [
         "release_waiting_material"
       ],
-      "output_physical_interface": "exit"
+      "output_process_port": "flow_output"
     }
   ],
   "runtime_contract": {
@@ -444,20 +497,54 @@
     ],
     "behavior_payloads": {
       "transport_to_exit": {
-        "subject_fields": ["carrier_id", "material_id", "subject_id"],
-        "recommended_fields": ["waypoints", "from_position", "to_position", "duration_s"]
+        "subject_fields": [
+          "carrier_id",
+          "material_id",
+          "subject_id"
+        ],
+        "recommended_fields": [
+          "waypoints",
+          "from_position",
+          "to_position",
+          "duration_s"
+        ]
       },
       "advance_to_next_stop_point": {
-        "subject_fields": ["material_id", "carrier_id", "subject_id"],
-        "recommended_fields": ["from_stop_point_id", "to_stop_point_id", "waypoints", "duration_s"]
+        "subject_fields": [
+          "material_id",
+          "carrier_id",
+          "subject_id"
+        ],
+        "recommended_fields": [
+          "from_stop_point_id",
+          "to_stop_point_id",
+          "waypoints",
+          "duration_s"
+        ]
       },
       "accept_material": {
-        "subject_fields": ["material_id", "carrier_id", "subject_id"],
-        "recommended_fields": ["target_stop_point_id", "to_position", "duration_s"]
+        "subject_fields": [
+          "material_id",
+          "carrier_id",
+          "subject_id"
+        ],
+        "recommended_fields": [
+          "target_stop_point_id",
+          "to_position",
+          "duration_s"
+        ]
       },
       "release_material": {
-        "subject_fields": ["material_id", "carrier_id", "subject_id"],
-        "recommended_fields": ["from_position", "to_instance_id", "duration_s"]
+        "subject_fields": [
+          "material_id",
+          "carrier_id",
+          "subject_id"
+        ],
+        "recommended_fields": [
+          "from_position",
+          "to_instance_id",
+          "duration_s"
+        ]
       }
     }
   },
@@ -478,28 +565,44 @@
     },
     "stop_point_model": {
       "type": "linear_interpolation",
-      "start_interface": "entry",
-      "end_interface": "exit",
       "default_stop_point_count": 4,
       "include_entry": true,
       "include_exit": true,
-      "coordinate_formula": "entry + t * (exit - entry)",
-      "spacing_policy": "evenly_spaced"
+      "coordinate_formula": "flow_input + t * (flow_output - flow_input)",
+      "spacing_policy": "evenly_spaced",
+      "start_process_port": "flow_input",
+      "end_process_port": "flow_output"
     },
     "execution_geometry": {
       "coordinate_space": "device_local",
       "default_path": {
-        "start_interface": "entry",
-        "end_interface": "exit",
-        "start_position": [-0.8, 0, 0.45],
-        "end_position": [0.8, 0, 0.45],
+        "start_process_port": "flow_input",
+        "end_process_port": "flow_output",
+        "start_position": [
+          -0.8,
+          0,
+          0.45
+        ],
+        "end_position": [
+          0.8,
+          0,
+          0.45
+        ],
         "waypoints": [
-          [-0.8, 0, 0.45],
-          [0.8, 0, 0.45]
+          [
+            -0.8,
+            0,
+            0.45
+          ],
+          [
+            0.8,
+            0,
+            0.45
+          ]
         ]
       },
       "scene_override_path": "SceneDocument.instances[].runtime_geometry.transport_path",
-      "executor_note": "For local scene testing, prefer calibrated scene-space path from SceneDocument; this default path is only the reusable device-local fallback."
+      "executor_note": "Material motion must use process ports or calibrated scene runtime_geometry, not physical mount anchors."
     },
     "queue_policy": {
       "when_downstream_busy": "wait_at_nearest_upstream_stop_point",

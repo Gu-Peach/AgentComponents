@@ -47,7 +47,7 @@ SceneBehaviorGraph  基于 SceneDocument 和 DeviceSpec 生成场景行为图
 | 边类型 | 含义 |
 | --- | --- |
 | `process_edges` | 流程画布层面的 `flow_output -> flow_input`，描述工艺上的物料流转关系。 |
-| `physical_edges` | 真实物理接口之间的连接，通常由 `process_edges + interface_bindings` 编译得到。 |
+| `physical_edges` | 真实物理接口之间的设备/模型连接，不表示物料运输路径。 |
 | `signal_edges` | 设备信号端口之间的通讯关系，例如到料事件触发抓取命令。 |
 
 ## 5. 示例元信息
@@ -121,7 +121,7 @@ SceneBehaviorGraph  基于 SceneDocument 和 DeviceSpec 生成场景行为图
 | `target` | 目标物理接口。 |
 | `compiled_from` | 该物理边由哪条工艺边编译得到。 |
 
-`physical_edges` 是执行层事实，表达“物料实际从哪个三维接口到哪个三维接口”。
+`physical_edges` 是设备/模型连接事实，表达“哪个物理锚点与哪个物理锚点发生几何连接、吸附、挂载或装配”。物料运输不走 `physical_edges`，而是走 `process_edges`、`process_ports.local_frame` 和实例级 `runtime_geometry`。
 
 ## 10. 信号连接边 `signal_edges`
 

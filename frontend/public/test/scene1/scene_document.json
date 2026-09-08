@@ -24,6 +24,8 @@
   "notes": [
     "The GLB appears to use a Y-up coordinate basis, while the SimulationSchema DeviceSpec local frames are Z-up. Keep transform values below as schema-space placeholders until calibrated in the frontend scene editor.",
     "asset_binding.parsed_glb_y_up stores node names and parsed GLB coordinates for binding frontend meshes to backend instances.",
+    "Material movement is driven by process_ports and runtime_geometry, not physical_interfaces.",
+    "Physical interfaces are reserved for model/device connection anchors such as bottom bounding-box mount points.",
     "Signal edges here describe static signal-port wiring only. Higher-level rules such as workpiece claiming, robot target selection, and output-conveyor arrival events remain in SceneBehaviorGraph.",
     "Feeder is present in the GLB but absent from the golden behavior graph. It is recorded in metadata.static_glb_nodes and not added to the active process chain."
   ],
@@ -39,19 +41,28 @@
       "Confirm conveyor speed_mps, capacity, stop_point_count, resume_threshold, and runtime_geometry.transport_path.",
       "Confirm robot speed, payload_kg, lift_height, and GLB joint node mapping if the DeviceSpec node names differ from this GLB.",
       "Confirm workpiece sort_class and target-conveyor policy.",
-      "Confirm physical edge snap_result distance/angle after interface calibration."
+      "Confirm physical edge snap_result distance/angle after interface calibration.",
+      "Confirm process-port coordinates and runtime_geometry transport paths; physical interface anchors are not material transport points."
     ],
     "static_glb_nodes": [
       {
         "name": "Feeder",
         "glb_node_index": 265,
-        "parsed_glb_y_up_position": [3.2691, 0.0, -1.1967],
+        "parsed_glb_y_up_position": [
+          3.2691,
+          0.0,
+          -1.1967
+        ],
         "reason_not_active_instance": "not referenced by scene_behavior_graph.golden.json"
       },
       {
         "name": "Block Geo [00Nn]",
         "glb_node_index": 259,
-        "parsed_glb_y_up_position": [3.2691, 0.35, -1.1967],
+        "parsed_glb_y_up_position": [
+          3.2691,
+          0.35,
+          -1.1967
+        ],
         "reason_not_active_instance": "static visual/container node"
       }
     ]
@@ -65,9 +76,21 @@
       "device_type": "conveyor",
       "display_name": "Main Conveyor 1",
       "transform": {
-        "position": [-1.8, 0.0, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          -1.8,
+          0.0,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed_mps": 0.25,
@@ -78,22 +101,74 @@
       "runtime_geometry": {
         "transport_path": {
           "coordinate_space": "scene",
-          "source": "manual_placeholder_from_device_local_entry_exit",
+          "source": "manual_placeholder_from_process_ports",
           "needs_calibration": true,
-          "start_interface": "entry",
-          "end_interface": "exit",
-          "start_position": [-2.6, 0.0, 0.45],
-          "end_position": [-1.0, 0.0, 0.45],
+          "start_position": [
+            -2.6,
+            0.0,
+            0.45
+          ],
+          "end_position": [
+            -1.0,
+            0.0,
+            0.45
+          ],
           "waypoints": [
-            [-2.6, 0.0, 0.45],
-            [-1.0, 0.0, 0.45]
+            [
+              -2.6,
+              0.0,
+              0.45
+            ],
+            [
+              -1.0,
+              0.0,
+              0.45
+            ]
           ],
           "stop_points": [
-            { "point_id": "main_conveyor_1.sp_01", "role": "entry", "t": 0.0, "position": [-2.6, 0.0, 0.45] },
-            { "point_id": "main_conveyor_1.sp_02", "role": "middle", "t": 0.3333, "position": [-2.0667, 0.0, 0.45] },
-            { "point_id": "main_conveyor_1.sp_03", "role": "middle", "t": 0.6667, "position": [-1.5333, 0.0, 0.45] },
-            { "point_id": "main_conveyor_1.sp_04", "role": "exit", "t": 1.0, "position": [-1.0, 0.0, 0.45] }
-          ]
+            {
+              "point_id": "main_conveyor_1.sp_01",
+              "role": "entry",
+              "t": 0.0,
+              "position": [
+                -2.6,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_1.sp_02",
+              "role": "middle",
+              "t": 0.3333,
+              "position": [
+                -2.0667,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_1.sp_03",
+              "role": "middle",
+              "t": 0.6667,
+              "position": [
+                -1.5333,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_1.sp_04",
+              "role": "exit",
+              "t": 1.0,
+              "position": [
+                -1.0,
+                0.0,
+                0.45
+              ]
+            }
+          ],
+          "start_process_port": "flow_input",
+          "end_process_port": "flow_output"
         }
       },
       "asset_binding": {
@@ -101,13 +176,34 @@
         "glb_node_index": 52,
         "glb_node_name": "Conveyor(1)",
         "parsed_glb_y_up": {
-          "translation": [-0.4057915211, 0.0, 0.7382925749],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [2.6691, 0.0, -1.1967]
+          "translation": [
+            -0.4057915211,
+            0.0,
+            0.7382925749
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            2.6691,
+            0.0,
+            -1.1967
+          ]
         }
       },
-      "semantic_tags": ["main_line", "pallet_transport", "upstream"]
+      "semantic_tags": [
+        "main_line",
+        "pallet_transport",
+        "upstream"
+      ]
     },
     {
       "instance_id": "main_conveyor_2",
@@ -115,9 +211,21 @@
       "device_type": "conveyor",
       "display_name": "Main Conveyor 2",
       "transform": {
-        "position": [-0.2, 0.0, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          -0.2,
+          0.0,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed_mps": 0.25,
@@ -128,22 +236,74 @@
       "runtime_geometry": {
         "transport_path": {
           "coordinate_space": "scene",
-          "source": "manual_placeholder_from_device_local_entry_exit",
+          "source": "manual_placeholder_from_process_ports",
           "needs_calibration": true,
-          "start_interface": "entry",
-          "end_interface": "exit",
-          "start_position": [-1.0, 0.0, 0.45],
-          "end_position": [0.6, 0.0, 0.45],
+          "start_position": [
+            -1.0,
+            0.0,
+            0.45
+          ],
+          "end_position": [
+            0.6,
+            0.0,
+            0.45
+          ],
           "waypoints": [
-            [-1.0, 0.0, 0.45],
-            [0.6, 0.0, 0.45]
+            [
+              -1.0,
+              0.0,
+              0.45
+            ],
+            [
+              0.6,
+              0.0,
+              0.45
+            ]
           ],
           "stop_points": [
-            { "point_id": "main_conveyor_2.sp_01", "role": "entry", "t": 0.0, "position": [-1.0, 0.0, 0.45] },
-            { "point_id": "main_conveyor_2.sp_02", "role": "middle", "t": 0.3333, "position": [-0.4667, 0.0, 0.45] },
-            { "point_id": "main_conveyor_2.sp_03", "role": "middle", "t": 0.6667, "position": [0.0667, 0.0, 0.45] },
-            { "point_id": "main_conveyor_2.sp_04", "role": "exit", "t": 1.0, "position": [0.6, 0.0, 0.45] }
-          ]
+            {
+              "point_id": "main_conveyor_2.sp_01",
+              "role": "entry",
+              "t": 0.0,
+              "position": [
+                -1.0,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_2.sp_02",
+              "role": "middle",
+              "t": 0.3333,
+              "position": [
+                -0.4667,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_2.sp_03",
+              "role": "middle",
+              "t": 0.6667,
+              "position": [
+                0.0667,
+                0.0,
+                0.45
+              ]
+            },
+            {
+              "point_id": "main_conveyor_2.sp_04",
+              "role": "exit",
+              "t": 1.0,
+              "position": [
+                0.6,
+                0.0,
+                0.45
+              ]
+            }
+          ],
+          "start_process_port": "flow_input",
+          "end_process_port": "flow_output"
         }
       },
       "asset_binding": {
@@ -151,13 +311,34 @@
         "glb_node_index": 103,
         "glb_node_name": "Conveyor(2)",
         "parsed_glb_y_up": {
-          "translation": [-2.406791687, 0.0, 0.7382925749],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [0.6681, 0.0, -1.1967]
+          "translation": [
+            -2.406791687,
+            0.0,
+            0.7382925749
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            0.6681,
+            0.0,
+            -1.1967
+          ]
         }
       },
-      "semantic_tags": ["main_line", "pallet_transport", "robot_pick_source"]
+      "semantic_tags": [
+        "main_line",
+        "pallet_transport",
+        "robot_pick_source"
+      ]
     },
     {
       "instance_id": "upper_out_conveyor_1",
@@ -165,9 +346,21 @@
       "device_type": "conveyor",
       "display_name": "Upper Output Conveyor 1",
       "transform": {
-        "position": [1.1, 0.55, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          1.1,
+          0.55,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed_mps": 0.2,
@@ -179,22 +372,74 @@
       "runtime_geometry": {
         "transport_path": {
           "coordinate_space": "scene",
-          "source": "manual_placeholder_from_device_local_entry_exit",
+          "source": "manual_placeholder_from_process_ports",
           "needs_calibration": true,
-          "start_interface": "entry",
-          "end_interface": "exit",
-          "start_position": [0.3, 0.55, 0.45],
-          "end_position": [1.9, 0.55, 0.45],
+          "start_position": [
+            0.3,
+            0.55,
+            0.45
+          ],
+          "end_position": [
+            1.9,
+            0.55,
+            0.45
+          ],
           "waypoints": [
-            [0.3, 0.55, 0.45],
-            [1.9, 0.55, 0.45]
+            [
+              0.3,
+              0.55,
+              0.45
+            ],
+            [
+              1.9,
+              0.55,
+              0.45
+            ]
           ],
           "stop_points": [
-            { "point_id": "upper_out_conveyor_1.sp_01", "role": "entry", "t": 0.0, "position": [0.3, 0.55, 0.45] },
-            { "point_id": "upper_out_conveyor_1.sp_02", "role": "middle", "t": 0.3333, "position": [0.8333, 0.55, 0.45] },
-            { "point_id": "upper_out_conveyor_1.sp_03", "role": "middle", "t": 0.6667, "position": [1.3667, 0.55, 0.45] },
-            { "point_id": "upper_out_conveyor_1.sp_04", "role": "exit", "t": 1.0, "position": [1.9, 0.55, 0.45] }
-          ]
+            {
+              "point_id": "upper_out_conveyor_1.sp_01",
+              "role": "entry",
+              "t": 0.0,
+              "position": [
+                0.3,
+                0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "upper_out_conveyor_1.sp_02",
+              "role": "middle",
+              "t": 0.3333,
+              "position": [
+                0.8333,
+                0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "upper_out_conveyor_1.sp_03",
+              "role": "middle",
+              "t": 0.6667,
+              "position": [
+                1.3667,
+                0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "upper_out_conveyor_1.sp_04",
+              "role": "exit",
+              "t": 1.0,
+              "position": [
+                1.9,
+                0.55,
+                0.45
+              ]
+            }
+          ],
+          "start_process_port": "flow_input",
+          "end_process_port": "flow_output"
         }
       },
       "asset_binding": {
@@ -202,13 +447,34 @@
         "glb_node_index": 173,
         "glb_node_name": "Conveyor(4)",
         "parsed_glb_y_up": {
-          "translation": [-4.1177153587, 0.0, 1.7616292238],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [-1.0429, 0.0, -0.1734]
+          "translation": [
+            -4.1177153587,
+            0.0,
+            1.7616292238
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            -1.0429,
+            0.0,
+            -0.1734
+          ]
         }
       },
-      "semantic_tags": ["output_line", "upper", "backpressure_source"]
+      "semantic_tags": [
+        "output_line",
+        "upper",
+        "backpressure_source"
+      ]
     },
     {
       "instance_id": "lower_out_conveyor_1",
@@ -216,9 +482,21 @@
       "device_type": "conveyor",
       "display_name": "Lower Output Conveyor 1",
       "transform": {
-        "position": [1.1, -0.55, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          1.1,
+          -0.55,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed_mps": 0.2,
@@ -230,22 +508,74 @@
       "runtime_geometry": {
         "transport_path": {
           "coordinate_space": "scene",
-          "source": "manual_placeholder_from_device_local_entry_exit",
+          "source": "manual_placeholder_from_process_ports",
           "needs_calibration": true,
-          "start_interface": "entry",
-          "end_interface": "exit",
-          "start_position": [0.3, -0.55, 0.45],
-          "end_position": [1.9, -0.55, 0.45],
+          "start_position": [
+            0.3,
+            -0.55,
+            0.45
+          ],
+          "end_position": [
+            1.9,
+            -0.55,
+            0.45
+          ],
           "waypoints": [
-            [0.3, -0.55, 0.45],
-            [1.9, -0.55, 0.45]
+            [
+              0.3,
+              -0.55,
+              0.45
+            ],
+            [
+              1.9,
+              -0.55,
+              0.45
+            ]
           ],
           "stop_points": [
-            { "point_id": "lower_out_conveyor_1.sp_01", "role": "entry", "t": 0.0, "position": [0.3, -0.55, 0.45] },
-            { "point_id": "lower_out_conveyor_1.sp_02", "role": "middle", "t": 0.3333, "position": [0.8333, -0.55, 0.45] },
-            { "point_id": "lower_out_conveyor_1.sp_03", "role": "middle", "t": 0.6667, "position": [1.3667, -0.55, 0.45] },
-            { "point_id": "lower_out_conveyor_1.sp_04", "role": "exit", "t": 1.0, "position": [1.9, -0.55, 0.45] }
-          ]
+            {
+              "point_id": "lower_out_conveyor_1.sp_01",
+              "role": "entry",
+              "t": 0.0,
+              "position": [
+                0.3,
+                -0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "lower_out_conveyor_1.sp_02",
+              "role": "middle",
+              "t": 0.3333,
+              "position": [
+                0.8333,
+                -0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "lower_out_conveyor_1.sp_03",
+              "role": "middle",
+              "t": 0.6667,
+              "position": [
+                1.3667,
+                -0.55,
+                0.45
+              ]
+            },
+            {
+              "point_id": "lower_out_conveyor_1.sp_04",
+              "role": "exit",
+              "t": 1.0,
+              "position": [
+                1.9,
+                -0.55,
+                0.45
+              ]
+            }
+          ],
+          "start_process_port": "flow_input",
+          "end_process_port": "flow_output"
         }
       },
       "asset_binding": {
@@ -253,13 +583,34 @@
         "glb_node_index": 138,
         "glb_node_name": "Conveyor(3)",
         "parsed_glb_y_up": {
-          "translation": [-4.1177153587, 0.0, -0.3003917933],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [-1.0429, 0.0, -2.2354]
+          "translation": [
+            -4.1177153587,
+            0.0,
+            -0.3003917933
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            -1.0429,
+            0.0,
+            -2.2354
+          ]
         }
       },
-      "semantic_tags": ["output_line", "lower", "backpressure_source"]
+      "semantic_tags": [
+        "output_line",
+        "lower",
+        "backpressure_source"
+      ]
     },
     {
       "instance_id": "robot_1",
@@ -267,9 +618,21 @@
       "device_type": "robot_arm",
       "display_name": "Robot 1 Upper Sorter",
       "transform": {
-        "position": [0.45, -0.1, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0.45,
+          -0.1,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed": 1.0,
@@ -282,13 +645,33 @@
         "glb_node_index": 485,
         "glb_node_name": "robot(center)(1)",
         "parsed_glb_y_up": {
-          "translation": [-3.0748651028, 0.0, 1.9350036383],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [0.0, 0.0, 0.0]
+          "translation": [
+            -3.0748651028,
+            0.0,
+            1.9350036383
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            0.0,
+            0.0,
+            0.0
+          ]
         }
       },
-      "semantic_tags": ["robot_sorting", "upper"]
+      "semantic_tags": [
+        "robot_sorting",
+        "upper"
+      ]
     },
     {
       "instance_id": "robot_2",
@@ -296,9 +679,21 @@
       "device_type": "robot_arm",
       "display_name": "Robot 2 Lower Sorter",
       "transform": {
-        "position": [0.15, 0.75, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0.15,
+          0.75,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "speed": 1.0,
@@ -311,13 +706,33 @@
         "glb_node_index": 375,
         "glb_node_name": "robot(2)",
         "parsed_glb_y_up": {
-          "translation": [-3.0653684139, 0.0, -0.4881752729],
-          "rotation_quaternion": [0.0, -1.0, 0.0, 0.0000000437],
-          "scale": [0.01, 0.01, 0.01],
-          "world_position": [0.0095, 0.0, -2.4232]
+          "translation": [
+            -3.0653684139,
+            0.0,
+            -0.4881752729
+          ],
+          "rotation_quaternion": [
+            0.0,
+            -1.0,
+            0.0,
+            4.37e-08
+          ],
+          "scale": [
+            0.01,
+            0.01,
+            0.01
+          ],
+          "world_position": [
+            0.0095,
+            0.0,
+            -2.4232
+          ]
         }
       },
-      "semantic_tags": ["robot_sorting", "lower"]
+      "semantic_tags": [
+        "robot_sorting",
+        "lower"
+      ]
     },
     {
       "instance_id": "pallet_1",
@@ -325,9 +740,21 @@
       "device_type": "workpiece_carrier",
       "display_name": "Loaded Pallet 1",
       "transform": {
-        "position": [-2.7, 0.0, 0.0],
-        "rotation_euler": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          -2.7,
+          0.0,
+          0.0
+        ],
+        "rotation_euler": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
       "param_overrides": {
         "slot_count": 12
@@ -337,13 +764,33 @@
         "glb_node_index": 261,
         "glb_node_name": "Euro Pallet [00Mn]",
         "parsed_glb_y_up": {
-          "translation": [-0.0000409796, 0.0, 0.0],
-          "rotation_quaternion": [0.0, 0.0, 0.0, 1.0],
-          "scale": [1.0, 1.0, 1.0],
-          "world_position": [3.2691, 0.2, -1.1967]
+          "translation": [
+            -4.09796e-05,
+            0.0,
+            0.0
+          ],
+          "rotation_quaternion": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "world_position": [
+            3.2691,
+            0.2,
+            -1.1967
+          ]
         }
       },
-      "semantic_tags": ["carrier", "initial_material_container"]
+      "semantic_tags": [
+        "carrier",
+        "initial_material_container"
+      ]
     }
   ],
   "materials": [
@@ -351,85 +798,217 @@
       "material_id": "part_001",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_01",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 213, "glb_node_name": "Lathe Comp 3 [00On]", "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.0077] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 213,
+        "glb_node_name": "Lathe Comp 3 [00On]",
+        "parsed_glb_y_up_world_position": [
+          2.9791,
+          0.35,
+          -1.0077
+        ]
+      }
     },
     {
       "material_id": "part_002",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_02",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 217, "glb_node_name": "Lathe Comp 3 [00Pn]", "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.1967] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 217,
+        "glb_node_name": "Lathe Comp 3 [00Pn]",
+        "parsed_glb_y_up_world_position": [
+          2.9791,
+          0.35,
+          -1.1967
+        ]
+      }
     },
     {
       "material_id": "part_003",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_03",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 221, "glb_node_name": "Lathe Comp 3 [00Qn]", "parsed_glb_y_up_world_position": [2.9791, 0.35, -1.3857] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 221,
+        "glb_node_name": "Lathe Comp 3 [00Qn]",
+        "parsed_glb_y_up_world_position": [
+          2.9791,
+          0.35,
+          -1.3857
+        ]
+      }
     },
     {
       "material_id": "part_004",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_04",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 225, "glb_node_name": "Lathe Comp 3 [00Rn]", "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.0077] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 225,
+        "glb_node_name": "Lathe Comp 3 [00Rn]",
+        "parsed_glb_y_up_world_position": [
+          3.1791,
+          0.35,
+          -1.0077
+        ]
+      }
     },
     {
       "material_id": "part_005",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_05",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 229, "glb_node_name": "Lathe Comp 3 [00Sn]", "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.1967] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 229,
+        "glb_node_name": "Lathe Comp 3 [00Sn]",
+        "parsed_glb_y_up_world_position": [
+          3.1791,
+          0.35,
+          -1.1967
+        ]
+      }
     },
     {
       "material_id": "part_006",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_06",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 233, "glb_node_name": "Lathe Comp 3 [00Tn]", "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.0077] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 233,
+        "glb_node_name": "Lathe Comp 3 [00Tn]",
+        "parsed_glb_y_up_world_position": [
+          3.3691,
+          0.35,
+          -1.0077
+        ]
+      }
     },
     {
       "material_id": "part_007",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_07",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 237, "glb_node_name": "Lathe Comp 3 [00Un]", "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.0077] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 237,
+        "glb_node_name": "Lathe Comp 3 [00Un]",
+        "parsed_glb_y_up_world_position": [
+          3.5591,
+          0.35,
+          -1.0077
+        ]
+      }
     },
     {
       "material_id": "part_008",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_08",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 241, "glb_node_name": "Lathe Comp 3 [00Vn]", "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.1967] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 241,
+        "glb_node_name": "Lathe Comp 3 [00Vn]",
+        "parsed_glb_y_up_world_position": [
+          3.3691,
+          0.35,
+          -1.1967
+        ]
+      }
     },
     {
       "material_id": "part_009",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_09",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 245, "glb_node_name": "Lathe Comp 3 [00Wn]", "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.1967] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 245,
+        "glb_node_name": "Lathe Comp 3 [00Wn]",
+        "parsed_glb_y_up_world_position": [
+          3.5591,
+          0.35,
+          -1.1967
+        ]
+      }
     },
     {
       "material_id": "part_010",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_10",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 249, "glb_node_name": "Lathe Comp 3 [00Xn]", "parsed_glb_y_up_world_position": [3.1791, 0.35, -1.3857] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 249,
+        "glb_node_name": "Lathe Comp 3 [00Xn]",
+        "parsed_glb_y_up_world_position": [
+          3.1791,
+          0.35,
+          -1.3857
+        ]
+      }
     },
     {
       "material_id": "part_011",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_11",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 253, "glb_node_name": "Lathe Comp 3 [00Yn]", "parsed_glb_y_up_world_position": [3.3691, 0.35, -1.3857] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 253,
+        "glb_node_name": "Lathe Comp 3 [00Yn]",
+        "parsed_glb_y_up_world_position": [
+          3.3691,
+          0.35,
+          -1.3857
+        ]
+      }
     },
     {
       "material_id": "part_012",
       "spec_id": "workpiece_1",
       "located_at": "pallet_1.slot_12",
-      "attributes": { "sort_class": "TODO" },
-      "asset_binding": { "asset_path": "frontend/public/test/scene1/1.glb", "glb_node_index": 257, "glb_node_name": "Lathe Comp 3 [00Zn]", "parsed_glb_y_up_world_position": [3.5591, 0.35, -1.3857] }
+      "attributes": {
+        "sort_class": "TODO"
+      },
+      "asset_binding": {
+        "asset_path": "frontend/public/test/scene1/1.glb",
+        "glb_node_index": 257,
+        "glb_node_name": "Lathe Comp 3 [00Zn]",
+        "parsed_glb_y_up_world_position": [
+          3.5591,
+          0.35,
+          -1.3857
+        ]
+      }
     }
   ],
   "process_edges": [
@@ -438,43 +1017,66 @@
       "source": "main_conveyor_1.flow_output",
       "target": "main_conveyor_2.flow_input",
       "edge_type": "material_flow",
-      "material_classes": ["workpiece", "workpiece_carrier"],
+      "material_classes": [
+        "workpiece",
+        "workpiece_carrier"
+      ],
       "priority": 100,
       "conditions": [],
-      "compiled_physical_edges": ["phys_main_1_to_main_2"],
-      "compiled_signal_edges": ["sig_main_1_ready_to_main_2_release"]
+      "compiled_physical_edges": [],
+      "compiled_signal_edges": [
+        "sig_main_1_ready_to_main_2_release"
+      ]
     },
     {
       "edge_id": "proc_main_2_to_robot_1",
       "source": "main_conveyor_2.flow_output",
       "target": "robot_1.flow_input",
       "edge_type": "material_flow",
-      "material_classes": ["workpiece", "workpiece_carrier"],
+      "material_classes": [
+        "workpiece",
+        "workpiece_carrier"
+      ],
       "priority": 100,
-      "conditions": ["robot_1 can reach pallet_1 slots"],
-      "compiled_physical_edges": ["phys_main_2_to_robot_1"],
-      "compiled_signal_edges": ["sig_main_2_ready_to_robot_1"]
+      "conditions": [
+        "robot_1 can reach pallet_1 slots"
+      ],
+      "compiled_physical_edges": [],
+      "compiled_signal_edges": [
+        "sig_main_2_ready_to_robot_1"
+      ]
     },
     {
       "edge_id": "proc_main_2_to_robot_2",
       "source": "main_conveyor_2.flow_output",
       "target": "robot_2.flow_input",
       "edge_type": "material_flow",
-      "material_classes": ["workpiece", "workpiece_carrier"],
+      "material_classes": [
+        "workpiece",
+        "workpiece_carrier"
+      ],
       "priority": 100,
-      "conditions": ["robot_2 can reach pallet_1 slots"],
-      "compiled_physical_edges": ["phys_main_2_to_robot_2"],
-      "compiled_signal_edges": ["sig_main_2_ready_to_robot_2"]
+      "conditions": [
+        "robot_2 can reach pallet_1 slots"
+      ],
+      "compiled_physical_edges": [],
+      "compiled_signal_edges": [
+        "sig_main_2_ready_to_robot_2"
+      ]
     },
     {
       "edge_id": "proc_robot_1_to_upper_out",
       "source": "robot_1.flow_output",
       "target": "upper_out_conveyor_1.flow_input",
       "edge_type": "material_flow",
-      "material_classes": ["workpiece"],
+      "material_classes": [
+        "workpiece"
+      ],
       "priority": 90,
-      "conditions": ["target_conveyor_id == upper_out_conveyor_1"],
-      "compiled_physical_edges": ["phys_robot_1_to_upper_out"],
+      "conditions": [
+        "target_conveyor_id == upper_out_conveyor_1"
+      ],
+      "compiled_physical_edges": [],
       "compiled_signal_edges": []
     },
     {
@@ -482,75 +1084,18 @@
       "source": "robot_2.flow_output",
       "target": "lower_out_conveyor_1.flow_input",
       "edge_type": "material_flow",
-      "material_classes": ["workpiece"],
+      "material_classes": [
+        "workpiece"
+      ],
       "priority": 90,
-      "conditions": ["target_conveyor_id == lower_out_conveyor_1"],
-      "compiled_physical_edges": ["phys_robot_2_to_lower_out"],
+      "conditions": [
+        "target_conveyor_id == lower_out_conveyor_1"
+      ],
+      "compiled_physical_edges": [],
       "compiled_signal_edges": []
     }
   ],
-  "physical_edges": [
-    {
-      "edge_id": "phys_main_1_to_main_2",
-      "source": "main_conveyor_1.exit",
-      "target": "main_conveyor_2.entry",
-      "compiled_from": "proc_main_1_to_main_2",
-      "edge_type": "physical_connection",
-      "connection_method": "agent_suggested",
-      "is_inferred": true,
-      "confidence": 0.8,
-      "compatibility_result": { "status": "not_checked", "matched_fields": [], "missing_fields": [], "message": "Verify after transform/interface calibration." },
-      "snap_result": { "distance_m": null, "angle_deg": null, "within_tolerance": "not_checked", "retain_offset": false }
-    },
-    {
-      "edge_id": "phys_main_2_to_robot_1",
-      "source": "main_conveyor_2.exit",
-      "target": "robot_1.pick_area",
-      "compiled_from": "proc_main_2_to_robot_1",
-      "edge_type": "physical_connection",
-      "connection_method": "agent_suggested",
-      "is_inferred": true,
-      "confidence": 0.8,
-      "compatibility_result": { "status": "not_checked", "matched_fields": [], "missing_fields": [], "message": "Verify robot_1 pick reach and pick_area frame." },
-      "snap_result": { "distance_m": null, "angle_deg": null, "within_tolerance": "not_checked", "retain_offset": false }
-    },
-    {
-      "edge_id": "phys_main_2_to_robot_2",
-      "source": "main_conveyor_2.exit",
-      "target": "robot_2.pick_area",
-      "compiled_from": "proc_main_2_to_robot_2",
-      "edge_type": "physical_connection",
-      "connection_method": "agent_suggested",
-      "is_inferred": true,
-      "confidence": 0.8,
-      "compatibility_result": { "status": "not_checked", "matched_fields": [], "missing_fields": [], "message": "Verify robot_2 pick reach and pick_area frame." },
-      "snap_result": { "distance_m": null, "angle_deg": null, "within_tolerance": "not_checked", "retain_offset": false }
-    },
-    {
-      "edge_id": "phys_robot_1_to_upper_out",
-      "source": "robot_1.place_area",
-      "target": "upper_out_conveyor_1.entry",
-      "compiled_from": "proc_robot_1_to_upper_out",
-      "edge_type": "physical_connection",
-      "connection_method": "agent_suggested",
-      "is_inferred": true,
-      "confidence": 0.8,
-      "compatibility_result": { "status": "not_checked", "matched_fields": [], "missing_fields": [], "message": "Verify robot_1 place reach and upper conveyor entry frame." },
-      "snap_result": { "distance_m": null, "angle_deg": null, "within_tolerance": "not_checked", "retain_offset": false }
-    },
-    {
-      "edge_id": "phys_robot_2_to_lower_out",
-      "source": "robot_2.place_area",
-      "target": "lower_out_conveyor_1.entry",
-      "compiled_from": "proc_robot_2_to_lower_out",
-      "edge_type": "physical_connection",
-      "connection_method": "agent_suggested",
-      "is_inferred": true,
-      "confidence": 0.8,
-      "compatibility_result": { "status": "not_checked", "matched_fields": [], "missing_fields": [], "message": "Verify robot_2 place reach and lower conveyor entry frame." },
-      "snap_result": { "distance_m": null, "angle_deg": null, "within_tolerance": "not_checked", "retain_offset": false }
-    }
-  ],
+  "physical_edges": [],
   "signal_edges": [
     {
       "edge_id": "sig_main_1_ready_to_main_2_release",
@@ -559,7 +1104,9 @@
       "edge_type": "control_signal",
       "delivery": "event",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -573,7 +1120,9 @@
       "edge_type": "control_signal",
       "delivery": "broadcast",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -587,7 +1136,9 @@
       "edge_type": "control_signal",
       "delivery": "broadcast",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -601,7 +1152,9 @@
       "edge_type": "control_signal",
       "delivery": "command",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -614,7 +1167,9 @@
       "edge_type": "control_signal",
       "delivery": "command",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -627,7 +1182,9 @@
       "edge_type": "control_signal",
       "delivery": "command",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -640,7 +1197,9 @@
       "edge_type": "control_signal",
       "delivery": "command",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -653,7 +1212,9 @@
       "edge_type": "control_signal",
       "delivery": "event",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -666,7 +1227,9 @@
       "edge_type": "control_signal",
       "delivery": "event",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -679,7 +1242,9 @@
       "edge_type": "control_signal",
       "delivery": "event",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -692,7 +1257,9 @@
       "edge_type": "control_signal",
       "delivery": "event",
       "trigger": "on_rising_edge",
-      "transform": { "type": "identity" },
+      "transform": {
+        "type": "identity"
+      },
       "timeout_ms": 30000,
       "on_timeout": "raise_observation",
       "enabled": true,
@@ -710,8 +1277,8 @@
         "behavior_id": "transport_to_exit",
         "payload": {
           "carrier_id": "pallet_1",
-          "from": "main_conveyor_1.entry",
-          "to": "main_conveyor_1.exit"
+          "from": "main_conveyor_1.flow_input",
+          "to": "main_conveyor_1.flow_output"
         }
       },
       "note": "runtime.sim_start is a SceneBehaviorGraph event, not a DeviceSpec signal_port. If the current SignalBusRuntime must start this scene without SceneBehaviorGraph, add an explicit conveyor start input signal to DeviceSpec or dispatch this initial behavior directly."

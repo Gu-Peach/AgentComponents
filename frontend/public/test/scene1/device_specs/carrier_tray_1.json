@@ -14,7 +14,8 @@
     "../../../test/1.png"
   ],
   "notes": [
-    "技术名使用 workpiece_carrier，实例名使用 carrier_tray_1。"
+    "Physical interfaces are reserved for carrier model/layout anchors.",
+    "Material load/unload uses process_ports and slot addresses."
   ],
   "device_spec_id": "carrier_tray_1",
   "device_type": "workpiece_carrier",
@@ -33,61 +34,14 @@
   },
   "physical_interfaces": [
     {
-      "interface_id": "load_surface",
-      "kind": "support",
-      "direction": "input",
-      "node_name": "LoadSurface",
-      "material_classes": [
-        "workpiece"
-      ],
+      "interface_id": "bbox_bottom_front_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontLeft",
       "local_frame": {
         "position": [
-          0,
-          0,
-          0.05
-        ],
-        "rotation_euler": [
-          0,
-          0,
-          0
-        ],
-        "forward": [
-          1,
-          0,
-          0
-        ],
-        "up": [
-          0,
-          0,
-          1
-        ]
-      },
-      "snap_tolerance": {
-        "distance_m": 0.02,
-        "angle_deg": 3
-      },
-      "compatibility_fields": [
-        {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece",
-          "match_rule": "intersects"
-        }
-      ]
-    },
-    {
-      "interface_id": "carrier_bottom",
-      "kind": "support",
-      "direction": "bidirectional",
-      "node_name": "CarrierBottom",
-      "material_classes": [
-        "workpiece_carrier"
-      ],
-      "local_frame": {
-        "position": [
-          0,
-          0,
+          -0.4,
+          -0.225,
           -0.05
         ],
         "rotation_euler": [
@@ -96,14 +50,14 @@
           0
         ],
         "forward": [
-          1,
           0,
-          0
+          0,
+          -1
         ],
         "up": [
           0,
-          0,
-          1
+          1,
+          0
         ]
       },
       "snap_tolerance": {
@@ -112,11 +66,134 @@
       },
       "compatibility_fields": [
         {
-          "field_id": "material_class",
-          "type": "material_class",
-          "name": "Material class",
-          "value": "workpiece_carrier",
-          "match_rule": "intersects"
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "carrier_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_front_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomFrontRight",
+      "local_frame": {
+        "position": [
+          0.4,
+          -0.225,
+          -0.05
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "carrier_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_back_left",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackLeft",
+      "local_frame": {
+        "position": [
+          -0.4,
+          0.225,
+          -0.05
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "carrier_mount",
+          "match_rule": "equals"
+        }
+      ]
+    },
+    {
+      "interface_id": "bbox_bottom_back_right",
+      "kind": "layout_mount_anchor",
+      "direction": "none",
+      "node_name": "BboxBottomBackRight",
+      "local_frame": {
+        "position": [
+          0.4,
+          0.225,
+          -0.05
+        ],
+        "rotation_euler": [
+          0,
+          0,
+          0
+        ],
+        "forward": [
+          0,
+          0,
+          -1
+        ],
+        "up": [
+          0,
+          1,
+          0
+        ]
+      },
+      "snap_tolerance": {
+        "distance_m": 0.02,
+        "angle_deg": 3
+      },
+      "compatibility_fields": [
+        {
+          "field_id": "anchor_role",
+          "type": "layout_anchor",
+          "name": "Anchor role",
+          "value": "carrier_mount",
+          "match_rule": "equals"
         }
       ]
     }
@@ -127,7 +204,6 @@
       "direction": "input",
       "label": "Load",
       "role": "flow_input",
-      "bound_physical_interface": "load_surface",
       "local_frame": {
         "position": [
           0,
@@ -155,14 +231,14 @@
       ],
       "bound_signal_ports": [
         "loaded"
-      ]
+      ],
+      "process_frame_role": "load_surface"
     },
     {
       "port_id": "flow_output",
       "direction": "output",
       "label": "Unload",
       "role": "flow_output",
-      "bound_physical_interface": "load_surface",
       "local_frame": {
         "position": [
           0,
@@ -190,7 +266,8 @@
       ],
       "bound_signal_ports": [
         "unloaded"
-      ]
+      ],
+      "process_frame_role": "unload_surface"
     }
   ],
   "signal_ports": [
@@ -222,7 +299,6 @@
   "interface_bindings": [
     {
       "process_port": "flow_input",
-      "physical_interface": "load_surface",
       "binding_id": "bind_flow_input_load_surface",
       "binding_role": "entry",
       "signal_ports": [
@@ -235,7 +311,6 @@
     },
     {
       "process_port": "flow_output",
-      "physical_interface": "load_surface",
       "binding_id": "bind_flow_output_load_surface",
       "binding_role": "exit",
       "signal_ports": [
@@ -251,18 +326,18 @@
     {
       "behavior_id": "carry_material",
       "behavior_type": "passive_carry",
-      "input_physical_interface": "load_surface",
       "output_signals": [
         "loaded"
-      ]
+      ],
+      "input_process_port": "flow_input"
     },
     {
       "behavior_id": "release_material",
       "behavior_type": "passive_release",
-      "output_physical_interface": "load_surface",
       "output_signals": [
         "unloaded"
-      ]
+      ],
+      "output_process_port": "flow_output"
     }
   ],
   "runtime_contract": {

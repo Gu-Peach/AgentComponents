@@ -36,7 +36,7 @@
   ],
   "edge_contract": {
     "process_edges": "流程画布层面的 process_port -> process_port，表达物料或工艺顺序，不表达物理吸附，也不表达控制信号。",
-    "physical_edges": "真实 physical_interface -> physical_interface 之间的连接，表达几何对齐、吸附、挂载或交接位置。",
+    "physical_edges": "真实 physical_interface -> physical_interface 之间的设备/模型连接，表达几何对齐、吸附、挂载或装配关系；不表达物料运输路径。",
     "signal_edges": "设备 signal_port -> signal_port 之间的通讯关系，表达控制、状态、互锁和事件传播。"
   },
   "process_edge_contract": {

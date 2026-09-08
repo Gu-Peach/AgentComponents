@@ -10,7 +10,7 @@
   "notes": [
     "传送带通过 entry/exit 暴露通用流转接口，通过 part_ready/blocked/capacity_available 信号参与调度。",
     "所有传送带默认支持 stop_point_model，Runtime 可根据 entry/exit 坐标和 stop_point_count 生成停留点。",
-    "v0.2 要求 entry/exit 既是 physical interface，也应被 flow_input/flow_output 的 process_port 通过 interface_bindings 绑定。"
+    "v0.3 明确 physical_interfaces 只描述设备/模型连接锚点；传送带物料入口/出口由 process_ports.flow_input / flow_output 及其 local_frame 描述。"
   ],
   "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["conveyor_geometry", "motion_model", "stop_point_model", "queue_policy"],
@@ -48,10 +48,10 @@
       }
     },
     "interface_bindings": {
-      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_fields": ["binding_id", "process_port", "signal_ports", "transport_behaviors"],
       "required_bindings": [
-        { "binding_role": "entry", "physical_interface": "entry", "process_port": "flow_input" },
-        { "binding_role": "exit", "physical_interface": "exit", "process_port": "flow_output" }
+        { "binding_role": "transport_start", "process_port": "flow_input" },
+        { "binding_role": "transport_end", "process_port": "flow_output" }
       ]
     }
   },

@@ -26,11 +26,11 @@
     "type_specific_contract"
   ],
   "field_contract": {
-    "physical_interfaces": "真实空间中的连接、抓取、放置、入料、出料等锚点；包含 local_frame、snap_tolerance 和 compatibility_fields。",
-    "process_ports": "工艺流程画布上的入口/出口/加工/等待/交接端口；可有 local_frame，但不等同于真实物理连接。",
-    "signal_ports": "设备可接收或发出的运行时命令、状态和事件；抽象信号可绑定到 process_port、physical_interface 或不绑定空间对象。",
-    "interface_bindings": "声明 physical_interface、process_port、signal_ports 和 transport_behaviors 的关联关系。",
-    "transport_behaviors": "设备可执行的物料流转行为能力，应引用已定义的 process_ports、physical_interfaces 和 signal_ports。",
+    "physical_interfaces": "设备模型/设备之间的真实连接、装配、吸附或对齐锚点；例如模型包围框底部四点、底座安装点、夹具安装点；不承担物料运输路径语义。",
+    "process_ports": "工艺流程和物料运动发生点；例如传送带起点/终点、机械臂抓取点/放置点、加工/等待/交接位置；可有独立 local_frame。",
+    "signal_ports": "设备可接收或发出的运行时命令、状态和事件；物料/动作相关信号优先绑定到 process_port，也可不绑定空间对象。",
+    "interface_bindings": "声明 process_port、signal_ports 和 transport_behaviors 的关联关系；physical_interface 仅在需要表达设备连接锚点关联时显式填写。",
+    "transport_behaviors": "设备可执行的物料流转行为能力，应引用已定义的 process_ports 和 signal_ports；执行几何来自 process_ports 或实例级 runtime_geometry。",
     "runtime_contract": "FSM、资源、容量、错误策略和运行约束。",
     "type_specific_contract": "设备类型专属的运动、控制、容量或几何语义。"
   },
@@ -69,9 +69,9 @@
     }
   },
   "process_port_contract": {
-    "description": "对标 VC vcFlow / vcConnector / TransportNode frame。用于表达物料或工艺流发生的位置和方向，可绑定真实 physical_interface。",
+    "description": "对标 VC vcFlow / vcConnector / TransportNode frame。用于表达物料或工艺流发生的位置和方向，可拥有独立 local_frame，不要求绑定 physical_interface。",
     "required_fields": ["port_id", "direction", "role"],
-    "recommended_fields": ["label", "local_frame", "accepted_material_types", "capacity", "bound_physical_interface", "bound_signal_ports"],
+    "recommended_fields": ["label", "local_frame", "accepted_material_types", "capacity", "bound_signal_ports"],
     "direction_values": ["input", "output", "bidirectional", "internal"],
     "role_values": ["flow_input", "flow_output", "material_entry", "material_exit", "load_position", "unload_position", "process_position", "buffer_position", "pick_position", "place_position", "storage_cell"],
     "local_frame_contract": "工艺端口可以有独立 local_frame，用于物料生成、进入、离开、加工、等待或机器人 pick/place 位姿；它不是 physical_interface 的替代品。"
@@ -85,17 +85,17 @@
     "edge_trigger_values": ["on_rising_edge", "on_falling_edge", "on_change", "level", "manual"],
     "retention_values": ["latest_value", "event_log", "checkpoint_only"],
     "bound_to_contract": {
-      "description": "信号本身是抽象端口，可绑定到 process_port、physical_interface 或不绑定空间对象。",
+      "description": "信号本身是抽象端口；物料/动作事件优先绑定到 process_port，设备连接/装配状态才可显式绑定到 physical_interface，也可不绑定空间对象。",
       "shape": { "type": "process_port | physical_interface | none", "id": "target_port_or_interface_id_optional" }
     }
   },
   "interface_binding_contract": {
     "description": "绑定关系不创建新接口，只声明同一设备能力下几何、工艺、信号和行为的关联。",
     "required_fields": ["binding_id"],
-    "recommended_fields": ["physical_interface", "process_port", "signal_ports", "transport_behaviors", "binding_role"],
+    "recommended_fields": ["process_port", "signal_ports", "transport_behaviors", "binding_role", "physical_interface_optional"],
     "binding_role_values": ["entry", "exit", "load", "unload", "pick", "place", "process", "storage", "tool_mount", "sensor"],
     "validation_rules": [
-      "binding 引用的 physical_interface 必须存在于 physical_interfaces。",
+      "binding 如显式引用 physical_interface，则该 physical_interface 必须存在于 physical_interfaces。",
       "binding 引用的 process_port 必须存在于 process_ports。",
       "binding 引用的 signal_ports 必须存在于 signal_ports。",
       "signal_ports 可绑定到 process_port 或 physical_interface，但不得要求所有信号都有空间坐标。"

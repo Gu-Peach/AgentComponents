@@ -1,0 +1,56 @@
+stateDiagram-v2
+  [*] --> Idle
+
+  Idle --> LoadContext: user_message / scene_changed / observation
+  LoadContext --> LoadCapabilities: SceneReader / ArtifactReader
+  LoadCapabilities --> BuildOrLoadTopology: DeviceSpecReader / CapabilityIndexer
+
+  BuildOrLoadTopology --> TopologyValid: cached topology valid
+  BuildOrLoadTopology --> RebuildTopology: cache miss or revision mismatch
+  RebuildTopology --> TopologyValid: TopologyBuilder + InterfaceCompiler
+  RebuildTopology --> TopologyNeedsReview: low-confidence inferred edges
+  TopologyNeedsReview --> WaitingForUser: question_set / approval_required
+  WaitingForUser --> BuildOrLoadTopology: user confirms or revises
+
+  TopologyValid --> ClassifyIntent: topology_summary ready
+  ClassifyIntent --> ResolveSlots: structured intent
+
+  ResolveSlots --> SceneQuery: intent = scene_query
+  ResolveSlots --> ParameterFill: intent = parameter_fill
+  ResolveSlots --> TopologyDiagnosis: intent = topology_diagnosis
+  ResolveSlots --> ProcessCompile: intent = process_config
+  ResolveSlots --> BehaviorGraphCompile: intent = simulation_plan
+  ResolveSlots --> RuntimeDiagnosis: intent = runtime_diagnosis
+  ResolveSlots --> ScenarioCompare: intent = scenario_compare
+  ResolveSlots --> RuntimeControl: intent = control
+
+  SceneQuery --> EmitResult: diagnostic_report
+
+  ParameterFill --> ValidateArtifact: ParameterExtractor + ParameterBinder
+  TopologyDiagnosis --> ValidateArtifact: diagnostic_report / edge patch
+  ProcessCompile --> SignalCompile: ProcessEdgePlanner
+  SignalCompile --> BehaviorGraphCompile: SignalRoutePlanner + EventBusBuilder
+  BehaviorGraphCompile --> ValidateArtifact: BehaviorGraphBuilder + PolicyLibrary
+  RuntimeDiagnosis --> ValidateArtifact: TraceAnalyzer + RepairPlanner
+  ScenarioCompare --> ValidateArtifact: ScenarioGenerator + MetricsReader
+  RuntimeControl --> EmitResult: pause / resume / cancel result
+
+  ValidateArtifact --> RepairArtifact: blocking validation error and attempts < 2
+  RepairArtifact --> ValidateArtifact: repaired candidate artifact
+  ValidateArtifact --> WaitingForUser: approval_required or unresolved assumptions
+  ValidateArtifact --> StagePatch: validation passed
+
+  StagePatch --> ApplyPatch: auto-apply allowed
+  StagePatch --> WaitingForUser: destructive or low-confidence patch
+  ApplyPatch --> EmitResult: PatchApplier + AuditLogger
+  EmitResult --> Idle
+
+  RuntimeDiagnosis --> PauseRuntime: repair requires live-state change
+  PauseRuntime --> ApplyPatch: safe point reached
+  ApplyPatch --> ResumeRuntime: repair targets active run
+  ResumeRuntime --> EmitResult
+
+  ValidateArtifact --> Failed: blocking error and attempts exhausted
+  Failed --> EmitResult: explain failure and next action
+
+  Idle --> [*]

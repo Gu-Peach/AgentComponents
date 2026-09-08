@@ -153,7 +153,7 @@ point(t) = entry + t * (exit - entry)
 ]
 ```
 
-`physical_interfaces` 描述物料在三维设备上真实进入和离开的位置，是场景物理连接、运行时物料转移和前端动画定位的重要依据。
+`physical_interfaces` 只描述传送带模型/设备的物理连接锚点，例如底部包围框四点、安装点或装配对齐点。它不描述物料进入、离开或传送路径。
 
 | 字段               | 含义                                                                    |
 | ------------------ | ----------------------------------------------------------------------- |
@@ -190,7 +190,7 @@ point(t) = entry + t * (exit - entry)
 ]
 ```
 
-`process_ports` 是工艺层抽象接口，用于描述设备在工艺流程中的输入和输出关系。它不直接表示三维模型上的位置，而是给场景流程编排和 Agent 规划使用。
+`process_ports` 是工艺层和执行层共同使用的物料点，用于描述设备在工艺流程中的输入、输出、加工、等待和交接位置。传送带的 `flow_input` / `flow_output` 应拥有独立 `local_frame`，供物料吸附、运动和前端动画执行器使用。
 
 | 字段        | 含义                                                      |
 | ----------- | --------------------------------------------------------- |
@@ -283,7 +283,7 @@ point(t) = entry + t * (exit - entry)
 | 字段                 | 含义                          |
 | -------------------- | ----------------------------- |
 | `process_port`       | 工艺流程口 ID。               |
-| `physical_interface` | 与该流程口对应的物理接口 ID。 |
+| `physical_interface` | 可选。仅当该工艺口确实需要关联设备连接锚点时填写；普通物料入口/出口不要求绑定。 |
 
 | 绑定关系              | 含义                                               |
 | --------------------- | -------------------------------------------------- |
@@ -297,22 +297,22 @@ point(t) = entry + t * (exit - entry)
   {
     "behavior_id": "accept_material",
     "behavior_type": "material_transfer",
-    "input_physical_interface": "entry",
+    "input_process_port": "flow_input",
     "output_signals": ["stop_point_occupied"]
   },
   {
     "behavior_id": "advance_to_next_stop_point",
     "behavior_type": "stop_point_buffered_transport",
-    "input_physical_interface": "entry",
-    "output_physical_interface": "exit",
+    "input_process_port": "flow_input",
+    "output_process_port": "flow_output",
     "default_algorithm": "linear_stop_point_motion",
     "output_signals": ["stop_point_occupied", "stop_point_released"]
   },
   {
     "behavior_id": "transport_to_exit",
     "behavior_type": "stop_point_buffered_transport",
-    "input_physical_interface": "entry",
-    "output_physical_interface": "exit",
+    "input_process_port": "flow_input",
+    "output_process_port": "flow_output",
     "default_algorithm": "linear_stop_point_motion",
     "output_signals": ["part_ready", "done", "stop_point_released"]
   },
@@ -320,7 +320,7 @@ point(t) = entry + t * (exit - entry)
     "behavior_id": "release_material",
     "behavior_type": "handoff",
     "input_signals": ["release_waiting_material"],
-    "output_physical_interface": "exit"
+    "output_process_port": "flow_output"
   }
 ]
 ```
@@ -331,8 +331,8 @@ point(t) = entry + t * (exit - entry)
 | --------------------------- | ----------------------------------------------------------- |
 | `behavior_id`               | 行为 ID，用于 SceneBehaviorGraph 和 Runtime 引用。 |
 | `behavior_type`             | 行为类型，用于运行时选择执行逻辑。                          |
-| `input_physical_interface`  | 行为读取物料的输入物理接口。                                |
-| `output_physical_interface` | 行为输出物料的物理接口。                                    |
+| `input_process_port`        | 行为读取物料的输入工艺点。                                  |
+| `output_process_port`       | 行为输出物料的输出工艺点。                                  |
 | `default_algorithm`         | 默认执行算法名称。传送带停留点输送使用 `linear_stop_point_motion`。 |
 | `input_signals`             | 触发该行为所需的输入信号。                                  |
 | `output_signals`            | 行为完成或到达关键状态时输出的信号。                        |
@@ -493,9 +493,9 @@ point(t) = entry + t * (exit - entry)
 传送带模板中的字段会在运行链路中协同使用。
 
 ```text
-process_ports        定义工艺层如何连接传送带
-interface_bindings   将工艺流程口映射到真实 entry / exit
-physical_interfaces  定义物料实际进出位置
+process_ports        定义物料在传送带上的入口、出口和运动点
+interface_bindings   将工艺点、信号和行为能力绑定起来
+physical_interfaces  定义设备模型连接/装配锚点，不定义物料路径
 transport_behaviors  定义设备能执行哪些输送行为
 runtime_contract     定义运行状态、资源占用、容量和异常策略
 type_specific_contract.motion_model 定义物料如何运动

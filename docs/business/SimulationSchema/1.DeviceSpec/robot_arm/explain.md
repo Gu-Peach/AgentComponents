@@ -66,23 +66,22 @@
 
 ## 7. 物理接口 `physical_interfaces`
 
-`physical_interfaces` 描述机械臂与物料发生真实交互的位置或工具点。
+`physical_interfaces` 只描述机械臂模型/设备的物理连接锚点，例如底座安装点、包围框底部锚点或工具挂载连接点。抓取点、放置点不属于物理接口，而属于带坐标的工艺接口。
 
 | 字段 | 含义 |
 | --- | --- |
 | `interface_id` | 物理接口 ID。 |
-| `kind` | 接口类型；`material` 表示物料交接，`tool` 表示工具中心点。 |
-| `direction` | 接口方向；`input` 入料，`output` 出料，`bidirectional` 双向。 |
+| `kind` | 接口类型；例如 `layout_mount_anchor`、`base_mount_anchor`、`tool_mount_anchor`。 |
+| `direction` | 接口方向；普通装配/布局锚点可使用 `none`。 |
 | `node_name` | GLB 模型中的锚点节点名。 |
-| `material_classes` | 支持交互的物料类型。 |
+| `material_classes` | 仅在物理连接确实需要兼容性校验时使用；不用于描述抓取/放置物料流。 |
 | `local_position` | 可选局部坐标，用于定位接口。 |
 | `local_forward` | 可选局部朝向，用于判断抓取或放置方向。 |
 
 | 接口 | 含义 |
 | --- | --- |
-| `pick_area` | 抓取区域，作为物料输入位置。 |
-| `place_area` | 放置区域，作为物料输出位置。 |
-| `tool_center_point` | 工具中心点 / TCP，描述夹爪或末端执行器的位置。 |
+| `base_mount_*` | 底座/包围框连接锚点，用于模型对齐、吸附或装配。 |
+| `tool_mount` | 可选工具安装连接点；TCP 仍建议放在 tooling/运动学配置中。 |
 
 ## 8. 工艺流程口 `process_ports`
 
@@ -94,8 +93,8 @@
 
 | 流程口 | 含义 |
 | --- | --- |
-| `flow_input` | 机械臂抓取侧的工艺输入。 |
-| `flow_output` | 机械臂放置侧的工艺输出。 |
+| `flow_input` | 机械臂抓取侧的工艺输入点，可带 `local_frame` 表示 pick pose。 |
+| `flow_output` | 机械臂放置侧的工艺输出点，可带 `local_frame` 表示 place pose。 |
 
 ## 9. 信号端口 `signal_ports`
 
@@ -110,8 +109,8 @@
 
 | 绑定关系 | 含义 |
 | --- | --- |
-| `flow_input -> pick_area` | 工艺输入映射到真实抓取区域。 |
-| `flow_output -> place_area` | 工艺输出映射到真实放置区域。 |
+| `flow_input -> start_pick` | 抓取工艺点绑定启动/状态信号和 `pick_and_place` 行为。 |
+| `flow_output -> done` | 放置工艺点绑定完成/状态信号和 `pick_and_place` 行为。 |
 
 ## 11. 输送行为 `transport_behaviors`
 
@@ -121,8 +120,8 @@
 | --- | --- |
 | `behavior_id` | 行为 ID；模板中核心行为为 `pick_and_place`。 |
 | `behavior_type` | 行为类型；`material_transfer` 表示物料转移。 |
-| `input_physical_interface` | 行为输入接口，即抓取位置。 |
-| `output_physical_interface` | 行为输出接口，即放置位置。 |
+| `input_process_port` | 行为输入工艺点，即抓取位置。 |
+| `output_process_port` | 行为输出工艺点，即放置位置。 |
 | `default_algorithm` | 默认执行算法；机械臂为 `robot_pick_place`。 |
 | `input_signals` | 启动行为所需信号。 |
 | `output_signals` | 行为过程中或完成后输出的信号。 |
@@ -182,11 +181,10 @@
 ## 14. 字段协作关系
 
 ```text
-process_ports / interface_bindings  定义工艺输入输出如何映射到抓取/放置位置
-physical_interfaces                 定义真实抓取区域、放置区域和 TCP
+process_ports / interface_bindings  定义抓取/放置工艺点如何绑定信号和行为
+physical_interfaces                 定义底座/模型/工具连接锚点，不定义抓取放置路径
 signal_ports                        定义 start_pick、busy、done、error 通讯
 transport_behaviors                 定义 pick_and_place 行为
 runtime_contract.resources          保证机械臂和夹爪互斥占用
 type_specific_contract.urdf         支撑关节级驱动和运动仿真
 ```
-

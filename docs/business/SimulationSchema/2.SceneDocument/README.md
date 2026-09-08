@@ -43,7 +43,7 @@
 | `instances` | 当前场景引入的设备实例列表。 |
 | `materials` | 当前场景中的物料实例列表。 |
 | `process_edges` | 工艺流程关系，描述 `flow_output -> flow_input`。 |
-| `physical_edges` | 真实物理接口连接关系，通常由流程边和接口绑定编译得到。 |
+| `physical_edges` | 真实物理接口连接关系，用于设备/模型几何对齐、吸附、挂载或装配；不表示物料流。 |
 | `signal_edges` | 设备实例之间的信号连接关系。 |
 | `runtime_config` | 场景运行配置，例如死锁检测、默认信号超时。 |
 | `derived_artifacts` | 推荐字段，记录 topology_graph 等派生产物引用和编译状态。 |

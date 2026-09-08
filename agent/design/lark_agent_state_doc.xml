@@ -1,0 +1,88 @@
+<title>Agent 自动代理状态图设计</title>
+
+<h1 seq="auto">设计定位</h1>
+<p>本文用于评审 Agent 如何替代 Visual Components 中依赖工程师手工完成的建模、连线、参数配置、脚本编排、校验排错和调参工作。</p>
+<p>当前系统已具备事件行为运行总线，Agent 不承担每帧控制或普通信号转发，而承担离线建模、结构化编译、校验、解释、修复和异常重规划。</p>
+
+<h1 seq="auto">主状态图</h1>
+<p>状态图描述从用户请求、场景变更或 runtime observation 进入 Agent 后，如何读取事实、构建拓扑、解析意图、生成 artifact、校验修复、写入数据库，并在运行异常时回到诊断修复链路。</p>
+<whiteboard type="mermaid" path="@./agent/design/agent_state_graph.mmd"></whiteboard>
+
+<h1 seq="auto">状态职责</h1>
+<table>
+  <colgroup><col width="180"/><col width="290"/><col width="300"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>状态</p></th>
+      <th background-color="light-gray"><p>职责</p></th>
+      <th background-color="light-gray"><p>关键工具</p></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><p>LoadContext</p></td>
+      <td><p>读取场景事实、revision、active artifacts 和可选运行快照。</p></td>
+      <td><p>`SceneReader`、`ArtifactReader`、`RevisionResolver`</p></td>
+    </tr>
+    <tr>
+      <td><p>LoadCapabilities</p></td>
+      <td><p>把 DeviceSpec 编译为设备行为、端口、资源、容量和默认参数索引。</p></td>
+      <td><p>`DeviceSpecReader`、`CapabilityIndexer`</p></td>
+    </tr>
+    <tr>
+      <td><p>BuildOrLoadTopology</p></td>
+      <td><p>读取或重建 physical/process/signal/transport 图，输出拓扑摘要和 warning。</p></td>
+      <td><p>`TopologyReader`、`InterfaceCompiler`、`TopologyBuilder`</p></td>
+    </tr>
+    <tr>
+      <td><p>ClassifyIntent / ResolveSlots</p></td>
+      <td><p>解析用户目标，并把“左侧传送带”“A2 格”“空闲机器人”等表达绑定到实例和端口。</p></td>
+      <td><p>`IntentSchemaTool`、`SlotResolver`、LLM structured output</p></td>
+    </tr>
+    <tr>
+      <td><p>Compile Subgraphs</p></td>
+      <td><p>按 intent 分支生成参数绑定、工艺流程、信号握手、行为图、诊断或方案比较 artifact。</p></td>
+      <td><p>`ProcessEdgePlanner`、`SignalRoutePlanner`、`BehaviorGraphBuilder`、`TraceAnalyzer`</p></td>
+    </tr>
+    <tr>
+      <td><p>ValidateArtifact</p></td>
+      <td><p>执行 schema、引用、端口、拓扑、行为闭环、资源容量和 runtime preflight 校验。</p></td>
+      <td><p>`SchemaValidator`、`ReferenceValidator`、`PortCompatibilityValidator`、`RuntimePreflightValidator`</p></td>
+    </tr>
+    <tr>
+      <td><p>StagePatch / ApplyPatch</p></td>
+      <td><p>通过 patch envelope 暂存或事务写入数据库事实，保留审计与回滚信息。</p></td>
+      <td><p>`PatchStager`、`PatchApplier`、`AuditLogger`</p></td>
+    </tr>
+  </tbody>
+</table>
+
+<h1 seq="auto">实现阶段</h1>
+<table>
+  <colgroup><col width="120"/><col width="300"/><col width="350"/></colgroup>
+  <thead>
+    <tr>
+      <th background-color="light-gray"><p>阶段</p></th>
+      <th background-color="light-gray"><p>目标</p></th>
+      <th background-color="light-gray"><p>验收口径</p></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><p>Phase 0</p></td><td><p>冻结设计基线与 artifact 契约。</p></td><td><p>所有候选 artifact 有统一 schema 和审计事件。</p></td></tr>
+    <tr><td><p>Phase 1</p></td><td><p>实现 Agent 数据访问和 LangGraph 骨架。</p></td><td><p>能读取 scene/spec/topology 并输出只读诊断。</p></td></tr>
+    <tr><td><p>Phase 2</p></td><td><p>实现确定性接口编译、拓扑构建和 Guardian 校验。</p></td><td><p>错引用、错端口、不可达路径和行为不闭环能被捕获。</p></td></tr>
+    <tr><td><p>Phase 3</p></td><td><p>实现自然语言到 SceneBehaviorGraph 的 MVP。</p></td><td><p>Runtime 不依赖 LLM 即可消费生成图执行基础行为。</p></td></tr>
+    <tr><td><p>Phase 4</p></td><td><p>实现只有位置信息时的拓扑自动补全。</p></td><td><p>高置信候选可暂存，低置信候选进入用户确认。</p></td></tr>
+    <tr><td><p>Phase 5</p></td><td><p>实现文档参数抽取与字段绑定。</p></td><td><p>参数有来源、单位、confidence 和目标字段。</p></td></tr>
+    <tr><td><p>Phase 6</p></td><td><p>实现 runtime observation 诊断和修复闭环。</p></td><td><p>缺路由、死锁、超时、资源冲突能生成证据化诊断和 patch。</p></td></tr>
+    <tr><td><p>Phase 7+</p></td><td><p>实现方案比较、模板记忆、外部联动和论文实验。</p></td><td><p>能证明相比 VC 人工配置减少步骤、错误率和诊断成本。</p></td></tr>
+  </tbody>
+</table>
+
+<h1 seq="auto">关键约束</h1>
+<ul>
+  <li>LLM 不能直接写数据库，所有写入必须经过 patch envelope、validator、revision check 和 audit log。</li>
+  <li>拓扑、可达性、端口兼容、资源容量和环路检测由确定性工具完成。</li>
+  <li>普通 signal event 不触发 Agent；只有用户请求、场景变更分析或 runtime observation 才进入 Agent。</li>
+  <li>文档解析可使用开源库，但参数绑定、语义定位、写库和审计必须自研封装。</li>
+</ul>

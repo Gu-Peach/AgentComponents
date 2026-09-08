@@ -9,7 +9,7 @@
   "references": ["../common_device_spec.schema.json", "../schema.json", "robot_arm_1.json"],
   "notes": [
     "机械臂运动特性保留 urdf.joints 与 trajectoryConfig 格式。",
-    "v0.2 将 pick/place/TCP 真实交互点、flow_input/flow_output 工艺端口、start/busy/done 信号分层定义。"
+    "v0.3 明确 pick/place 是带坐标的工艺接口；physical_interfaces 只保留机械臂底座/模型连接锚点，TCP 放在 tooling/运动配置中。"
   ],
   "extends": "common_device_spec_schema_v0_2",
   "required_type_specific_fields": ["rootNodeName", "urdf", "trajectoryConfig"],
@@ -17,10 +17,10 @@
   "required_signals": ["start_pick", "pause_pick", "resume_pick", "busy", "done", "error"],
   "vc_aligned_port_requirements": {
     "physical_interfaces": {
-      "required_interface_ids": ["pick_area", "place_area", "tool_center_point"],
+      "required_interface_roles": ["layout_mount_anchor", "base_mount_anchor"],
       "required_fields": ["interface_id", "kind", "direction", "local_frame"],
       "recommended_fields": ["material_classes", "snap_tolerance", "compatibility_fields", "connection_cardinality"],
-      "tool_interface_note": "tool_center_point 可作为 VC tool/mount interface 类似物，用于抓取、工具挂载或检测体定位。"
+      "tool_interface_note": "tool_center_point 不再作为物料流 physical_interface；应放入 type_specific_contract.tooling 或运动学配置。"
     },
     "process_ports": {
       "required_port_ids": ["flow_input", "flow_output"],
@@ -40,10 +40,10 @@
       }
     },
     "interface_bindings": {
-      "required_fields": ["binding_id", "physical_interface", "process_port", "signal_ports", "transport_behaviors"],
+      "required_fields": ["binding_id", "process_port", "signal_ports", "transport_behaviors"],
       "required_bindings": [
-        { "binding_role": "pick", "physical_interface": "pick_area", "process_port": "flow_input" },
-        { "binding_role": "place", "physical_interface": "place_area", "process_port": "flow_output" }
+        { "binding_role": "pick", "process_port": "flow_input" },
+        { "binding_role": "place", "process_port": "flow_output" }
       ]
     }
   }

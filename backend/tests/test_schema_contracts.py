@@ -101,6 +101,9 @@ def assert_device_spec_contract(spec: dict[str, Any]) -> None:
         for key in ["input_physical_interface", "output_physical_interface"]:
             if behavior.get(key):
                 assert behavior[key] in physical_ids
+        for key in ["input_process_port", "output_process_port"]:
+            if behavior.get(key):
+                assert behavior[key] in process_ids
         for key in ["input_signals", "output_signals", "control_signals"]:
             for signal_id in behavior.get(key, []):
                 assert signal_id in signal_ids

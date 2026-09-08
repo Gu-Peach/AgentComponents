@@ -63,13 +63,14 @@ def validate_physical_edge(ctx: dict[str, Any], source: str, target: str) -> lis
     try:
         _, _, source_port = resolve_port(ctx, source, "physical_interfaces")
         _, _, target_port = resolve_port(ctx, target, "physical_interfaces")
-        if source_port.get("direction") not in {"output", "bidirectional"}:
-            issues.append({"severity": "error", "code": "PHYSICAL_SOURCE_DIRECTION", "message": "Physical edge source must be output/bidirectional."})
-        if target_port.get("direction") not in {"input", "bidirectional"}:
-            issues.append({"severity": "error", "code": "PHYSICAL_TARGET_DIRECTION", "message": "Physical edge target must be input/bidirectional."})
+        if source_port.get("direction") not in {"output", "bidirectional", "none"}:
+            issues.append({"severity": "error", "code": "PHYSICAL_SOURCE_DIRECTION", "message": "Physical edge source must be output/bidirectional/none."})
+        if target_port.get("direction") not in {"input", "bidirectional", "none"}:
+            issues.append({"severity": "error", "code": "PHYSICAL_TARGET_DIRECTION", "message": "Physical edge target must be input/bidirectional/none."})
         source_classes = set(source_port.get("material_classes", []))
         target_classes = set(target_port.get("material_classes", []))
-        if source_classes and target_classes and source_classes.isdisjoint(target_classes):
+        anchor_directions = {source_port.get("direction"), target_port.get("direction")}
+        if "none" not in anchor_directions and source_classes and target_classes and source_classes.isdisjoint(target_classes):
             issues.append({"severity": "error", "code": "MATERIAL_CLASS_MISMATCH", "message": "Physical edge material classes are incompatible."})
     except ValueError as exc:
         issues.append({"severity": "error", "code": "INVALID_PHYSICAL_ENDPOINT", "message": str(exc)})
