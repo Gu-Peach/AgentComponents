@@ -3,7 +3,10 @@
 import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls } from "@react-three/drei";
 import { Box, Eye, MousePointer2 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { ACESFilmicToneMapping, PMREMGenerator, SRGBColorSpace } from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { useThree } from "@react-three/fiber";
 import { RuntimeEventBridge } from "@/components/scene/RuntimeEventBridge";
 import { SceneGlbLayer } from "@/components/scene/SceneGlbLayer";
 import { SceneRuntimeBootstrap } from "@/components/scene/SceneRuntimeBootstrap";
@@ -18,10 +21,11 @@ function SceneContent() {
 
   return (
     <>
+      <SceneEnvironment />
       <color attach="background" args={["#cfd2d5"]} />
-      <ambientLight intensity={0.62} />
-      <directionalLight castShadow position={[5, 8, 5]} intensity={1.35} shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
-      <hemisphereLight args={["#e8f2ff", "#5a5d61", 0.55]} />
+      <ambientLight intensity={0.86} />
+      <directionalLight castShadow position={[5, 8, 5]} intensity={1.2} shadow-mapSize-width={2048} shadow-mapSize-height={2048} />
+      <hemisphereLight args={["#f3f7ff", "#6b6d70", 0.75]} />
       <Grid args={[20, 20]} cellSize={0.5} cellThickness={0.6} sectionSize={2} sectionThickness={1.2} fadeDistance={28} fadeStrength={1.2} position={[0, -0.01, 0]} />
       <axesHelper args={[1.8]} />
 
@@ -37,6 +41,32 @@ function SceneContent() {
       <RuntimeCountBeacon count={objectCount} />
     </>
   );
+}
+
+function SceneEnvironment() {
+  const { gl, scene } = useThree();
+
+  useEffect(() => {
+    gl.outputColorSpace = SRGBColorSpace;
+    gl.toneMapping = ACESFilmicToneMapping;
+    gl.toneMappingExposure = 1.15;
+
+    const pmrem = new PMREMGenerator(gl);
+    const environmentScene = new RoomEnvironment();
+    const environmentMap = pmrem.fromScene(environmentScene, 0.04).texture;
+    const previousEnvironment = scene.environment;
+
+    scene.environment = environmentMap;
+
+    return () => {
+      scene.environment = previousEnvironment;
+      environmentMap.dispose();
+      environmentScene.dispose();
+      pmrem.dispose();
+    };
+  }, [gl, scene]);
+
+  return null;
 }
 
 function RuntimeCountBeacon({ count }: { count: number }) {

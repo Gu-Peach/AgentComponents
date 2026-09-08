@@ -49,6 +49,7 @@ class SimulationService:
             runtime_snapshot=snapshot,
         )
         self.simulations.add_run(run)
+        self.db.flush()
         self._enqueue_startup_behavior(run, snapshot, scene.current_document)
         run.runtime_snapshot = snapshot
         self.db.commit()
@@ -143,6 +144,8 @@ class SimulationService:
         completion_signal_results: list[dict[str, Any]] = []
         process_handoff_tasks: list[dict[str, Any]] = []
         process_handoff_frontend_events: list[dict[str, Any]] = []
+        robot_followup_tasks: list[dict[str, Any]] = []
+        robot_followup_frontend_events: list[dict[str, Any]] = []
         if payload.status == "done" and result.get("status") not in {"not_found", "already_completed"}:
             if self._should_emit_completion_signals(snapshot, result):
                 completion_signal_results = self._emit_completion_signals(run, result, payload)
@@ -158,6 +161,12 @@ class SimulationService:
                 process_handoff_frontend_events = handoff["frontend_events"]
                 self.runtime_store.put_snapshot(run_id, snapshot, payload.ttl_seconds)
                 run.runtime_snapshot = snapshot
+            robot_followup = self._enqueue_next_robot_pick_if_available(run, snapshot, result, payload)
+            robot_followup_tasks = robot_followup["device_tasks"]
+            robot_followup_frontend_events = robot_followup["frontend_events"]
+            if robot_followup_tasks:
+                self.runtime_store.put_snapshot(run_id, snapshot, payload.ttl_seconds)
+                run.runtime_snapshot = snapshot
         self.db.commit()
         return {
             "run_id": run_id,
@@ -169,6 +178,8 @@ class SimulationService:
             "completion_signal_results": completion_signal_results,
             "process_handoff_tasks": process_handoff_tasks,
             "process_handoff_frontend_events": process_handoff_frontend_events,
+            "robot_followup_tasks": robot_followup_tasks,
+            "robot_followup_frontend_events": robot_followup_frontend_events,
             "snapshot": snapshot,
         }
 
@@ -317,11 +328,21 @@ class SimulationService:
             if not target_behavior:
                 continue
 
-            if not source_exit_released:
+            if target_instance.get("device_type") != "robot_arm" and not source_exit_released:
                 self._release_completed_conveyor_exit_for_handoff(snapshot, completed, request)
                 source_exit_released = True
 
             task_payload = self._process_handoff_payload(completed, request, edge, target_process_port)
+            if target_instance.get("device_type") == "robot_arm":
+                claimed = self._claim_next_workpiece(snapshot, target_instance_id)
+                if not claimed:
+                    continue
+                task_payload.update(claimed)
+                task_payload["subject_id"] = claimed["material_id"]
+                task_payload["source_carrier_id"] = task_payload.pop("carrier_id", None) or task_payload.get("source_carrier_id")
+                target_conveyor_id = self._target_conveyor_for_robot(scene.current_document, target_instance_id)
+                if target_conveyor_id:
+                    task_payload["target_conveyor_id"] = target_conveyor_id
             task_payload = DeviceRuntime._payload_with_instance_runtime_context(task_payload, target_instance)
             task_payload = ActionExecutor({}, snapshot).prepare_behavior_payload(target_instance_id, target_behavior.get("behavior_id"), task_payload)
             completion_events = completion_result.get("events") or [{}]
@@ -357,6 +378,57 @@ class SimulationService:
             if frontend_event:
                 frontend_events.append(frontend_event)
         return {"device_tasks": created_tasks, "frontend_events": frontend_events}
+
+    def _enqueue_next_robot_pick_if_available(
+        self,
+        run: models.SimulationRun,
+        snapshot: dict[str, Any],
+        completion_result: dict[str, Any],
+        request: ActionCompleteRequest,
+    ) -> dict[str, list[dict[str, Any]]]:
+        completed = self._completed_runtime_item(completion_result)
+        if not completed or completed.get("behavior_id") != "pick_and_place" or request.status != "done":
+            return {"device_tasks": [], "frontend_events": []}
+        robot_id = completed.get("instance_id")
+        if not robot_id:
+            return {"device_tasks": [], "frontend_events": []}
+
+        scene = self.scenes.get(run.scene_id)
+        if not scene:
+            raise NotFoundError("Scene", run.scene_id)
+        robot = self._find_scene_instance(scene.current_document, robot_id)
+        if not robot or robot.get("device_type") != "robot_arm" or not self._behavior_definition(robot, "pick_and_place"):
+            return {"device_tasks": [], "frontend_events": []}
+        if snapshot.setdefault("device_states", {}).get(robot_id) not in {None, "idle"}:
+            return {"device_tasks": [], "frontend_events": []}
+
+        claimed = self._claim_next_workpiece(snapshot, robot_id)
+        if not claimed:
+            return {"device_tasks": [], "frontend_events": []}
+
+        task_payload: dict[str, Any] = {
+            **claimed,
+            "subject_id": claimed["material_id"],
+            "source_carrier_id": completed.get("payload", {}).get("source_carrier_id") or completed.get("payload", {}).get("carrier_id") or "pallet_1",
+        }
+        target_conveyor_id = self._target_conveyor_for_robot(scene.current_document, robot_id)
+        if target_conveyor_id:
+            task_payload["target_conveyor_id"] = target_conveyor_id
+        created = self._enqueue_runtime_followup_task(
+            run,
+            scene.current_document,
+            snapshot,
+            robot_id,
+            "pick_and_place",
+            task_payload,
+            request,
+            trigger_signal="robot.pick_done",
+            route_id="runtime.robot_claim_next_workpiece",
+            created_by_event_id=None,
+        )
+        if not created:
+            return {"device_tasks": [], "frontend_events": []}
+        return {"device_tasks": [created["task"]], "frontend_events": [created["frontend_event"]] if created.get("frontend_event") else []}
 
     def _behavior_definition(self, instance: dict[str, Any], behavior_id: str) -> dict[str, Any] | None:
         spec = self.device_specs.get(instance.get("spec_id", ""))
@@ -418,6 +490,17 @@ class SimulationService:
         target_process_port: str,
     ) -> dict[str, Any]:
         payload = SimulationService._strip_runtime_execution_fields(completed.get("payload", {}))
+        for key in [
+            "conveyor_id",
+            "point_id",
+            "from_point_id",
+            "from_stop_point_id",
+            "to_point_id",
+            "to_stop_point_id",
+            "target_stop_point_id",
+            "transport_goal_behavior_id",
+        ]:
+            payload.pop(key, None)
         payload.update(
             {
                 "source_process_edge": edge.get("edge_id"),
@@ -433,6 +516,44 @@ class SimulationService:
             }
         )
         return payload
+
+    @staticmethod
+    def _claim_next_workpiece(snapshot: dict[str, Any], robot_id: str) -> dict[str, Any] | None:
+        remaining = snapshot.setdefault("workpiece_pool", {}).setdefault("remaining_parts", {})
+        initial_items = list(remaining.setdefault("initial_items", []))
+        claimed = remaining.setdefault("claimed", {})
+        completed = set(remaining.setdefault("completed", []))
+        for material_id in initial_items:
+            if material_id in claimed or material_id in completed:
+                continue
+            source_slot = SimulationService._source_slot_for_material(snapshot, material_id)
+            claimed[material_id] = robot_id
+            snapshot.setdefault("material_claims", {})[material_id] = {"claimed_by": robot_id, "source_slot": source_slot}
+            return {"material_id": material_id, "source_slot": source_slot}
+        return None
+
+    @staticmethod
+    def _source_slot_for_material(snapshot: dict[str, Any], material_id: str) -> str | None:
+        location = snapshot.setdefault("material_locations", {}).get(material_id)
+        if isinstance(location, str) and location:
+            return location
+        if "_" not in material_id:
+            return None
+        try:
+            return f"pallet_1.slot_{int(material_id.rsplit('_', 1)[-1]):02d}"
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _target_conveyor_for_robot(scene_doc: dict[str, Any], robot_id: str) -> str | None:
+        source_ref = f"{robot_id}.flow_output"
+        for edge in scene_doc.get("process_edges", []):
+            if edge.get("source") != source_ref:
+                continue
+            parsed = SimulationService._parse_ref(edge.get("target"))
+            if parsed:
+                return parsed[0]
+        return None
 
     @staticmethod
     def _strip_runtime_execution_fields(payload: dict[str, Any]) -> dict[str, Any]:
@@ -931,10 +1052,23 @@ class SimulationService:
             "device_states": {instance.get("instance_id"): "idle" for instance in document.get("instances", [])},
             "device_fsm_states": {instance.get("instance_id"): "idle" for instance in document.get("instances", [])},
             "material_locations": {item.get("material_id"): item.get("located_at") for item in document.get("materials", [])},
+            "workpiece_pool": SimulationService._initial_workpiece_pool(document),
+            "material_claims": {},
             "resource_locks": {},
             "active_actions": {},
             **conveyor_runtime,
         }
+
+    @staticmethod
+    def _initial_workpiece_pool(document: dict[str, Any]) -> dict[str, Any]:
+        initial_items = sorted(
+            material.get("material_id")
+            for material in document.get("materials", [])
+            if isinstance(material.get("material_id"), str)
+            and isinstance(material.get("located_at"), str)
+            and material.get("located_at", "").startswith("pallet_1.slot_")
+        )
+        return {"remaining_parts": {"initial_items": initial_items, "claimed": {}, "completed": []}}
 
     @staticmethod
     def _initial_conveyor_runtime_state(document: dict[str, Any]) -> dict[str, Any]:

@@ -37,7 +37,7 @@ describe("glb runtime bindings", () => {
   it("drives a bound GLB subject node for conveyor actions", () => {
     const scene = new Object3D();
     const palletNode = new Object3D();
-    palletNode.name = "Euro Pallet [00Mn]";
+    palletNode.name = "Euro_Pallet_00Mn";
     scene.add(palletNode);
 
     const bindings = buildGlbRuntimeBindings({
@@ -66,6 +66,37 @@ describe("glb runtime bindings", () => {
     expect(runtime).toBeTruthy();
     expect(palletNode.position.toArray()).toEqual([1, 0.25, -0.5]);
     expect(result?.subjectTransform?.transform.position).toEqual([1, 0.25, -0.5]);
+  });
+
+  it("resolves raw GLB node names against Three sanitized node names", () => {
+    const scene = new Object3D();
+    const partNode = new Object3D();
+    partNode.name = "Lathe_Comp_3_00On";
+    scene.add(partNode);
+
+    const bindings = buildGlbRuntimeBindings({
+      source: { asset_path: "frontend/public/test/scene1/1.glb" },
+      materials: [{ material_id: "part_001", asset_binding: { glb_node_name: "Lathe Comp 3 [00On]" } }],
+    });
+    const action: RuntimeAnimationAction = {
+      actionId: "task_1",
+      instanceId: "main_conveyor_1",
+      behaviorId: "transport_to_exit",
+      kind: "conveyor_linear",
+      subjectId: "part_001",
+      waypoints: [{ x: 0, y: 0, z: 0 }, { x: 2, y: 0.5, z: -1 }],
+      duration: 2,
+      elapsed: 0,
+      startedAt: 0,
+      payload: { material_id: "part_001" },
+      status: "running",
+    };
+
+    const runtime = createGlbActionRuntime(action, scene, bindings);
+    runtime?.update(0.5);
+
+    expect(runtime).toBeTruthy();
+    expect(partNode.position.toArray()).toEqual([1, 0.25, -0.5]);
   });
 
   it("only marks objects renderable when their GLB nodes exist", () => {

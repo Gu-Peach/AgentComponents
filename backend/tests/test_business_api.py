@@ -7,6 +7,58 @@ from conftest import make_client
 
 
 SCENE1_DOCUMENT = Path("../frontend/public/test/scene1/scene_document.json")
+SCENE1_ROOT = Path("../frontend/public/test/scene1")
+
+
+def upload_scene1_device_specs(client) -> None:
+    bundle = json.loads((SCENE1_ROOT / "device_specs" / "index.json").read_text(encoding="utf-8-sig"))
+    for item in bundle["device_specs"]:
+        spec = json.loads(Path("..", item["path"]).read_text(encoding="utf-8-sig"))
+        response = client.post("/api/device-specs", json={"spec_id": spec.get("device_spec_id") or spec.get("schema_id"), "document": spec})
+        assert response.status_code == 200
+
+
+def create_scene1_runtime(client) -> str:
+    upload_scene1_device_specs(client)
+    project = client.post("/api/projects", json={"name": "Scene1 local runtime"})
+    assert project.status_code == 200
+    project_id = project.json()["id"]
+    scene = client.get(f"/api/projects/{project_id}/scene").json()
+    scene_doc = json.loads(SCENE1_DOCUMENT.read_text(encoding="utf-8-sig"))
+
+    replaced = client.put(
+        f"/api/projects/{project_id}/scene",
+        json={"base_revision": scene["revision"], "document": scene_doc},
+    )
+    assert replaced.status_code == 200
+
+    topology = client.post(f"/api/projects/{project_id}/topology/rebuild")
+    assert topology.status_code == 200
+
+    run = client.post(f"/api/projects/{project_id}/simulation-runs", json={"base_scene_revision": replaced.json()["new_revision"]})
+    assert run.status_code == 200
+    return run.json()["run_id"]
+
+
+def next_frontend_event(client, run_id: str, handled_task_ids: set[str]) -> dict:
+    frontend_events = client.get(f"/api/simulation-runs/{run_id}/frontend-events")
+    assert frontend_events.status_code == 200
+    for event in frontend_events.json()["events"]:
+        task_id = event.get("task_id")
+        if task_id and task_id not in handled_task_ids:
+            return event
+    raise AssertionError("No uncompleted frontend event found")
+
+
+def complete_frontend_event(client, run_id: str, event: dict, completed_task_ids: set[str], sim_time_s: float) -> dict:
+    task_id = event["task_id"]
+    completed_task_ids.add(task_id)
+    response = client.post(
+        f"/api/simulation-runs/{run_id}/actions/{task_id}/complete",
+        json={"sim_time_s": sim_time_s, "payload": {"completed_by": "frontend_test"}},
+    )
+    assert response.status_code == 200
+    return response.json()
 
 
 def test_project_scene_edges_compile_topology_and_runtime() -> None:
@@ -122,28 +174,7 @@ def test_project_scene_edges_compile_topology_and_runtime() -> None:
 
 def test_replace_scene_document_rebuilds_topology_and_bootstraps_startup_runtime() -> None:
     client = make_client()
-    assert client.post("/api/device-specs/import-defaults").status_code == 200
-
-    project = client.post("/api/projects", json={"name": "Scene1 local runtime"})
-    assert project.status_code == 200
-    project_id = project.json()["id"]
-    scene = client.get(f"/api/projects/{project_id}/scene").json()
-    scene_doc = json.loads(SCENE1_DOCUMENT.read_text(encoding="utf-8-sig"))
-
-    replaced = client.put(
-        f"/api/projects/{project_id}/scene",
-        json={"base_revision": scene["revision"], "document": scene_doc},
-    )
-    assert replaced.status_code == 200
-    assert replaced.json()["new_revision"] == 1
-
-    topology = client.post(f"/api/projects/{project_id}/topology/rebuild")
-    assert topology.status_code == 200
-    assert topology.json()["document"]["signal_graph"]["edges"]
-
-    run = client.post(f"/api/projects/{project_id}/simulation-runs", json={"base_scene_revision": 1})
-    assert run.status_code == 200
-    run_id = run.json()["run_id"]
+    run_id = create_scene1_runtime(client)
 
     frontend_events = client.get(f"/api/simulation-runs/{run_id}/frontend-events")
     assert frontend_events.status_code == 200
@@ -168,6 +199,39 @@ def test_replace_scene_document_rebuilds_topology_and_bootstraps_startup_runtime
     assert followup_event["behavior_id"] == "advance_to_next_stop_point"
     assert followup_event["payload"]["from_point_id"] == "main_conveyor_1.sp_02"
     assert followup_event["payload"]["to_point_id"] == "main_conveyor_1.sp_03"
+
+
+def test_scene_document_runtime_reaches_robot_claim_loop() -> None:
+    client = make_client()
+    run_id = create_scene1_runtime(client)
+    seen_task_ids: set[str] = set()
+    completed_task_ids: set[str] = set()
+    robot_pick_events: list[dict] = []
+    last_completion: dict | None = None
+
+    for step in range(12):
+        event = next_frontend_event(client, run_id, seen_task_ids)
+        seen_task_ids.add(event["task_id"])
+        if event["behavior_id"] == "pick_and_place":
+            robot_pick_events.append(event)
+            if len(robot_pick_events) == 2:
+                break
+            continue
+        last_completion = complete_frontend_event(client, run_id, event, completed_task_ids, sim_time_s=float(step + 1))
+
+    assert [event["instance_id"] for event in robot_pick_events] == ["robot_1", "robot_2"]
+    assert [event["payload"]["material_id"] for event in robot_pick_events] == ["part_001", "part_002"]
+    assert [event["payload"]["target_conveyor_id"] for event in robot_pick_events] == ["upper_out_conveyor_1", "lower_out_conveyor_1"]
+    assert robot_pick_events[0]["payload"]["subject_id"] == "part_001"
+    assert last_completion is not None
+    assert last_completion["snapshot"]["conveyor_occupancy"]["main_conveyor_2"]["main_conveyor_2.sp_04"] == "pallet_1"
+
+    first_robot_complete = complete_frontend_event(client, run_id, robot_pick_events[0], completed_task_ids, sim_time_s=20.0)
+    assert first_robot_complete["process_handoff_frontend_events"][0]["instance_id"] == "upper_out_conveyor_1"
+    assert first_robot_complete["process_handoff_frontend_events"][0]["behavior_id"] == "accept_material"
+    assert first_robot_complete["process_handoff_frontend_events"][0]["payload"]["material_id"] == "part_001"
+    assert first_robot_complete["robot_followup_frontend_events"][0]["instance_id"] == "robot_1"
+    assert first_robot_complete["robot_followup_frontend_events"][0]["payload"]["material_id"] == "part_003"
 
 
 def test_supabase_migration_contains_required_runtime_and_agent_tables() -> None:

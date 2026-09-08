@@ -1,4 +1,4 @@
-import { Object3D, Vector3 } from "three";
+import { Object3D, PropertyBinding, Vector3 } from "three";
 import { buildIKFromDeviceConfig, type BuiltIKResult } from "@/lib/ik";
 import { interpolateWaypoints } from "@/lib/runtime-behavior";
 import type {
@@ -80,7 +80,7 @@ export function sceneDocumentAssetUrl(document: SceneDocumentRecord | null): str
 export function findRenderableGlbObjectIds(bindings: GlbRuntimeBindings, scene: Object3D): string[] {
   const ids: string[] = [];
   for (const [objectId, nodeName] of bindings.nodeNameByObjectId.entries()) {
-    if (!scene.getObjectByName(nodeName)) continue;
+    if (!findObjectByBoundName(scene, nodeName)) continue;
 
     const robotConfig = bindings.robotConfigByInstanceId.get(objectId);
     if (robotConfig && !canResolveRobotConfig(robotConfig, scene)) continue;
@@ -171,8 +171,8 @@ function jointConfigFromRecord(record: SceneDocumentRecord): UrdfJointConfig | n
 }
 
 function canResolveRobotConfig(config: DeviceConfig, scene: Object3D): boolean {
-  if (!scene.getObjectByName(config.rootNodeName)) return false;
-  return (config.urdf?.joints ?? []).every((joint) => Boolean(scene.getObjectByName(joint.nodeName)));
+  if (!findObjectByBoundName(scene, config.rootNodeName)) return false;
+  return (config.urdf?.joints ?? []).every((joint) => Boolean(findObjectByBoundName(scene, joint.nodeName)));
 }
 
 class ConveyorGlbActionRuntime implements GlbActionRuntime {
@@ -238,7 +238,7 @@ class RobotGlbActionRuntime implements GlbActionRuntime {
 
 function resolveSubjectNode(action: RuntimeAnimationAction, scene: Object3D, bindings: GlbRuntimeBindings): Object3D | null {
   for (const nodeName of subjectNodeNameCandidates(action, bindings)) {
-    const node = scene.getObjectByName(nodeName);
+    const node = findObjectByBoundName(scene, nodeName);
     if (node) return node;
   }
   return null;
@@ -248,15 +248,27 @@ function subjectNodeNameCandidates(action: RuntimeAnimationAction, bindings: Glb
   const names: string[] = [];
   for (const directKey of ["subject_node_name", "glb_node_name", "object_node_name", "material_node_name"]) {
     const value = readString(action.payload[directKey]);
-    if (value) names.push(value);
+    if (value) names.push(...gltfNodeNameCandidates(value));
   }
 
   for (const objectId of subjectIdCandidates(action)) {
     const nodeName = bindings.nodeNameByObjectId.get(objectId);
-    if (nodeName) names.push(nodeName);
+    if (nodeName) names.push(...gltfNodeNameCandidates(nodeName));
   }
 
   return Array.from(new Set(names));
+}
+
+function findObjectByBoundName(scene: Object3D, boundName: string): Object3D | null {
+  for (const name of gltfNodeNameCandidates(boundName)) {
+    const node = scene.getObjectByName(name);
+    if (node) return node;
+  }
+  return null;
+}
+
+function gltfNodeNameCandidates(boundName: string): string[] {
+  return Array.from(new Set([boundName, PropertyBinding.sanitizeNodeName(boundName)].filter(Boolean)));
 }
 
 function subjectIdCandidates(action: RuntimeAnimationAction): string[] {

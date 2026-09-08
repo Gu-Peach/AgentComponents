@@ -8,12 +8,12 @@ const BOOTSTRAP_DISABLED = process.env.NEXT_PUBLIC_BOOTSTRAP_SCENE1_RUNTIME === 
 
 export function SceneRuntimeBootstrap() {
   const runId = useWorkspaceStore((state) => state.runtimeRunId);
-  const startedRef = useRef(false);
+  const completedRef = useRef(false);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
-    if (BOOTSTRAP_DISABLED || runId || startedRef.current) return;
-    startedRef.current = true;
-    let cancelled = false;
+    if (BOOTSTRAP_DISABLED || runId || completedRef.current || inFlightRef.current) return;
+    inFlightRef.current = true;
 
     const store = useWorkspaceStore.getState();
     store.appendLog("info", "bootstrapping scene1 runtime from SceneDocument");
@@ -21,7 +21,7 @@ export function SceneRuntimeBootstrap() {
     void frontendApiClient
       .bootstrapScene1Runtime()
       .then((result) => {
-        if (cancelled) return;
+        completedRef.current = true;
         const nextStore = useWorkspaceStore.getState();
         nextStore.setRuntimeSceneDocument(result.sceneDocument);
         nextStore.replaceSceneObjects(result.sceneObjects);
@@ -29,13 +29,11 @@ export function SceneRuntimeBootstrap() {
         nextStore.appendLog("success", `runtime run ready: ${result.runId}`);
       })
       .catch((error) => {
-        if (cancelled) return;
         useWorkspaceStore.getState().appendLog("warning", `scene1 runtime bootstrap failed: ${String(error)}`);
+      })
+      .finally(() => {
+        inFlightRef.current = false;
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, [runId]);
 
   return null;
