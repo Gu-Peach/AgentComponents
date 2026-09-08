@@ -2,11 +2,12 @@
 
 import { Edges, Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
-import type { SceneObject } from "@/types/scene";
+import type { RuntimeDeviceVisualState, SceneObject } from "@/types/scene";
 
 interface SceneObjectMeshProps {
   object: SceneObject;
   selected: boolean;
+  visual?: RuntimeDeviceVisualState;
   onSelect: (objectId: string) => void;
 }
 
@@ -14,9 +15,10 @@ function degToRad(value: number) {
   return (value * Math.PI) / 180;
 }
 
-function ConveyorMesh({ object, selected }: { object: SceneObject; selected: boolean }) {
+function ConveyorMesh({ object, selected, visual }: { object: SceneObject; selected: boolean; visual?: RuntimeDeviceVisualState }) {
   const [length, height, width] = object.dimensions;
   const stopPointCount = object.id.includes("output") ? 5 : 4;
+  const beltOffset = visual?.beltOffset ?? 0;
 
   return (
     <group>
@@ -29,6 +31,15 @@ function ConveyorMesh({ object, selected }: { object: SceneObject; selected: boo
         <boxGeometry args={[length * 0.92, 0.035, width * 0.72]} />
         <meshStandardMaterial color="#171a1f" roughness={0.8} />
       </mesh>
+      {Array.from({ length: 7 }).map((_, index) => {
+        const t = (index / 7 + beltOffset) % 1;
+        return (
+          <mesh key={`belt-${index}`} position={[-length * 0.42 + length * 0.84 * t, height / 2 + 0.04, 0]} receiveShadow>
+            <boxGeometry args={[0.035, 0.01, width * 0.58]} />
+            <meshStandardMaterial color="#4a5663" roughness={0.72} />
+          </mesh>
+        );
+      })}
       {Array.from({ length: stopPointCount }).map((_, index) => {
         const t = index / (stopPointCount - 1);
         return (
@@ -42,7 +53,13 @@ function ConveyorMesh({ object, selected }: { object: SceneObject; selected: boo
   );
 }
 
-function RobotArmMesh({ object, selected }: { object: SceneObject; selected: boolean }) {
+function RobotArmMesh({ object, selected, visual }: { object: SceneObject; selected: boolean; visual?: RuntimeDeviceVisualState }) {
+  const baseYaw = visual?.baseYaw ?? 0;
+  const shoulder = visual?.shoulder ?? -0.52;
+  const elbow = visual?.elbow ?? 0.62;
+  const wrist = visual?.wrist ?? -0.12;
+  const gripperClosed = visual?.gripperClosed ?? false;
+
   return (
     <group>
       <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
@@ -50,26 +67,42 @@ function RobotArmMesh({ object, selected }: { object: SceneObject; selected: boo
         <meshStandardMaterial color="#2c3239" roughness={0.55} metalness={0.2} />
         {selected && <Edges color="#57d9ff" />}
       </mesh>
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <cylinderGeometry args={[0.14, 0.16, 0.86, 24]} />
-        <meshStandardMaterial color={object.color} roughness={0.45} metalness={0.08} />
-      </mesh>
-      <mesh position={[0.42, 1.0, 0]} rotation={[0, 0, -0.62]} castShadow>
-        <boxGeometry args={[0.84, 0.18, 0.18]} />
-        <meshStandardMaterial color="#f6f7f9" roughness={0.36} />
-      </mesh>
-      <mesh position={[0.96, 0.78, 0]} rotation={[0, 0, 0.52]} castShadow>
-        <boxGeometry args={[0.62, 0.14, 0.14]} />
-        <meshStandardMaterial color="#f6f7f9" roughness={0.36} />
-      </mesh>
-      <mesh position={[1.3, 0.65, 0]} castShadow>
-        <boxGeometry args={[0.16, 0.08, 0.34]} />
-        <meshStandardMaterial color="#20242a" roughness={0.6} />
-      </mesh>
-      <mesh position={[0.04, 1.02, 0]}>
-        <sphereGeometry args={[0.16, 24, 16]} />
-        <meshStandardMaterial color="#3abf7a" emissive="#1a6a45" emissiveIntensity={0.22} />
-      </mesh>
+      <group rotation={[0, baseYaw, 0]}>
+        <mesh position={[0, 0.55, 0]} castShadow>
+          <cylinderGeometry args={[0.14, 0.16, 0.86, 24]} />
+          <meshStandardMaterial color={object.color} roughness={0.45} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 1.02, 0]}>
+          <sphereGeometry args={[0.16, 24, 16]} />
+          <meshStandardMaterial color="#3abf7a" emissive="#1a6a45" emissiveIntensity={0.22} />
+        </mesh>
+        <group position={[0, 1.02, 0]} rotation={[0, 0, shoulder]}>
+          <mesh position={[0.42, 0, 0]} castShadow>
+            <boxGeometry args={[0.84, 0.18, 0.18]} />
+            <meshStandardMaterial color="#f6f7f9" roughness={0.36} />
+          </mesh>
+          <group position={[0.84, 0, 0]} rotation={[0, 0, elbow]}>
+            <mesh position={[0.34, 0, 0]} castShadow>
+              <boxGeometry args={[0.68, 0.14, 0.14]} />
+              <meshStandardMaterial color="#f6f7f9" roughness={0.36} />
+            </mesh>
+            <group position={[0.7, 0, 0]} rotation={[0, 0, wrist]}>
+              <mesh castShadow>
+                <boxGeometry args={[0.16, 0.08, 0.34]} />
+                <meshStandardMaterial color="#20242a" roughness={0.6} />
+              </mesh>
+              <mesh position={[0.11, -0.055, gripperClosed ? -0.055 : -0.095]} castShadow>
+                <boxGeometry args={[0.16, 0.035, 0.08]} />
+                <meshStandardMaterial color="#20242a" roughness={0.6} />
+              </mesh>
+              <mesh position={[0.11, -0.055, gripperClosed ? 0.055 : 0.095]} castShadow>
+                <boxGeometry args={[0.16, 0.035, 0.08]} />
+                <meshStandardMaterial color="#20242a" roughness={0.6} />
+              </mesh>
+            </group>
+          </group>
+        </group>
+      </group>
     </group>
   );
 }
@@ -131,9 +164,9 @@ function GenericDeviceMesh({ object, selected }: { object: SceneObject; selected
   );
 }
 
-function ShapeForType({ object, selected }: { object: SceneObject; selected: boolean }) {
-  if (object.type === "conveyor") return <ConveyorMesh object={object} selected={selected} />;
-  if (object.type === "robot_arm") return <RobotArmMesh object={object} selected={selected} />;
+function ShapeForType({ object, selected, visual }: { object: SceneObject; selected: boolean; visual?: RuntimeDeviceVisualState }) {
+  if (object.type === "conveyor") return <ConveyorMesh object={object} selected={selected} visual={visual} />;
+  if (object.type === "robot_arm") return <RobotArmMesh object={object} selected={selected} visual={visual} />;
   if (object.type === "workpiece_carrier") return <CarrierMesh object={object} selected={selected} />;
   if (object.type === "storage_rack") return <StorageRackMesh object={object} selected={selected} />;
   if (object.type === "rotary_table") {
@@ -163,7 +196,7 @@ function ShapeForType({ object, selected }: { object: SceneObject; selected: boo
   return <GenericDeviceMesh object={object} selected={selected} />;
 }
 
-export function SceneObjectMesh({ object, selected, onSelect }: SceneObjectMeshProps) {
+export function SceneObjectMesh({ object, selected, visual, onSelect }: SceneObjectMeshProps) {
   const { position, rotation, scale } = object.transform;
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
@@ -178,7 +211,7 @@ export function SceneObjectMesh({ object, selected, onSelect }: SceneObjectMeshP
       scale={scale}
       onClick={handleClick}
     >
-      <ShapeForType object={object} selected={selected} />
+      <ShapeForType object={object} selected={selected} visual={visual} />
       <Html position={[0, Math.max(object.dimensions[1], 0.35) + 0.34, 0]} center distanceFactor={10}>
         <div
           style={{

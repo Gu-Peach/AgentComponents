@@ -6,6 +6,8 @@ import type {
   LayoutSizes,
   LogLevel,
   PanelState,
+  RuntimeAnimationAction,
+  RuntimeDeviceVisualState,
   SceneObject,
   Transform3D,
   Vector3Tuple,
@@ -59,6 +61,10 @@ interface WorkspaceState {
   sceneObjects: SceneObject[];
   selectedObjectId: string | null;
   logs: ReturnType<typeof makeLog>[];
+  runtimeRunId: string | null;
+  activeRuntimeActions: RuntimeAnimationAction[];
+  runtimeDeviceVisuals: Record<string, RuntimeDeviceVisualState>;
+  seenRuntimeEventRefs: string[];
   setAssetCategory: (category: AssetCategory) => void;
   setAssetQuery: (query: string) => void;
   selectAsset: (assetId: string) => void;
@@ -68,6 +74,14 @@ interface WorkspaceState {
   addAssetToScene: (assetId: string, position?: Vector3Tuple) => void;
   updateSceneObject: (objectId: string, patch: Partial<Omit<SceneObject, "id">>) => void;
   updateSceneObjectTransform: (objectId: string, patch: Partial<Transform3D>) => void;
+  applyRuntimeObjectTransform: (objectId: string, patch: Partial<Transform3D>) => void;
+  setRuntimeRunId: (runId: string | null) => void;
+  startRuntimeAction: (action: RuntimeAnimationAction) => void;
+  updateRuntimeAction: (actionId: string, patch: Partial<RuntimeAnimationAction>) => void;
+  completeRuntimeAction: (actionId: string) => RuntimeAnimationAction | undefined;
+  setRuntimeDeviceVisual: (objectId: string, visual: RuntimeDeviceVisualState | null) => void;
+  markRuntimeEventSeen: (eventRef: string) => void;
+  hasSeenRuntimeEvent: (eventRef: string) => boolean;
   appendLog: (level: LogLevel, message: string) => void;
   clearLogs: () => void;
   resetWorkspace: () => void;
@@ -90,6 +104,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   sceneObjects: mockInitialSceneObjects,
   selectedObjectId: mockInitialSceneObjects[0]?.id ?? null,
   logs: initialLogs,
+  runtimeRunId: process.env.NEXT_PUBLIC_SIMULATION_RUN_ID ?? null,
+  activeRuntimeActions: [],
+  runtimeDeviceVisuals: {},
+  seenRuntimeEventRefs: [],
 
   setAssetCategory: (category) => set({ assetCategory: category }),
   setAssetQuery: (query) => set({ assetQuery: query }),
@@ -154,6 +172,87 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       logs: [...state.logs, makeLog("info", `updated transform: ${objectId}`)],
     }));
   },
+  applyRuntimeObjectTransform: (objectId, patch) => {
+    set((state) => ({
+      sceneObjects: state.sceneObjects.map((object) =>
+        object.id === objectId ? { ...object, transform: { ...object.transform, ...patch } } : object,
+      ),
+    }));
+  },
+  setRuntimeRunId: (runId) => set({ runtimeRunId: runId }),
+  startRuntimeAction: (action) => {
+    set((state) => {
+      if (state.activeRuntimeActions.some((item) => item.actionId === action.actionId)) return {};
+      return {
+        activeRuntimeActions: [...state.activeRuntimeActions, action],
+        runtimeDeviceVisuals: {
+          ...state.runtimeDeviceVisuals,
+          [action.instanceId]: {
+            ...state.runtimeDeviceVisuals[action.instanceId],
+            activeActionId: action.actionId,
+            armPhase: action.kind === "robot_pick_place" ? "approach" : state.runtimeDeviceVisuals[action.instanceId]?.armPhase,
+          },
+        },
+        logs: [...state.logs, makeLog("success", `runtime action started: ${action.instanceId}.${action.behaviorId}`)],
+      };
+    });
+  },
+  updateRuntimeAction: (actionId, patch) => {
+    set((state) => ({
+      activeRuntimeActions: state.activeRuntimeActions.map((action) =>
+        action.actionId === actionId ? { ...action, ...patch } : action,
+      ),
+    }));
+  },
+  completeRuntimeAction: (actionId) => {
+    const action = get().activeRuntimeActions.find((item) => item.actionId === actionId);
+    if (!action) return undefined;
+    set((state) => {
+      const nextVisuals = { ...state.runtimeDeviceVisuals };
+      const hasAnotherActionOnDevice = state.activeRuntimeActions.some(
+        (item) => item.actionId !== actionId && item.instanceId === action.instanceId,
+      );
+      if (hasAnotherActionOnDevice) {
+        nextVisuals[action.instanceId] = { ...nextVisuals[action.instanceId], activeActionId: undefined };
+      } else {
+        nextVisuals[action.instanceId] = {
+          ...nextVisuals[action.instanceId],
+          activeActionId: undefined,
+          beltOffset: 0,
+          armPhase: "idle",
+          shoulder: 0,
+          elbow: 0,
+          wrist: 0,
+          gripperClosed: false,
+        };
+      }
+      return {
+        activeRuntimeActions: state.activeRuntimeActions.filter((item) => item.actionId !== actionId),
+        runtimeDeviceVisuals: nextVisuals,
+        logs: [...state.logs, makeLog("success", `runtime action completed: ${action.instanceId}.${action.behaviorId}`)],
+      };
+    });
+    return action;
+  },
+  setRuntimeDeviceVisual: (objectId, visual) => {
+    set((state) => {
+      const nextVisuals = { ...state.runtimeDeviceVisuals };
+      if (visual === null) {
+        delete nextVisuals[objectId];
+      } else {
+        nextVisuals[objectId] = { ...nextVisuals[objectId], ...visual };
+      }
+      return { runtimeDeviceVisuals: nextVisuals };
+    });
+  },
+  markRuntimeEventSeen: (eventRef) => {
+    set((state) =>
+      state.seenRuntimeEventRefs.includes(eventRef)
+        ? {}
+        : { seenRuntimeEventRefs: [...state.seenRuntimeEventRefs, eventRef] },
+    );
+  },
+  hasSeenRuntimeEvent: (eventRef) => get().seenRuntimeEventRefs.includes(eventRef),
   appendLog: (level, message) => set((state) => ({ logs: [...state.logs, makeLog(level, message)] })),
   clearLogs: () => set({ logs: [makeLog("info", "terminal cleared")] }),
   resetWorkspace: () =>
@@ -166,6 +265,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       sceneObjects: mockInitialSceneObjects,
       selectedObjectId: mockInitialSceneObjects[0]?.id ?? null,
       logs: initialLogs,
+      runtimeRunId: process.env.NEXT_PUBLIC_SIMULATION_RUN_ID ?? null,
+      activeRuntimeActions: [],
+      runtimeDeviceVisuals: {},
+      seenRuntimeEventRefs: [],
     }),
 }));
 

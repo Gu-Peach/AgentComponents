@@ -4,6 +4,8 @@ import { Canvas } from "@react-three/fiber";
 import { Grid, OrbitControls } from "@react-three/drei";
 import { Box, Eye, MousePointer2 } from "lucide-react";
 import { useMemo } from "react";
+import { RuntimeEventBridge } from "@/components/scene/RuntimeEventBridge";
+import { SceneRuntimeAnimator } from "@/components/scene/SceneRuntimeAnimator";
 import { SceneObjectMesh } from "@/components/scene/SceneObjectMesh";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import type { Vector3Tuple } from "@/types/scene";
@@ -11,6 +13,7 @@ import type { Vector3Tuple } from "@/types/scene";
 function SceneContent() {
   const sceneObjects = useWorkspaceStore((state) => state.sceneObjects);
   const selectedObjectId = useWorkspaceStore((state) => state.selectedObjectId);
+  const runtimeDeviceVisuals = useWorkspaceStore((state) => state.runtimeDeviceVisuals);
   const selectSceneObject = useWorkspaceStore((state) => state.selectSceneObject);
 
   const objectCount = sceneObjects.length;
@@ -29,6 +32,7 @@ function SceneContent() {
           key={object.id}
           object={object}
           selected={object.id === selectedObjectId}
+          visual={runtimeDeviceVisuals[object.id]}
           onSelect={selectSceneObject}
         />
       ))}
@@ -39,6 +43,7 @@ function SceneContent() {
       </mesh>
 
       <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={3.5} maxDistance={18} />
+      <SceneRuntimeAnimator />
       <RuntimeCountBeacon count={objectCount} />
     </>
   );
@@ -80,6 +85,7 @@ export function SceneViewport() {
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
     >
+      <RuntimeEventBridge />
       <div className="viewport-toolbar">
         <MousePointer2 size={15} />
         <span>选择 / Orbit</span>

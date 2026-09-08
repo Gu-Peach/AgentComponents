@@ -100,6 +100,13 @@ def test_project_scene_edges_compile_topology_and_runtime() -> None:
     assert dispatch.json()["dispatched_actions"][0]["instance_id"] == "robot_1"
     assert dispatch.json()["snapshot"]["device_states"]["robot_1"] == "busy"
 
+    action_id = dispatch.json()["dispatched_actions"][0]["action_id"]
+    complete = client.post(f"/api/simulation-runs/{run_id}/actions/{action_id}/complete", json={"sim_time_s": 2.4, "payload": {"completed_by": "frontend"}})
+    assert complete.status_code == 200
+    assert complete.json()["status"] == "completed_active_action"
+    assert complete.json()["snapshot"]["device_states"]["robot_1"] == "idle"
+    assert action_id not in complete.json()["snapshot"]["active_actions"]
+
     snapshot = client.put(f"/api/simulation-runs/{run_id}/runtime-snapshot", json={"snapshot": {"clock": 2, "signal_values": {"conveyor_1.part_ready": True}}})
     assert snapshot.status_code == 200
     assert snapshot.json()["snapshot"]["clock"] == 2

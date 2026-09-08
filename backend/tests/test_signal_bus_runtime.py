@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.db import models
 from app.db.session import SessionLocal
-from app.schemas.domain import DeviceTaskDispatchRequest, InstanceCreate, ProjectCreate, SignalEdgeCreate, SignalEmitRequest, SimulationRunCreate
+from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, InstanceCreate, ProjectCreate, SignalEdgeCreate, SignalEmitRequest, SimulationRunCreate
 from app.services.catalog_service import DeviceSpecService
 from app.services.project_service import ProjectService
 from app.services.runtime_state import InMemoryRuntimeStateStore
@@ -205,6 +205,45 @@ def test_dispatch_pending_device_task_starts_active_action() -> None:
         assert any(event["type"] == "routed_signal_event" and event["status"] == "consumed" for event in snapshot["event_queue"])
         assert any(event["type"] == "device_action_started" for event in snapshot["event_queue"])
         assert any(event.event_type == "device_action_started" for event in _db_events(db, run.id))
+    finally:
+        db.close()
+
+
+def test_complete_frontend_device_task_marks_runtime_done() -> None:
+    db, store, simulation, run = _create_run_with_signal_edges(
+        [
+            {
+                "edge_id": "sig_conveyor_to_robot",
+                "target": "robot_1.start_pick",
+                "route_id": "route_conveyor_to_robot",
+            }
+        ]
+    )
+    try:
+        emitted = simulation.emit_signal(
+            run.id,
+            "conveyor_1.part_ready",
+            SignalEmitRequest(value=True, payload={"material_id": "part_001"}, sim_time_s=2.0),
+        )
+        task_id = emitted["device_tasks"][0]["task_id"]
+
+        result = simulation.complete_action(
+            run.id,
+            task_id,
+            ActionCompleteRequest(sim_time_s=3.0, payload={"completed_by": "frontend"}),
+        )
+
+        assert result["status"] == "completed_device_task"
+        assert result["completed_task"]["status"] == "done"
+        assert result["completed_task"]["completion_payload"] == {"completed_by": "frontend"}
+
+        snapshot = store.get_snapshot(run.id)
+        assert snapshot["device_tasks"][0]["status"] == "done"
+        assert snapshot["device_states"]["robot_1"] == "idle"
+        assert snapshot["device_fsm_states"]["robot_1"] == "idle"
+        assert snapshot["frontend_events"][0]["status"] == "done"
+        assert any(event["type"] == "device_action_completed" and event["task_id"] == task_id for event in snapshot["event_queue"])
+        assert any(event.event_type == "device_action_completed" for event in _db_events(db, run.id))
     finally:
         db.close()
 

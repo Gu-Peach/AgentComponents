@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError, NotFoundError
 from app.db import models
 from app.repositories.sql import DeviceSpecRepository, ProjectRepository, SceneRepository, SimulationRepository
-from app.schemas.domain import DeviceTaskDispatchRequest, RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate
+from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate
+from app.services.action_executor import ActionExecutor
 from app.services.device_runtime import DeviceRuntime
 from app.services.ids import new_id
 from app.services.runtime_state import RuntimeStateStore
@@ -115,11 +116,95 @@ class SimulationService:
         self.db.commit()
         return {"run_id": run_id, **result, "snapshot": snapshot}
 
+    def complete_action(self, run_id: str, action_ref: str, payload: ActionCompleteRequest) -> dict[str, Any]:
+        run = self.get_run(run_id)
+        snapshot = deepcopy(self.runtime_store.get_snapshot(run_id) or run.runtime_snapshot or {})
+        result = self._complete_runtime_action(snapshot, action_ref, payload)
+
+        self.runtime_store.put_snapshot(run_id, snapshot, payload.ttl_seconds)
+        run.runtime_snapshot = snapshot
+        for event in result.get("events", []):
+            self.simulations.add_event(
+                models.SimulationEvent(
+                    id=new_id("simevt"),
+                    simulation_run_id=run.id,
+                    sim_time_s=payload.sim_time_s,
+                    event_type=event.get("type", "device_action_completed"),
+                    payload=event,
+                )
+            )
+        self.db.commit()
+        return {"run_id": run_id, "action_ref": action_ref, **result, "snapshot": snapshot}
+
     # 清空运行时状态：确认仿真运行存在后，删除该 run_id 对应的临时运行数据。
     def clear_runtime_state(self, run_id: str) -> dict[str, Any]:
         self.get_run(run_id)
         self.runtime_store.clear_run(run_id)
         return {"run_id": run_id, "cleared": True}
+
+    @staticmethod
+    def _complete_runtime_action(snapshot: dict[str, Any], action_ref: str, payload: ActionCompleteRequest) -> dict[str, Any]:
+        active_actions = snapshot.setdefault("active_actions", {})
+        if action_ref in active_actions:
+            completed = ActionExecutor({}, snapshot).complete_action(action_ref, sim_time_s=payload.sim_time_s)
+            SimulationService._mark_related_task_done(snapshot, action_ref, payload)
+            SimulationService._mark_frontend_event_done(snapshot, action_ref, payload.status)
+            events = [event for event in snapshot.get("event_queue", []) if event.get("action_id") == action_ref and event.get("type") == "device_action_completed"]
+            return {"status": "completed_active_action", **completed, "events": events}
+
+        task = SimulationService._find_device_task(snapshot, action_ref)
+        if not task:
+            return {"status": "not_found", "completed_action": None, "completed_task": None, "events": []}
+
+        if task.get("status") in {"done", "failed", "visual_done"}:
+            SimulationService._mark_frontend_event_done(snapshot, action_ref, str(task.get("status")))
+            return {"status": "already_completed", "completed_action": None, "completed_task": task, "events": []}
+
+        task["status"] = payload.status
+        task["completed_at_sim_time_s"] = payload.sim_time_s
+        task["completion_payload"] = deepcopy(payload.payload)
+        instance_id = task.get("instance_id")
+        if instance_id:
+            snapshot.setdefault("device_states", {})[instance_id] = "idle" if payload.status == "done" else "failed"
+            snapshot.setdefault("device_fsm_states", {})[instance_id] = "idle" if payload.status == "done" else "failed"
+
+        event = {
+            "event_id": new_id("evt"),
+            "type": "device_action_completed",
+            "task_id": task.get("task_id"),
+            "action_id": task.get("action_id"),
+            "instance_id": instance_id,
+            "behavior_id": task.get("behavior_id"),
+            "payload": deepcopy(task.get("payload", {})),
+            "completion_payload": deepcopy(payload.payload),
+            "status": payload.status,
+            "sim_time_s": payload.sim_time_s,
+            "completed_by": "frontend_runtime",
+        }
+        snapshot.setdefault("event_queue", []).append(event)
+        SimulationService._mark_frontend_event_done(snapshot, action_ref, payload.status)
+        return {"status": "completed_device_task", "completed_action": None, "completed_task": task, "events": [event]}
+
+    @staticmethod
+    def _find_device_task(snapshot: dict[str, Any], action_ref: str) -> dict[str, Any] | None:
+        for task in snapshot.setdefault("device_tasks", []):
+            if action_ref in {task.get("task_id"), task.get("action_id")}:
+                return task
+        return None
+
+    @staticmethod
+    def _mark_related_task_done(snapshot: dict[str, Any], action_ref: str, payload: ActionCompleteRequest) -> None:
+        for task in snapshot.setdefault("device_tasks", []):
+            if action_ref in {task.get("task_id"), task.get("action_id")}:
+                task["status"] = payload.status
+                task["completed_at_sim_time_s"] = payload.sim_time_s
+                task["completion_payload"] = deepcopy(payload.payload)
+
+    @staticmethod
+    def _mark_frontend_event_done(snapshot: dict[str, Any], action_ref: str, status: str) -> None:
+        for event in snapshot.setdefault("frontend_events", []):
+            if action_ref in {event.get("task_id"), event.get("action_id"), event.get("event_id")}:
+                event["status"] = status
 
     # 生成初始快照：根据场景文档创建仿真启动时的默认运行状态。
     @staticmethod

@@ -1,0 +1,71 @@
+{
+  "schema_id": "scene1_device_spec_bundle_v0_1",
+  "schema_type": "DeviceSpecBundle",
+  "version": "0.1.0",
+  "scene_id": "scene1_pallet_sorting_line",
+  "description": "Local DeviceSpec bundle used by frontend/public/test/scene1 before uploading specs to the backend database.",
+  "source": {
+    "kind": "local_frontend_test_bundle",
+    "path": "frontend/public/test/scene1/device_specs"
+  },
+  "upload_order": [
+    "conveyor_1",
+    "robot_arm_1",
+    "carrier_tray_1",
+    "workpiece_1"
+  ],
+  "device_specs": [
+    {
+      "spec_id": "conveyor_1",
+      "device_type": "conveyor",
+      "path": "frontend/public/test/scene1/device_specs/conveyor_1.json",
+      "used_by_instances": [
+        "main_conveyor_1",
+        "main_conveyor_2",
+        "upper_out_conveyor_1",
+        "lower_out_conveyor_1"
+      ]
+    },
+    {
+      "spec_id": "robot_arm_1",
+      "device_type": "robot_arm",
+      "path": "frontend/public/test/scene1/device_specs/robot_arm_1.json",
+      "used_by_instances": [
+        "robot_1",
+        "robot_2"
+      ]
+    },
+    {
+      "spec_id": "carrier_tray_1",
+      "device_type": "workpiece_carrier",
+      "path": "frontend/public/test/scene1/device_specs/carrier_tray_1.json",
+      "used_by_instances": [
+        "pallet_1"
+      ]
+    },
+    {
+      "spec_id": "workpiece_1",
+      "device_type": "workpiece",
+      "path": "frontend/public/test/scene1/device_specs/workpiece_1.json",
+      "used_by_materials": [
+        "part_001",
+        "part_002",
+        "part_003",
+        "part_004",
+        "part_005",
+        "part_006",
+        "part_007",
+        "part_008",
+        "part_009",
+        "part_010",
+        "part_011",
+        "part_012"
+      ]
+    }
+  ],
+  "notes": [
+    "These files are local copies of the current SimulationSchema DeviceSpecs plus scene1 execution-contract additions.",
+    "The conveyor spec contains reusable device-local entry/exit geometry; scene-specific transport paths live on SceneDocument instances.",
+    "Upload these specs before importing scene_document.json so every spec_id can resolve."
+  ]
+}

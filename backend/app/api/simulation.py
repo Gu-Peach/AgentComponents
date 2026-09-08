@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.serializers import simulation_run_response
 from app.db.session import get_db
 from app.dependencies import get_runtime_store
-from app.schemas.domain import DeviceTaskDispatchRequest, RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate, SimulationRunResponse
+from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, RuntimeSnapshotPut, SignalEmitRequest, SimulationRunCreate, SimulationRunResponse
 from app.services.runtime_state import RuntimeStateStore
 from app.services.simulation_service import SimulationService
 
@@ -56,6 +56,11 @@ def emit_signal(run_id: str, signal_id: str, payload: SignalEmitRequest, db: Ses
 @router.post("/api/simulation-runs/{run_id}/device-tasks/dispatch")
 def dispatch_device_tasks(run_id: str, payload: DeviceTaskDispatchRequest, db: Session = Depends(get_db), runtime_store: RuntimeStateStore = Depends(get_runtime_store)) -> dict:
     return SimulationService(db, runtime_store).dispatch_device_tasks(run_id, payload)
+
+
+@router.post("/api/simulation-runs/{run_id}/actions/{action_id}/complete")
+def complete_action(run_id: str, action_id: str, payload: ActionCompleteRequest, db: Session = Depends(get_db), runtime_store: RuntimeStateStore = Depends(get_runtime_store)) -> dict:
+    return SimulationService(db, runtime_store).complete_action(run_id, action_id, payload)
 
 
 # 清空运行时状态：DELETE /api/simulation-runs/{run_id}/runtime-state，删除指定仿真运行的临时状态。

@@ -156,6 +156,13 @@ class DeviceTaskDispatchRequest(BaseModel):
     ttl_seconds: int | None = Field(default=None, ge=1)
 
 
+class ActionCompleteRequest(BaseModel):
+    status: Literal["done", "failed"] = "done"
+    payload: JsonDict = Field(default_factory=dict)
+    sim_time_s: float | None = None
+    ttl_seconds: int | None = Field(default=None, ge=1)
+
+
 class SignalEmitRequest(BaseModel):
     value: Any = None
     payload: JsonDict = Field(default_factory=dict)

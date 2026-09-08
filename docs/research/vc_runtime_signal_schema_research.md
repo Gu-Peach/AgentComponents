@@ -11,8 +11,6 @@
 
 > 重要边界：这里没有、也不应该反编译 VC 的闭源 DLL。本文只基于 VC 安装包内可读的 Python 脚本、API 自动补全文档和 Connectivity XML 文档做机制归纳。因此下面说的“源码”更准确地指“可读脚本层 + 公开 API 元数据”，不是 VC 引擎内部实现。
 
----
-
 ## 1. 先回答你的核心疑问：VC 的意义到底是什么？
 
 你的直觉基本是对的：VC 不是在真实物理层面模拟“刀具切削材料、机床受力、热变形、夹具刚度、工序质量漂移”这种连续加工物理。它更常见的建模方式是：
@@ -71,13 +69,13 @@
 
 VC 的建模大致可以拆成五层：
 
-| 层 | VC 对象/资源 | 解决的问题 | 对我们复刻的启发 |
-|---|---|---|---|
-| 组件层 | `vcComponent`、`vcNode`、`vcBehaviour` | 一个设备由节点树和行为对象组成 | `DeviceSpec` 不只描述 3D 资产，也要描述行为能力 |
-| 物理/接口层 | `vcConnector`、`vcFlow`、`vcSimInterface`、`vcSimInterfaceSection`、`vcSimInterfaceField` | 设备能否吸附、连接、装夹、挂载、匹配 | 要有端口级 schema，不能只有设备级连接 |
-| 信号层 | `vcSignal`、`vcBoolSignal`、`vcBooleanSignalMap`、`OnSignal`、`OnSignalTrigger` | 设备间传递布尔/数值/组件/字符串状态 | `signal_ports` + `signal_edges` + `SignalBusRuntime` 是必需品 |
-| 工艺/运输层 | `vcProcessController`、`vcProcessExecutor`、`vcTransportSystem`、`vcTransportNode`、`vcTransportLink`、`vcProductType` | 产品流、运输路径、加工步骤、资源执行 | `process_edges` 和 transport reachability 应独立于物理边 |
-| 外部连接层 | `VisualComponents.Connectivity.*` | 和 OPC UA、Siemens S7、机器人控制器等同步变量 | 后期可做 PLC/OPC Bridge，但不应塞进 MVP 核心 |
+| 层          | VC 对象/资源                                                                                                           | 解决的问题                                    | 对我们复刻的启发                                              |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| 组件层      | `vcComponent`、`vcNode`、`vcBehaviour`                                                                                 | 一个设备由节点树和行为对象组成                | `DeviceSpec` 不只描述 3D 资产，也要描述行为能力               |
+| 物理/接口层 | `vcConnector`、`vcFlow`、`vcSimInterface`、`vcSimInterfaceSection`、`vcSimInterfaceField`                              | 设备能否吸附、连接、装夹、挂载、匹配          | 要有端口级 schema，不能只有设备级连接                         |
+| 信号层      | `vcSignal`、`vcBoolSignal`、`vcBooleanSignalMap`、`OnSignal`、`OnSignalTrigger`                                        | 设备间传递布尔/数值/组件/字符串状态           | `signal_ports` + `signal_edges` + `SignalBusRuntime` 是必需品 |
+| 工艺/运输层 | `vcProcessController`、`vcProcessExecutor`、`vcTransportSystem`、`vcTransportNode`、`vcTransportLink`、`vcProductType` | 产品流、运输路径、加工步骤、资源执行          | `process_edges` 和 transport reachability 应独立于物理边      |
+| 外部连接层  | `VisualComponents.Connectivity.*`                                                                                      | 和 OPC UA、Siemens S7、机器人控制器等同步变量 | 后期可做 PLC/OPC Bridge，但不应塞进 MVP 核心                  |
 
 本项目现有 schema 已经走在正确方向上：`DeviceSpec` 拆出 `physical_interfaces`、`process_ports`、`signal_ports`、`interface_bindings`、`transport_behaviors`；`SceneDocument` 拆出 `process_edges`、`physical_edges`、`signal_edges`；`SceneBehaviorGraph.event_bus` 负责事件定义和路由。这比简单模仿 VC 手工 Process Modeling 更适合做 Agent 驱动的产线生成。
 
@@ -285,7 +283,11 @@ Component -> Behaviour/Flow -> Connector -> Connection -> Connector -> Behaviour
   "snap_tolerance": { "distance_mm": 5, "angle_deg": 3 },
   "compatibility_fields": [
     { "type": "integer_compatibility", "name": "fixture_class", "value": 1001 },
-    { "type": "signal", "name": "re_evaluation_request", "signal_port": "machine_1.re_evaluate" }
+    {
+      "type": "signal",
+      "name": "re_evaluation_request",
+      "signal_port": "machine_1.re_evaluate"
+    }
   ]
 }
 ```
