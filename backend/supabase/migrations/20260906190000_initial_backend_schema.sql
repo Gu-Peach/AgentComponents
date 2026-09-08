@@ -96,6 +96,53 @@ CREATE TABLE IF NOT EXISTS public.simulation_events (
 
 CREATE INDEX IF NOT EXISTS idx_simulation_events_run_time ON public.simulation_events(simulation_run_id, sim_time_s, created_at);
 
+CREATE TABLE IF NOT EXISTS public.agent_runs (
+  id TEXT PRIMARY KEY DEFAULT ('agrun_' || replace(gen_random_uuid()::text, '-', '')),
+  project_id TEXT NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  scene_id TEXT NOT NULL REFERENCES public.scenes(id) ON DELETE CASCADE,
+  base_scene_revision INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'created',
+  user_message TEXT NOT NULL,
+  intent JSONB,
+  checkpoint JSONB,
+  repair_attempts INTEGER NOT NULL DEFAULT 0,
+  final_response JSONB,
+  error JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_project_scene ON public.agent_runs(project_id, scene_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.agent_artifacts (
+  id TEXT PRIMARY KEY DEFAULT ('artifact_' || replace(gen_random_uuid()::text, '-', '')),
+  agent_run_id TEXT NOT NULL REFERENCES public.agent_runs(id) ON DELETE CASCADE,
+  scene_id TEXT NOT NULL REFERENCES public.scenes(id) ON DELETE CASCADE,
+  artifact_type TEXT NOT NULL,
+  base_scene_revision INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'candidate',
+  confidence DOUBLE PRECISION NOT NULL DEFAULT 0,
+  approval_required BOOLEAN NOT NULL DEFAULT true,
+  payload JSONB NOT NULL,
+  validation_report JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_artifacts_run_type ON public.agent_artifacts(agent_run_id, artifact_type, created_at);
+
+CREATE TABLE IF NOT EXISTS public.agent_events (
+  id TEXT PRIMARY KEY DEFAULT ('agevt_' || replace(gen_random_uuid()::text, '-', '')),
+  agent_run_id TEXT NOT NULL REFERENCES public.agent_runs(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_events_run_sequence ON public.agent_events(agent_run_id, sequence);
+
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES
   ('models', 'models', false, 104857600, ARRAY['model/gltf-binary', 'model/gltf+json', 'application/octet-stream']),
@@ -103,4 +150,3 @@ VALUES
   ('uploads', 'uploads', false, 104857600, NULL),
   ('exports', 'exports', false, 104857600, NULL)
 ON CONFLICT (id) DO NOTHING;
-

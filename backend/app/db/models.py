@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin
@@ -92,3 +92,43 @@ class SimulationEvent(TimestampMixin, Base):
     event_type: Mapped[str] = mapped_column(String(128), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
 
+
+class AgentRun(TimestampMixin, Base):
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(64), ForeignKey("projects.id"), index=True, nullable=False)
+    scene_id: Mapped[str] = mapped_column(String(64), ForeignKey("scenes.id"), index=True, nullable=False)
+    base_scene_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="created", nullable=False)
+    user_message: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[dict | None] = mapped_column(JSON)
+    checkpoint: Mapped[dict | None] = mapped_column(JSON)
+    repair_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    final_response: Mapped[dict | None] = mapped_column(JSON)
+    error: Mapped[dict | None] = mapped_column(JSON)
+
+
+class AgentArtifact(TimestampMixin, Base):
+    __tablename__ = "agent_artifacts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    agent_run_id: Mapped[str] = mapped_column(String(64), ForeignKey("agent_runs.id"), index=True, nullable=False)
+    scene_id: Mapped[str] = mapped_column(String(64), ForeignKey("scenes.id"), index=True, nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String(96), index=True, nullable=False)
+    base_scene_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), default="candidate", nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    approval_required: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    validation_report: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class AgentEvent(TimestampMixin, Base):
+    __tablename__ = "agent_events"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    agent_run_id: Mapped[str] = mapped_column(String(64), ForeignKey("agent_runs.id"), index=True, nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)

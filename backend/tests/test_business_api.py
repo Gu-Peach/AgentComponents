@@ -7,7 +7,7 @@ from conftest import make_client
 
 def test_project_scene_edges_compile_topology_and_runtime() -> None:
     client = make_client()
-    assert client.get("/health").json()["agent_enabled"] is False
+    assert client.get("/health").json()["agent_enabled"] is True
 
     imported = client.post("/api/device-specs/import-defaults")
     assert imported.status_code == 200
@@ -116,9 +116,8 @@ def test_project_scene_edges_compile_topology_and_runtime() -> None:
     assert cleanup.json()["cleared"] is True
 
 
-def test_supabase_migration_contains_required_tables_and_no_agent_tables() -> None:
+def test_supabase_migration_contains_required_runtime_and_agent_tables() -> None:
     migration = Path("supabase/migrations/20260906190000_initial_backend_schema.sql").read_text(encoding="utf-8")
-    for table in ["projects", "assets", "device_specs", "scenes", "scene_events", "scene_topologies", "simulation_runs", "simulation_events"]:
+    for table in ["projects", "assets", "device_specs", "scenes", "scene_events", "scene_topologies", "simulation_runs", "simulation_events", "agent_runs", "agent_artifacts", "agent_events"]:
         assert f"public.{table}" in migration
-    assert "agent_runs" not in migration
     assert "agent_threads" not in migration

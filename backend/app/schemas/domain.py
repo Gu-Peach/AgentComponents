@@ -176,3 +176,61 @@ class ValidationIssue(BaseModel):
     message: str
     path: str | None = None
     details: JsonDict = Field(default_factory=dict)
+
+
+class AgentRunCreate(BaseModel):
+    user_message: str = Field(min_length=1)
+    base_scene_revision: int | None = Field(default=None, ge=0)
+    mode: Literal["dry_run", "stage", "auto_apply"] = "dry_run"
+    simulation_run_id: str | None = None
+    document_text: str | None = None
+    scenario_count: int = Field(default=2, ge=1, le=8)
+
+
+class AgentRunResponse(BaseModel):
+    agent_run_id: str
+    project_id: str
+    scene_id: str
+    base_scene_revision: int
+    status: str
+    intent: JsonDict | None = None
+    checkpoint: JsonDict | None = None
+    repair_attempts: int = 0
+    final_response: JsonDict | None = None
+
+
+class AgentArtifactResponse(BaseModel):
+    artifact_id: str
+    agent_run_id: str
+    scene_id: str
+    artifact_type: str
+    base_scene_revision: int
+    status: str
+    confidence: float
+    approval_required: bool
+    payload: JsonDict
+    validation_report: JsonDict
+
+
+class AgentEventResponse(BaseModel):
+    event_id: str
+    agent_run_id: str
+    sequence: int
+    event_type: str
+    payload: JsonDict
+
+
+class PatchApplyRequest(BaseModel):
+    expected_base_revision: int = Field(ge=0)
+    approved_by_user: bool = False
+
+
+class PatchApplyResponse(BaseModel):
+    artifact_id: str
+    applied: bool
+    status: str
+    scene_id: str
+    previous_revision: int
+    new_revision: int
+    validation_report: JsonDict
+    warnings: list[JsonDict] = Field(default_factory=list)

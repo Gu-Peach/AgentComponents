@@ -44,3 +44,41 @@ def simulation_run_response(run: models.SimulationRun) -> dict:
         "runtime_snapshot": run.runtime_snapshot,
     }
 
+
+def agent_run_response(run: models.AgentRun) -> dict:
+    return {
+        "agent_run_id": run.id,
+        "project_id": run.project_id,
+        "scene_id": run.scene_id,
+        "base_scene_revision": run.base_scene_revision,
+        "status": run.status,
+        "intent": run.intent,
+        "checkpoint": run.checkpoint,
+        "repair_attempts": run.repair_attempts,
+        "final_response": run.final_response,
+    }
+
+
+def agent_artifact_response(artifact: models.AgentArtifact) -> dict:
+    return {
+        "artifact_id": artifact.id,
+        "agent_run_id": artifact.agent_run_id,
+        "scene_id": artifact.scene_id,
+        "artifact_type": artifact.artifact_type,
+        "base_scene_revision": artifact.base_scene_revision,
+        "status": artifact.status,
+        "confidence": artifact.confidence,
+        "approval_required": artifact.approval_required,
+        "payload": artifact.payload,
+        "validation_report": artifact.validation_report,
+    }
+
+
+def agent_event_response(event: models.AgentEvent) -> dict:
+    return {
+        "event_id": event.id,
+        "agent_run_id": event.agent_run_id,
+        "sequence": event.sequence,
+        "event_type": event.event_type,
+        "payload": event.payload,
+    }

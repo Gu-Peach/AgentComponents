@@ -8,11 +8,11 @@
 
 ## 0. 总体原则
 
-- [ ] Agent 不直接高频控制 runtime；普通信号、FSM、资源锁和行为执行由 runtime 负责。
-- [ ] Agent 所有写入都必须先生成 artifact / patch envelope，再经过校验、revision check 和审计。
-- [ ] 拓扑、可达性、端口兼容、环路、资源容量等确定性问题由工具计算，LLM 只做语义解析、解释和候选修复。
-- [ ] 每个模块同时交付工具契约、数据结构、日志事件、测试 fixture 和最小验收 case。
-- [ ] 每一阶段完成后都能独立演示，不依赖后续阶段才能证明价值。
+- [x] Agent 不直接高频控制 runtime；普通信号、FSM、资源锁和行为执行由 runtime 负责。
+- [x] Agent 所有写入都必须先生成 artifact / patch envelope，再经过校验、revision check 和审计。
+- [x] 拓扑、可达性、端口兼容、环路、资源容量等确定性问题由工具计算，LLM 只做语义解析、解释和候选修复。
+- [x] 每个模块同时交付工具契约、数据结构、日志事件、测试 fixture 和最小验收 case。
+- [x] 每一阶段完成后都能独立演示，不依赖后续阶段才能证明价值。
 
 ---
 
@@ -23,21 +23,21 @@
 ### 交付物
 
 - [x] 完成 `agent/design/design.md` 的 Agent 功能模块设计。
-- [ ] 固化 `AgentState` 字段：scene、device specs、topology、intent、candidate artifacts、validation、runtime snapshot、final response。
-- [ ] 固化 artifact 类型：`scene_patch`、`device_spec_patch`、`physical_edge_patch`、`process_patch`、`signal_patch`、`scene_behavior_graph_patch`、`parameter_binding_patch`、`diagnostic_report`、`question_set`、`scenario_experiment_plan`。
-- [ ] 固化 `PatchEnvelope`：`base_scene_revision`、operations、reason、confidence、validation_before/after、approval_required、rollback_hint。
-- [ ] 固化 agent event taxonomy：`agent.scene_loaded`、`agent.topology_built`、`agent.validation_failed`、`agent.patch_staged`、`agent.runtime_observation_diagnosed` 等。
+- [x] 固化 `AgentState` 字段：scene、device specs、topology、intent、candidate artifacts、validation、runtime snapshot、final response。
+- [x] 固化 artifact 类型：`scene_patch`、`device_spec_patch`、`physical_edge_patch`、`process_patch`、`signal_patch`、`scene_behavior_graph_patch`、`parameter_binding_patch`、`diagnostic_report`、`question_set`、`scenario_experiment_plan`。
+- [x] 固化 `PatchEnvelope`：`base_scene_revision`、operations、reason、confidence、validation_before/after、approval_required、rollback_hint。
+- [x] 固化 agent event taxonomy：`agent.scene_loaded`、`agent.topology_built`、`agent.validation_failed`、`agent.patch_staged`、`agent.runtime_observation_diagnosed` 等。
 
 ### 工具
 
-- [ ] `SchemaContractRegistry`：集中注册 Agent 输入/输出 schema。
-- [ ] `ArtifactSchemaValidator`：校验所有候选 artifact 基础结构。
-- [ ] `AgentEventEmitter`：统一记录 Agent 节点事件。
+- [x] `SchemaContractRegistry`：集中注册 Agent 输入/输出 schema。
+- [x] `ArtifactSchemaValidator`：校验所有候选 artifact 基础结构。
+- [x] `AgentEventEmitter`：统一记录 Agent 节点事件。
 
 ### 验收
 
-- [ ] 任一候选 artifact 都能通过统一 schema 校验或返回结构化错误。
-- [ ] 每次 Agent run 都能回放节点、artifact、校验结果和最终决策。
+- [x] 任一候选 artifact 都能通过统一 schema 校验或返回结构化错误。
+- [x] 每次 Agent run 都能回放节点、artifact、校验结果和最终决策。
 
 ---
 
@@ -47,26 +47,26 @@
 
 ### 交付物
 
-- [ ] 实现 LangGraph 主图：`LoadContextNode -> LoadDeviceCapabilitiesNode -> BuildOrLoadTopologyNode -> ClassifyIntentNode -> ResolveSlotsNode -> RouteTaskNode -> ValidateArtifactNode -> RepairOrInterruptNode -> ExplainNode -> StageOrApplyNode -> EmitResultNode`。
-- [ ] 实现 `AgentState` Pydantic / TypedDict 定义。
-- [ ] 实现 run checkpoint、resume、cancel、repair_attempts 限制。
-- [ ] 实现基础 SSE / event stream，用于前端展示 Agent 当前阶段。
+- [x] 实现 LangGraph 主图：`LoadContextNode -> LoadDeviceCapabilitiesNode -> BuildOrLoadTopologyNode -> ClassifyIntentNode -> ResolveSlotsNode -> RouteTaskNode -> ValidateArtifactNode -> RepairOrInterruptNode -> ExplainNode -> StageOrApplyNode -> EmitResultNode`。
+- [x] 实现 `AgentState` Pydantic / TypedDict 定义。
+- [x] 实现 run checkpoint、resume、cancel、repair_attempts 限制。
+- [x] 实现基础 SSE / event stream，用于前端展示 Agent 当前阶段。
 
 ### 工具
 
-- [ ] `SceneReader(scene_id, revision?)`：读取 `SceneDocument`、active artifacts、revision。
-- [ ] `DeviceSpecReader(spec_ids, version_policy?)`：读取设备规范和版本。
-- [ ] `TopologyReader(scene_id, revision)`：读取缓存拓扑；revision 不匹配返回 null。
-- [ ] `ArtifactReader(agent_run_id | scene_id)`：读取历史候选图、patch、诊断报告。
-- [ ] `RuntimeSnapshotReader(run_id)`：只读 runtime snapshot。
-- [ ] `EventLogReader(run_id, window, filters?)`：只读 runtime events / observations。
-- [ ] `ArtifactWriter(agent_run_id, artifact)`：写候选 artifact，不改业务事实。
+- [x] `SceneReader(scene_id, revision?)`：读取 `SceneDocument`、active artifacts、revision。
+- [x] `DeviceSpecReader(spec_ids, version_policy?)`：读取设备规范和版本。
+- [x] `TopologyReader(scene_id, revision)`：读取缓存拓扑；revision 不匹配返回 null。
+- [x] `ArtifactReader(agent_run_id | scene_id)`：读取历史候选图、patch、诊断报告。
+- [x] `RuntimeSnapshotReader(run_id)`：只读 runtime snapshot。
+- [x] `EventLogReader(run_id, window, filters?)`：只读 runtime events / observations。
+- [x] `ArtifactWriter(agent_run_id, artifact)`：写候选 artifact，不改业务事实。
 
 ### 验收
 
-- [ ] 给定 `scene_id + user_message`，Agent 能完整创建 run、读取 scene/spec/topology、输出只读诊断 artifact。
-- [ ] 如果 scene revision 变化，旧 topology 和旧 patch 不会被误用。
-- [ ] LLM 节点没有数据库直连权限，只能通过工具读写。
+- [x] 给定 `scene_id + user_message`，Agent 能完整创建 run、读取 scene/spec/topology、输出只读诊断 artifact。
+- [x] 如果 scene revision 变化，旧 topology 和旧 patch 不会被误用。
+- [x] LLM 节点没有数据库直连权限，只能通过工具读写。
 
 ---
 
@@ -76,34 +76,34 @@
 
 ### 交付物
 
-- [ ] `CapabilityIndex`：实例级行为、process port、physical interface、signal port、resource、capacity、默认参数索引。
-- [ ] `CompiledInterfaceIndex`：把 `DeviceSpec.interface_bindings` 编译成实例级 physical/process/signal/behavior 绑定。
-- [ ] `TopologyGraph` 基础版：显式 `physical_graph`、`process_graph`、`signal_graph`、`transport_graph`。
-- [ ] `ValidationReport` 分级：blocking、warning、info。
+- [x] `CapabilityIndex`：实例级行为、process port、physical interface、signal port、resource、capacity、默认参数索引。
+- [x] `CompiledInterfaceIndex`：把 `DeviceSpec.interface_bindings` 编译成实例级 physical/process/signal/behavior 绑定。
+- [x] `TopologyGraph` 基础版：显式 `physical_graph`、`process_graph`、`signal_graph`、`transport_graph`。
+- [x] `ValidationReport` 分级：blocking、warning、info。
 
 ### 工具
 
-- [ ] `CapabilityIndexer(DeviceSpec[], SceneDocument)`：生成实例级能力索引。
-- [ ] `InterfaceCompiler(SceneDocument, DeviceSpec[])`：编译三层接口绑定。
-- [ ] `TopologyBuilder(SceneDocument, CapabilityIndex, options)`：从显式边生成拓扑图。
-- [ ] `ReachabilityChecker(TopologyGraph, source, target, material_class?)`：查询物料/工艺/运输可达性。
-- [ ] `SchemaValidator(artifact)`：JSON Schema / Pydantic 结构校验。
-- [ ] `ReferenceValidator(artifact, SceneDocument, DeviceSpec[])`：引用完整性校验。
-- [ ] `PortCompatibilityValidator(edges, CapabilityIndex)`：方向、类型、物料兼容校验。
-- [ ] `BehaviorClosureValidator(SceneBehaviorGraph)`：trigger、guard、done、error、release 闭环校验。
-- [ ] `RuntimePreflightValidator(SceneBehaviorGraph, RuntimeSnapshot?)`：初始事件、完成条件、启动条件校验。
+- [x] `CapabilityIndexer(DeviceSpec[], SceneDocument)`：生成实例级能力索引。
+- [x] `InterfaceCompiler(SceneDocument, DeviceSpec[])`：编译三层接口绑定。
+- [x] `TopologyBuilder(SceneDocument, CapabilityIndex, options)`：从显式边生成拓扑图。
+- [x] `ReachabilityChecker(TopologyGraph, source, target, material_class?)`：查询物料/工艺/运输可达性。
+- [x] `SchemaValidator(artifact)`：JSON Schema / Pydantic 结构校验。
+- [x] `ReferenceValidator(artifact, SceneDocument, DeviceSpec[])`：引用完整性校验。
+- [x] `PortCompatibilityValidator(edges, CapabilityIndex)`：方向、类型、物料兼容校验。
+- [x] `BehaviorClosureValidator(SceneBehaviorGraph)`：trigger、guard、done、error、release 闭环校验。
+- [x] `RuntimePreflightValidator(SceneBehaviorGraph, RuntimeSnapshot?)`：初始事件、完成条件、启动条件校验。
 
 ### 可用开源依赖
 
-- [ ] `pydantic` / `jsonschema`：结构校验。
-- [ ] `networkx`：连通分量、路径、环路、拓扑排序。
-- [ ] `scipy.spatial.KDTree` 或 `rtree`：后续隐式拓扑空间邻近搜索。
+- [x] `pydantic` / `jsonschema`：结构校验。
+- [x] `networkx`：连通分量、路径、环路、拓扑排序。
+- [x] `scipy.spatial.KDTree` 或 `rtree`：后续隐式拓扑空间邻近搜索。
 
 ### 验收
 
-- [ ] 无效 instance、port、behavior、event、state 引用都能被 blocking error 捕获。
-- [ ] output->output、boolean->object signal 等错连能被捕获。
-- [ ] 不存在任何 LLM 生成内容可以绕过 Guardian 写入最终图。
+- [x] 无效 instance、port、behavior、event、state 引用都能被 blocking error 捕获。
+- [x] output->output、boolean->object signal 等错连能被捕获。
+- [x] 不存在任何 LLM 生成内容可以绕过 Guardian 写入最终图。
 
 ---
 
@@ -113,32 +113,32 @@
 
 ### 交付物
 
-- [ ] `IntentParserNode`：输出 structured intent。
-- [ ] `SlotResolverNode`：把“左侧传送带”“A2 格”“空闲机器人”解析为实例、端口、目标位置。
-- [ ] `ProcessCompileSubgraph`：生成 process modules 和必要 `process_edges` patch。
-- [ ] `SignalCompileSubgraph`：生成 signal plan、event bus routes、timeout/on_error 策略。
-- [ ] `BehaviorGraphCompileSubgraph`：生成 `SceneBehaviorGraph` 草案。
-- [ ] `ExplainNode`：输出 Agent 对场景调度的理解。
-- [ ] `SceneBehaviorGraphWriter`：写候选图版本或最终图版本。
+- [x] `IntentParserNode`：输出 structured intent。
+- [x] `SlotResolverNode`：把“左侧传送带”“A2 格”“空闲机器人”解析为实例、端口、目标位置。
+- [x] `ProcessCompileSubgraph`：生成 process modules 和必要 `process_edges` patch。
+- [x] `SignalCompileSubgraph`：生成 signal plan、event bus routes、timeout/on_error 策略。
+- [x] `BehaviorGraphCompileSubgraph`：生成 `SceneBehaviorGraph` 草案。
+- [x] `ExplainNode`：输出 Agent 对场景调度的理解。
+- [x] `SceneBehaviorGraphWriter`：写候选图版本或最终图版本。
 
 ### 工具
 
-- [ ] `IntentSchemaTool`：约束 LLM 结构化输出。
-- [ ] `SlotResolver(SceneContext, TopologyGraph, user_slots)`：引用消解。
-- [ ] `ProcessTemplateLibrary`：source、buffered transport、machine process、robot pick-place、sorting、backpressure 模板。
-- [ ] `ProcessEdgePlanner`：生成或补齐 `process_edges`。
-- [ ] `SignalPortResolver`：查找设备 signal ports 和方向。
-- [ ] `SignalRoutePlanner`：生成 `signal_edges` 和 `event_bus.routes`。
-- [ ] `EventBusBuilder`：注册事件、topics、subscriptions。
-- [ ] `PolicyLibrary`：resource lock、queue wait、capacity threshold、workpiece claim、deadlock detection。
-- [ ] `BehaviorGraphBuilder`：组装 events、states、rules、policies、completion、failure observations。
+- [x] `IntentSchemaTool`：约束 LLM 结构化输出。
+- [x] `SlotResolver(SceneContext, TopologyGraph, user_slots)`：引用消解。
+- [x] `ProcessTemplateLibrary`：source、buffered transport、machine process、robot pick-place、sorting、backpressure 模板。
+- [x] `ProcessEdgePlanner`：生成或补齐 `process_edges`。
+- [x] `SignalPortResolver`：查找设备 signal ports 和方向。
+- [x] `SignalRoutePlanner`：生成 `signal_edges` 和 `event_bus.routes`。
+- [x] `EventBusBuilder`：注册事件、topics、subscriptions。
+- [x] `PolicyLibrary`：resource lock、queue wait、capacity threshold、workpiece claim、deadlock detection。
+- [x] `BehaviorGraphBuilder`：组装 events、states、rules、policies、completion、failure observations。
 
 ### 验收
 
-- [ ] 输入“传送带末端有料时，让空闲机器人抓到 A2 格”，能生成合规 `SceneBehaviorGraph`。
-- [ ] 图中所有 behavior 都来自 `DeviceSpec.transport_behaviors` 或明确的 `device_spec_patch` 候选。
-- [ ] Runtime 不需要 LLM 即可消费该图推进基础行为。
-- [ ] 自动修复最多 2 次，失败后输出结构化诊断而不是继续循环。
+- [x] 输入“传送带末端有料时，让空闲机器人抓到 A2 格”，能生成合规 `SceneBehaviorGraph`。
+- [x] 图中所有 behavior 都来自 `DeviceSpec.transport_behaviors` 或明确的 `device_spec_patch` 候选。
+- [x] Runtime 不需要 LLM 即可消费该图推进基础行为。
+- [x] 自动修复最多 2 次，失败后输出结构化诊断而不是继续循环。
 
 ---
 
@@ -148,28 +148,28 @@
 
 ### 交付物
 
-- [ ] 隐式 physical edge 候选生成：距离、朝向、接口类型、物料类别、设备语义打分。
-- [ ] physical edge -> process edge 派生规则。
-- [ ] process edge -> signal handshake 派生规则。
-- [ ] topology warning：孤立设备、悬空端口、方向冲突、类型不兼容、重复连接、环路。
-- [ ] 低置信度候选的用户确认数据结构。
+- [x] 隐式 physical edge 候选生成：距离、朝向、接口类型、物料类别、设备语义打分。
+- [x] physical edge -> process edge 派生规则。
+- [x] process edge -> signal handshake 派生规则。
+- [x] topology warning：孤立设备、悬空端口、方向冲突、类型不兼容、重复连接、环路。
+- [x] 低置信度候选的用户确认数据结构。
 
 ### 工具
 
-- [ ] `WorldFrameResolver(instance.transform, physical_interface.local_frame)`：计算端口世界坐标和方向。
-- [ ] `ImplicitEdgeCandidateGenerator`：生成候选边和 confidence。
-- [ ] `EdgeConfidenceScorer`：融合几何、方向、类型、物料、语义分数。
-- [ ] `TopologyWriter`：写入 topology artifact 或候选 edge patch。
-- [ ] `PhysicalEdgePatchWriter`：生成 `physical_edges` patch。
-- [ ] `ProcessPatchWriter`：生成 `process_edges` patch。
-- [ ] `SignalPatchWriter`：生成 `signal_edges` patch。
-- [ ] `ApprovalManager`：低置信度边进入确认。
+- [x] `WorldFrameResolver(instance.transform, physical_interface.local_frame)`：计算端口世界坐标和方向。
+- [x] `ImplicitEdgeCandidateGenerator`：生成候选边和 confidence。
+- [x] `EdgeConfidenceScorer`：融合几何、方向、类型、物料、语义分数。
+- [x] `TopologyWriter`：写入 topology artifact 或候选 edge patch。
+- [x] `PhysicalEdgePatchWriter`：生成 `physical_edges` patch。
+- [x] `ProcessPatchWriter`：生成 `process_edges` patch。
+- [x] `SignalPatchWriter`：生成 `signal_edges` patch。
+- [x] `ApprovalManager`：低置信度边进入确认。
 
 ### 验收
 
-- [ ] 给定只有 instances + transform 的场景，能生成候选 topology 和缺失连接报告。
-- [ ] 高置信度连接可暂存 patch，低置信度连接不会自动写入事实表。
-- [ ] 如果目标不可达，Agent 输出“缺少哪条连接/哪个设备”的具体原因。
+- [x] 给定只有 instances + transform 的场景，能生成候选 topology 和缺失连接报告。
+- [x] 高置信度连接可暂存 patch，低置信度连接不会自动写入事实表。
+- [x] 如果目标不可达，Agent 输出“缺少哪条连接/哪个设备”的具体原因。
 
 ---
 
@@ -179,34 +179,34 @@
 
 ### 交付物
 
-- [ ] 支持 Markdown / TXT / DOCX / XLSX / CSV / PDF 的参数抽取入口。
-- [ ] `ParameterBindingPlan`：extracted params、target bindings、units_normalized、confidence、source trace、missing params。
-- [ ] 参数绑定目标：`SceneDocument.instances[].param_overrides`、`runtime_config`、`SceneBehaviorGraph.policies`、`completion_conditions`。
-- [ ] 支持把补全后的内容写回协作文档或需求文档。
+- [x] 支持 Markdown / TXT / DOCX / XLSX / CSV / PDF 的参数抽取入口。
+- [x] `ParameterBindingPlan`：extracted params、target bindings、units_normalized、confidence、source trace、missing params。
+- [x] 参数绑定目标：`SceneDocument.instances[].param_overrides`、`runtime_config`、`SceneBehaviorGraph.policies`、`completion_conditions`。
+- [x] 支持把补全后的内容写回协作文档或需求文档。
 
 ### 工具
 
-- [ ] `DocumentReader(document_id | storage_key | upload_id)`：读取文档元数据和内容。
-- [ ] `DocumentParser(document_blob, mime_type)`：解析章节、表格、键值对、文本 span。
-- [ ] `ParameterExtractor(parsed_document, extraction_schema)`：抽取节拍、速度、容量、故障率、验收指标。
-- [ ] `UnitNormalizer(params)`：统一 SI 单位。
-- [ ] `ParameterBinder(extracted_params, SceneContext, CapabilityIndex)`：绑定到具体字段路径。
-- [ ] `ParameterPatchWriter`：生成参数 patch。
-- [ ] `DocumentPatchWriter`：写回说明文档、验收文档或设计文档。
+- [x] `DocumentReader(document_id | storage_key | upload_id)`：读取文档元数据和内容。
+- [x] `DocumentParser(document_blob, mime_type)`：解析章节、表格、键值对、文本 span。
+- [x] `ParameterExtractor(parsed_document, extraction_schema)`：抽取节拍、速度、容量、故障率、验收指标。
+- [x] `UnitNormalizer(params)`：统一 SI 单位。
+- [x] `ParameterBinder(extracted_params, SceneContext, CapabilityIndex)`：绑定到具体字段路径。
+- [x] `ParameterPatchWriter`：生成参数 patch。
+- [x] `DocumentPatchWriter`：写回说明文档、验收文档或设计文档。
 
 ### 可用开源依赖
 
-- [ ] `pypdf` / `pdfplumber`：PDF 文本和表格抽取。
-- [ ] `python-docx`：Word 文档读写。
-- [ ] `openpyxl`：Excel 参数表读写。
-- [ ] `markdown-it-py` 或 `markdown`：Markdown 解析。
-- [ ] OCR 可选：仅扫描件或图片文档需要。
+- [x] `pypdf` / `pdfplumber`：PDF 文本和表格抽取。
+- [x] `python-docx`：Word 文档读写。
+- [x] `openpyxl`：Excel 参数表读写。
+- [x] `markdown-it-py` 或 `markdown`：Markdown 解析。
+- [x] OCR 可选：仅扫描件或图片文档需要。
 
 ### 验收
 
-- [ ] “process time = 45s” 能绑定到具体机床或行为策略，而不是只作为自由文本保存。
-- [ ] 所有关键参数都有 source trace、单位、confidence 和目标字段。
-- [ ] 低置信度或多候选绑定不会自动写库，必须进入确认或 assumption。
+- [x] “process time = 45s” 能绑定到具体机床或行为策略，而不是只作为自由文本保存。
+- [x] 所有关键参数都有 source trace、单位、confidence 和目标字段。
+- [x] 低置信度或多候选绑定不会自动写库，必须进入确认或 assumption。
 
 ---
 
@@ -216,26 +216,26 @@
 
 ### 交付物
 
-- [ ] observation 类型统一：deadlock、timeout、target_not_reached、resource_conflict、capacity_blocked、event_unconsumed、action_failed、completion_not_met、metric_violation、user_interrupt。
-- [ ] `RuntimeDiagnosticReport`：symptom、root causes、evidence events、affected devices、suggested repairs、can_auto_repair。
-- [ ] observation -> repair patch -> validation -> pause/replan/resume 流程。
-- [ ] 运行时安全点策略：只有 runtime 暂停或到达 safe point 后才能应用修复。
+- [x] observation 类型统一：deadlock、timeout、target_not_reached、resource_conflict、capacity_blocked、event_unconsumed、action_failed、completion_not_met、metric_violation、user_interrupt。
+- [x] `RuntimeDiagnosticReport`：symptom、root causes、evidence events、affected devices、suggested repairs、can_auto_repair。
+- [x] observation -> repair patch -> validation -> pause/replan/resume 流程。
+- [x] 运行时安全点策略：只有 runtime 暂停或到达 safe point 后才能应用修复。
 
 ### 工具
 
-- [ ] `ObservationClassifier`：将 runtime observation 归类。
-- [ ] `TraceAnalyzer(RuntimeSnapshot, EventLog, SceneBehaviorGraph)`：回溯事件、状态、资源锁、信号值。
-- [ ] `RootCauseMapper`：把症状映射到缺边、缺路由、资源冲突、容量阻塞、行为失败。
-- [ ] `RepairPlanner`：生成候选修复方案。
-- [ ] `PatchStager`：暂存修复 patch。
-- [ ] `PatchApplier`：通过 revision check 和事务写入事实表。
-- [ ] `RuntimeControlTool`：pause、resume、cancel、replan request。
+- [x] `ObservationClassifier`：将 runtime observation 归类。
+- [x] `TraceAnalyzer(RuntimeSnapshot, EventLog, SceneBehaviorGraph)`：回溯事件、状态、资源锁、信号值。
+- [x] `RootCauseMapper`：把症状映射到缺边、缺路由、资源冲突、容量阻塞、行为失败。
+- [x] `RepairPlanner`：生成候选修复方案。
+- [x] `PatchStager`：暂存修复 patch。
+- [x] `PatchApplier`：通过 revision check 和事务写入事实表。
+- [x] `RuntimeControlTool`：pause、resume、cancel、replan request。
 
 ### 验收
 
-- [ ] 缺失 `conveyor.part_ready -> robot.start_pick` 路由时，Agent 能从 event log 解释根因并生成 `signal_patch`。
-- [ ] resource lock 长期不释放时，Agent 能定位占用者、等待者和相关规则。
-- [ ] 未通过 validation 的修复 patch 不会被提交到 runtime。
+- [x] 缺失 `conveyor.part_ready -> robot.start_pick` 路由时，Agent 能从 event log 解释根因并生成 `signal_patch`。
+- [x] resource lock 长期不释放时，Agent 能定位占用者、等待者和相关规则。
+- [x] 未通过 validation 的修复 patch 不会被提交到 runtime。
 
 ---
 
@@ -245,32 +245,32 @@
 
 ### 交付物
 
-- [ ] scenario variant 生成：机器人数量、输送速度、缓存容量、工艺路线、投料频率。
-- [ ] 仿真实验提交和批量运行。
-- [ ] 指标采集：throughput、cycle time、WIP、waiting time、utilization、blocked time、deadlock count。
-- [ ] `ScenarioComparisonReport`：方案、指标、瓶颈、tradeoff、推荐方案、模型置信度。
-- [ ] 验收文档 assertions：吞吐量、节拍、WIP、利用率、超时率。
+- [x] scenario variant 生成：机器人数量、输送速度、缓存容量、工艺路线、投料频率。
+- [x] 仿真实验提交和批量运行。
+- [x] 指标采集：throughput、cycle time、WIP、waiting time、utilization、blocked time、deadlock count。
+- [x] `ScenarioComparisonReport`：方案、指标、瓶颈、tradeoff、推荐方案、模型置信度。
+- [x] 验收文档 assertions：吞吐量、节拍、WIP、利用率、超时率。
 
 ### 工具
 
-- [ ] `ScenarioGenerator`：生成参数和结构变体。
-- [ ] `SimulationSubmitter`：提交 simulation runs。
-- [ ] `MetricsReader`：读取指标和事件统计。
-- [ ] `BottleneckAnalyzer`：识别瓶颈设备、阻塞边和资源等待。
-- [ ] `ScenarioReportWriter`：写报告 artifact。
-- [ ] `RecommendationPlanner`：生成参数、布局、流程或策略修改建议。
+- [x] `ScenarioGenerator`：生成参数和结构变体。
+- [x] `SimulationSubmitter`：提交 simulation runs。
+- [x] `MetricsReader`：读取指标和事件统计。
+- [x] `BottleneckAnalyzer`：识别瓶颈设备、阻塞边和资源等待。
+- [x] `ScenarioReportWriter`：写报告 artifact。
+- [x] `RecommendationPlanner`：生成参数、布局、流程或策略修改建议。
 
 ### 可用开源依赖
 
-- [ ] `pandas` / `numpy`：指标聚合。
-- [ ] `scipy`：简单优化或参数扫描。
-- [ ] `SimPy`：如果需要离线实验 runner。
+- [x] `pandas` / `numpy`：指标聚合。
+- [x] `scipy`：简单优化或参数扫描。
+- [x] `SimPy`：如果需要离线实验 runner。
 
 ### 验收
 
-- [ ] 对同一场景能自动比较至少 2 个 variant。
-- [ ] 报告能解释瓶颈来自设备节拍、容量、资源锁还是拓扑断链。
-- [ ] 没有足够输入数据时，报告明确标注验证不能成立，不给虚假确定结论。
+- [x] 对同一场景能自动比较至少 2 个 variant。
+- [x] 报告能解释瓶颈来自设备节拍、容量、资源锁还是拓扑断链。
+- [x] 没有足够输入数据时，报告明确标注验证不能成立，不给虚假确定结论。
 
 ---
 
@@ -376,3 +376,4 @@ Phase 0 契约冻结
 ```
 
 Phase 4 和 Phase 5 可以并行推进；Phase 7 依赖 Phase 6 的 observation 和 metrics；Phase 9 不应早于 Phase 3，否则外部联动会倒逼核心模型变形。
+
