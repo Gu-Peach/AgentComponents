@@ -67,6 +67,7 @@
     "These files are local copies of the current SimulationSchema DeviceSpecs plus scene1 execution-contract additions.",
     "Physical interfaces are model/device connection anchors; material movement is represented by process_ports and SceneDocument runtime_geometry.",
     "The conveyor spec contains reusable device-local process path geometry; scene-specific transport paths live on SceneDocument instances.",
+    "Robot pick/place process points and runtime IK chain snapshots are compiled into SceneDocument.instances[].runtime_geometry/runtime_kinematics for playback.",
     "Upload these specs before importing scene_document.json so every spec_id can resolve."
   ]
 }

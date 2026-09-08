@@ -79,10 +79,14 @@ SceneBehaviorGraph  基于 SceneDocument 和 DeviceSpec 生成场景行为图
 | `transform.scale` | 缩放 `[x, y, z]`。 |
 | `param_overrides` | 对设备本体默认参数的场景级覆盖，推荐新字段。 |
 | `params` | `param_overrides` 的旧别名，用于兼容早期示例。 |
+| `runtime_geometry` | 当前实例已编译/校准到 scene 坐标的执行几何。 |
+| `runtime_kinematics` | 当前实例运行时可直接消费的运动结构，例如机械臂 IK chain。 |
 
 ### 6.1 传送带参数覆盖
 
-传送带的停留点生成方式属于 `DeviceSpec.conveyor.type_specific_contract.stop_point_model`，但每条传送带在具体场景中需要几个停留点、容量是多少，应由 `SceneDocument.instances[].param_overrides` 指定。
+传送带的停留点生成方式属于 `DeviceSpec.conveyor.type_specific_contract.stop_point_model`，但每条传送带在具体场景中需要几个停留点、容量是多少，应由 `SceneDocument.instances[].param_overrides` 指定。真正播放动画时，起点、终点、waypoints 和 stop_points 应优先读取 `SceneDocument.instances[].runtime_geometry.transport_path`。
+
+机械臂的 URDF/IK 默认定义可以来自 `DeviceSpec.type_specific_contract.urdf`，但进入场景后应编译为 `SceneDocument.instances[].runtime_kinematics.kinematic_chain`，并把 pick/place 工艺点写入 `runtime_geometry.process_points` 或 `runtime_geometry.pick_place_path`。这样前端执行动画时不需要重新从 DeviceSpec 局部坐标猜场景点位。
 
 | 字段 | 含义 |
 | --- | --- |

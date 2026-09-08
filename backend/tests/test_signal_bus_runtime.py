@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from types import SimpleNamespace
 
 from sqlalchemy import select
 
@@ -8,6 +9,7 @@ from app.db import models
 from app.db.session import SessionLocal
 from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, InstanceCreate, ProjectCreate, SignalEdgeCreate, SignalEmitRequest, SimulationRunCreate
 from app.services.catalog_service import DeviceSpecService
+from app.services.device_runtime import DeviceRuntime
 from app.services.project_service import ProjectService
 from app.services.runtime_state import InMemoryRuntimeStateStore
 from app.services.scene_service import SceneService
@@ -307,3 +309,60 @@ def test_identity_transform_preserves_value_and_payload() -> None:
         assert store.get_signals(run.id)["robot_1.start_pick"]["payload"] == payload
     finally:
         db.close()
+
+
+def test_device_task_payload_includes_scene_instance_runtime_context() -> None:
+    class FakeSpecRepository:
+        def get(self, spec_id: str):
+            assert spec_id == "robot_arm_1"
+            return SimpleNamespace(
+                document={
+                    "transport_behaviors": [
+                        {"behavior_id": "pick_and_place", "input_signals": ["start_pick"]}
+                    ]
+                }
+            )
+
+    scene_doc = {
+        "instances": [
+            {
+                "instance_id": "robot_1",
+                "spec_id": "robot_arm_1",
+                "device_type": "robot_arm",
+                "transform": {"position": [1, 0, 0], "rotation_euler": [0, 0, 0], "scale": [1, 1, 1]},
+                "param_overrides": {"target_conveyor_id": "upper_out_conveyor_1", "lift_height": 0.3},
+                "runtime_geometry": {
+                    "pick_place_path": {
+                        "input_process_port": "flow_input",
+                        "output_process_port": "flow_output",
+                        "pick_position": [0.1, 0.2, 0.3],
+                        "place_position": [1.1, 1.2, 1.3],
+                        "approach_height": 0.3,
+                        "waypoints": [[0.1, 0.5, 0.3], [0.1, 0.2, 0.3], [1.1, 1.2, 1.3]],
+                    }
+                },
+                "runtime_kinematics": {
+                    "kinematic_chain": {"root_node_name": "UR10_00Hn", "joints": [{"name": "joint_1", "nodeName": "Link1_00In"}]}
+                },
+            }
+        ]
+    }
+
+    task = DeviceRuntime(FakeSpecRepository()).on_signal(
+        SimpleNamespace(id="run_1"),
+        scene_doc,
+        "robot_1.start_pick",
+        {"material_id": "part_001"},
+        {"source": "main_conveyor_2.part_ready", "route_id": "route_1", "edge_id": "edge_1"},
+        {"event_id": "evt_1"},
+    )
+
+    assert task is not None
+    assert task["behavior_id"] == "pick_and_place"
+    assert task["payload"]["material_id"] == "part_001"
+    assert task["payload"]["target_conveyor_id"] == "upper_out_conveyor_1"
+    assert task["payload"]["pick_position"] == [0.1, 0.2, 0.3]
+    assert task["payload"]["place_position"] == [1.1, 1.2, 1.3]
+    assert task["payload"]["waypoints"] == [[0.1, 0.5, 0.3], [0.1, 0.2, 0.3], [1.1, 1.2, 1.3]]
+    assert task["payload"]["runtime_kinematics"]["kinematic_chain"]["root_node_name"] == "UR10_00Hn"
+    assert task["payload"]["scene_instance"]["instance_id"] == "robot_1"

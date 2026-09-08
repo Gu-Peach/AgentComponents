@@ -360,6 +360,111 @@
         "lift_height": 0.3,
         "target_conveyor_id": "upper_out_conveyor_1"
       },
+      "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_process_edge",
+            "source_ref": "main_conveyor_2.flow_output",
+            "source_process_edge": "proc_main_2_to_robot_1",
+            "position": [-0.649, 0.15, -1.197],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_process_edge",
+            "source_ref": "upper_out_conveyor_1.flow_input",
+            "target_process_edge": "proc_robot_1_to_upper_out",
+            "position": [-1.093, 0.7, -0.173],
+            "needs_calibration": true
+          }
+        },
+        "pick_place_path": {
+          "coordinate_space": "scene",
+          "source": "manual_placeholder_from_process_edges",
+          "needs_calibration": true,
+          "input_process_port": "flow_input",
+          "output_process_port": "flow_output",
+          "source_process_edge": "proc_main_2_to_robot_1",
+          "target_process_edge": "proc_robot_1_to_upper_out",
+          "source_instance_id": "main_conveyor_2",
+          "target_instance_id": "upper_out_conveyor_1",
+          "pick_position": [-0.649, 0.15, -1.197],
+          "place_position": [-1.093, 0.7, -0.173],
+          "approach_height": 0.3,
+          "waypoints": [
+            [-0.649, 0.45, -1.197],
+            [-0.649, 0.15, -1.197],
+            [-0.649, 0.45, -1.197],
+            [-1.093, 1.0, -0.173],
+            [-1.093, 0.7, -0.173],
+            [-1.093, 1.0, -0.173]
+          ]
+        }
+      },
+      "runtime_kinematics": {
+        "kinematic_chain": {
+          "coordinate_space": "scene_resolved_from_glb",
+          "source": "compiled_from_device_spec_type_specific_contract",
+          "compiled_from": "robot_arm_1.type_specific_contract.urdf",
+          "needs_calibration": true,
+          "root_node_name": "UR10_00Hn",
+          "end_effector_node_name": "Link6_00Nn",
+          "joints": [
+            {
+              "name": "joint_1",
+              "nodeName": "Link1_00In",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 1, "z": 0 },
+              "limit": { "lower": -3.14, "upper": 3.14 }
+            },
+            {
+              "name": "joint_2",
+              "nodeName": "Link2_00Jn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_3",
+              "nodeName": "Link3_00Kn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_4",
+              "nodeName": "Link4_00Ln",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_5",
+              "nodeName": "Link5_00Mn",
+              "type": "revolute",
+              "axis": { "x": 1, "y": 0, "z": 0 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_6",
+              "nodeName": "Link6_00Nn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 1, "z": 0 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            }
+          ]
+        },
+        "tooling": {
+          "tcp_node_name": "Link6_00Nn",
+          "tcp_local_frame": {
+            "position": [0, 0, 0.8],
+            "rotation_euler": [0, 0, 0],
+            "forward": [1, 0, 0],
+            "up": [0, 0, 1]
+          }
+        }
+      },
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",
         "glb_node_index": 485,
@@ -388,6 +493,111 @@
         "payload_kg": 5.0,
         "lift_height": 0.3,
         "target_conveyor_id": "lower_out_conveyor_1"
+      },
+      "runtime_geometry": {
+        "process_points": {
+          "flow_input": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_process_edge",
+            "source_ref": "main_conveyor_2.flow_output",
+            "source_process_edge": "proc_main_2_to_robot_2",
+            "position": [-0.649, 0.15, -1.197],
+            "needs_calibration": true
+          },
+          "flow_output": {
+            "coordinate_space": "scene",
+            "source": "compiled_from_process_edge",
+            "source_ref": "lower_out_conveyor_1.flow_input",
+            "target_process_edge": "proc_robot_2_to_lower_out",
+            "position": [-1.093, 0.7, -2.235],
+            "needs_calibration": true
+          }
+        },
+        "pick_place_path": {
+          "coordinate_space": "scene",
+          "source": "manual_placeholder_from_process_edges",
+          "needs_calibration": true,
+          "input_process_port": "flow_input",
+          "output_process_port": "flow_output",
+          "source_process_edge": "proc_main_2_to_robot_2",
+          "target_process_edge": "proc_robot_2_to_lower_out",
+          "source_instance_id": "main_conveyor_2",
+          "target_instance_id": "lower_out_conveyor_1",
+          "pick_position": [-0.649, 0.15, -1.197],
+          "place_position": [-1.093, 0.7, -2.235],
+          "approach_height": 0.3,
+          "waypoints": [
+            [-0.649, 0.45, -1.197],
+            [-0.649, 0.15, -1.197],
+            [-0.649, 0.45, -1.197],
+            [-1.093, 1.0, -2.235],
+            [-1.093, 0.7, -2.235],
+            [-1.093, 1.0, -2.235]
+          ]
+        }
+      },
+      "runtime_kinematics": {
+        "kinematic_chain": {
+          "coordinate_space": "scene_resolved_from_glb",
+          "source": "compiled_from_device_spec_type_specific_contract",
+          "compiled_from": "robot_arm_1.type_specific_contract.urdf",
+          "needs_calibration": true,
+          "root_node_name": "UR10_00Hn",
+          "end_effector_node_name": "Link6_00Nn",
+          "joints": [
+            {
+              "name": "joint_1",
+              "nodeName": "Link1_00In",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 1, "z": 0 },
+              "limit": { "lower": -3.14, "upper": 3.14 }
+            },
+            {
+              "name": "joint_2",
+              "nodeName": "Link2_00Jn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_3",
+              "nodeName": "Link3_00Kn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_4",
+              "nodeName": "Link4_00Ln",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 0, "z": 1 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_5",
+              "nodeName": "Link5_00Mn",
+              "type": "revolute",
+              "axis": { "x": 1, "y": 0, "z": 0 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            },
+            {
+              "name": "joint_6",
+              "nodeName": "Link6_00Nn",
+              "type": "revolute",
+              "axis": { "x": 0, "y": 1, "z": 0 },
+              "limit": { "lower": -1.57, "upper": 2.36 }
+            }
+          ]
+        },
+        "tooling": {
+          "tcp_node_name": "Link6_00Nn",
+          "tcp_local_frame": {
+            "position": [0, 0, 0.8],
+            "rotation_euler": [0, 0, 0],
+            "forward": [1, 0, 0],
+            "up": [0, 0, 1]
+          }
+        }
       },
       "asset_binding": {
         "asset_path": "frontend/public/test/scene1/1.glb",

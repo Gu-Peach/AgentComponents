@@ -71,6 +71,8 @@ class InstanceCreate(RevisionedRequest):
     device_type: str | None = None
     transform: Transform = Field(default_factory=Transform)
     param_overrides: JsonDict = Field(default_factory=dict)
+    runtime_geometry: JsonDict = Field(default_factory=dict)
+    runtime_kinematics: JsonDict = Field(default_factory=dict)
     visible: bool = True
     locked: bool = False
     semantic_tags: list[str] = Field(default_factory=list)
@@ -80,6 +82,8 @@ class InstancePatch(RevisionedRequest):
     display_name: str | None = None
     transform: Transform | None = None
     param_overrides: JsonDict | None = None
+    runtime_geometry: JsonDict | None = None
+    runtime_kinematics: JsonDict | None = None
     visible: bool | None = None
     locked: bool | None = None
     semantic_tags: list[str] | None = None

@@ -61,6 +61,9 @@
 | `scale` | 实例缩放。 |
 | `param_overrides` | 对设备本体默认参数的场景级覆盖，推荐新字段。 |
 | `params` | `param_overrides` 的旧别名，兼容早期示例。 |
+| `runtime_geometry` | 当前场景实例的执行几何，坐标已经落到 scene/world 坐标。 |
+| `runtime_kinematics` | 当前场景实例的运行时运动结构，例如机械臂 IK chain、joint nodeName、TCP。 |
+| `asset_binding` | 当前实例绑定到 GLB/场景资产中的节点信息。 |
 | `material_id` | 物料实例 ID。 |
 | `located_at` | 物料当前初始位置，如设备接口、载具槽位。 |
 | `edge_id` | 场景边 ID。 |
@@ -95,3 +98,16 @@
 | `param_overrides.stop_point_spacing_policy` | 停留点分布方式，第一阶段默认 `evenly_spaced`。 |
 | `param_overrides.capacity` | 当前传送带实例可同时承载的物料或载具数量。 |
 | `param_overrides.resume_threshold` | blocked 后恢复接收的负载阈值。 |
+
+## 运行时实例数据
+
+`DeviceSpec` 只描述设备本体的局部默认能力，例如 `process_ports.local_frame`、机械臂 `urdf.joints`、默认轨迹参数。设备被拖入场景后，编译器或前端校准器应把运行时需要直接读取的数据写入 `SceneDocument.instances[]`。
+
+| 字段 | 运行时含义 |
+|---|---|
+| `runtime_geometry.transport_path` | 传送带实例的 scene 坐标输送路径、停留点和起止工艺口。 |
+| `runtime_geometry.process_points` | 设备实例各工艺口在当前场景中的 scene 坐标。 |
+| `runtime_geometry.pick_place_path` | 机械臂抓取/放置动作的 scene 坐标 pick/place 点和路径。 |
+| `runtime_kinematics.kinematic_chain` | 机械臂实例的 IK chain 快照，由 DeviceSpec URDF 和 GLB 节点绑定编译而来。 |
+
+运行时播放动画时优先读取 `SceneDocument.instances[].runtime_geometry` 和 `runtime_kinematics`；只有编译/校准阶段才回到 `DeviceSpec` 读取局部默认定义。

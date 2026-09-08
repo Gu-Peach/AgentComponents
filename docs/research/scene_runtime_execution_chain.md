@@ -43,7 +43,8 @@ SceneDocument
 - `physical_edges[]`：设备物理连接/装配关系，例如底部包围框安装点、底座连接点、夹具安装点之间的连接；不表达物料运输路径。
 - `signal_edges[]`：信号端口之间的静态连接关系。
 - `instances[].param_overrides`：实例级参数覆盖。
-- `instances[].runtime_geometry`：场景级执行几何，例如传送带实例的 `transport_path`、`waypoints`、`stop_points`。这些执行几何应从工艺接口/process point 派生，而不是从 physical interface 派生。
+- `instances[].runtime_geometry`：场景级执行几何，例如传送带实例的 `transport_path`、`waypoints`、`stop_points`，以及机械臂实例的 `process_points`、`pick_place_path`。这些执行几何应从工艺接口/process point 派生，而不是从 physical interface 派生。
+- `instances[].runtime_kinematics`：场景实例级运动结构，例如机械臂由 `DeviceSpec.type_specific_contract.urdf` 和 GLB 节点绑定编译出的 IK chain、joint nodeName、TCP。
 
 关键点：`SceneDocument` 不是运行时状态表。它不保存设备当前是否 busy，也不保存当前 action 进度。这些属于 RuntimeSnapshot / RuntimeStateStore。
 
@@ -145,21 +146,23 @@ main_conveyor_2.part_ready
 
 ## 3. 执行参数优先级
 
-真正执行行为时，参数不应该只来自 `DeviceSpec`。更合理的优先级是：
+真正执行行为时，运行时基础参数来自 `SceneDocument.instances[]`；`Runtime event payload` 只作为本次动作的临时覆盖或物料选择信息。更合理的优先级是：
 
 ```text
 Runtime event payload
   > SceneDocument.instances[].runtime_geometry
+  > SceneDocument.instances[].runtime_kinematics
   > SceneDocument.instances[].param_overrides
   > DeviceSpec.params_schema.default / type_specific_contract
 ```
 
 含义：
 
-- `Runtime event payload`：本次动作特定参数，例如 `material_id`、`target_conveyor_id`、`waypoints`。
-- `SceneDocument.runtime_geometry`：场景实例级执行几何，例如某条传送带在当前场景中的起点、终点和停留点。
+- `Runtime event payload`：本次动作特定参数或覆盖，例如 `material_id`、`target_conveyor_id`、临时 `waypoints`。
+- `SceneDocument.runtime_geometry`：场景实例级执行几何，例如某条传送带在当前场景中的起点、终点和停留点，或某个机械臂的 pick/place 点和抓放路径。
 - `SceneDocument.param_overrides`：场景实例级参数，例如速度、容量、停留点数量。
-- `DeviceSpec`：设备类默认能力和默认参数，只作为复用 fallback。
+- `SceneDocument.runtime_kinematics`：场景实例级 IK/运动结构快照，例如机械臂 joint chain、joint nodeName、TCP；由 DeviceSpec 的局部默认定义编译而来。
+- `DeviceSpec`：设备类默认能力、局部工艺点和默认运动结构，主要作为编译来源；运行时播放动画不应重新依赖它推断场景坐标。
 
 以传送带为例：
 
@@ -180,7 +183,7 @@ Runtime event
   -> 可选指定本次动作 waypoints
 ```
 
-如果 payload 没有显式 `waypoints`，执行器可以读 `SceneDocument.instances[].runtime_geometry.transport_path`。如果 scene 也没有给，才退回用 `DeviceSpec.process_ports.flow_input/flow_output + instance.transform` 推导。`physical_interfaces` 不应作为物料路径 fallback，除非某个设备明确把物理连接点同时声明为工艺点。
+如果 payload 没有显式 `waypoints`，执行器应优先读 `SceneDocument.instances[].runtime_geometry`：传送带读 `transport_path`，机械臂读 `pick_place_path`。如果 scene 也没有给，才在编译/校准阶段用 `DeviceSpec.process_ports.flow_input/flow_output + instance.transform` 推导并写回 SceneDocument。`physical_interfaces` 不应作为物料路径 fallback，除非某个设备明确把物理连接点同时声明为工艺点。
 
 ## 4. 前后端分工
 

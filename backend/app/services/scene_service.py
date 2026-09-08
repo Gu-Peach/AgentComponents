@@ -47,6 +47,8 @@ class SceneService:
             "display_name": payload.display_name or spec.display_name,
             "transform": payload.transform.model_dump(),
             "param_overrides": payload.param_overrides,
+            "runtime_geometry": payload.runtime_geometry,
+            "runtime_kinematics": payload.runtime_kinematics,
             "visible": payload.visible,
             "locked": payload.locked,
             "semantic_tags": payload.semantic_tags,
@@ -68,6 +70,10 @@ class SceneService:
             instance["transform"] = payload.transform.model_dump()
         if payload.param_overrides is not None:
             instance["param_overrides"] = payload.param_overrides
+        if payload.runtime_geometry is not None:
+            instance["runtime_geometry"] = payload.runtime_geometry
+        if payload.runtime_kinematics is not None:
+            instance["runtime_kinematics"] = payload.runtime_kinematics
         self._invalidate_topology(document)
         return self._save_scene(scene, document, "scene.instance_updated", {"instance_id": instance_id})
 

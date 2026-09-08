@@ -37,6 +37,7 @@ class DeviceRuntime:
         spec = self.device_specs.get(instance.get("spec_id", ""))
         spec_doc = spec.document if spec else {}
         behavior_id = self.registry.resolve_behavior(instance.get("device_type"), spec_doc, signal_port)
+        task_payload = self._payload_with_instance_runtime_context(payload, instance)
 
         return {
             "task_id": new_id("task"),
@@ -46,7 +47,7 @@ class DeviceRuntime:
             "trigger_signal": target_signal,
             "signal_port": signal_port,
             "behavior_id": behavior_id,
-            "payload": deepcopy(payload),
+            "payload": task_payload,
             "status": "pending",
             "source_signal": edge.get("source"),
             "route_id": edge.get("route_id"),
@@ -128,6 +129,68 @@ class DeviceRuntime:
             if instance.get("instance_id") == instance_id:
                 return instance
         return None
+
+    @staticmethod
+    def _payload_with_instance_runtime_context(payload: dict[str, Any], instance: dict[str, Any]) -> dict[str, Any]:
+        enriched = deepcopy(payload)
+
+        for key, value in (instance.get("param_overrides") or {}).items():
+            enriched.setdefault(key, deepcopy(value))
+
+        runtime_geometry = instance.get("runtime_geometry")
+        runtime_kinematics = instance.get("runtime_kinematics")
+        if runtime_geometry:
+            enriched.setdefault("runtime_geometry", deepcopy(runtime_geometry))
+            DeviceRuntime._apply_runtime_geometry_defaults(enriched, runtime_geometry)
+        if runtime_kinematics:
+            enriched.setdefault("runtime_kinematics", deepcopy(runtime_kinematics))
+
+        if runtime_geometry or runtime_kinematics:
+            enriched.setdefault(
+                "scene_instance",
+                {
+                    "instance_id": instance.get("instance_id"),
+                    "spec_id": instance.get("spec_id"),
+                    "device_type": instance.get("device_type"),
+                    "transform": deepcopy(instance.get("transform", {})),
+                    "asset_binding": deepcopy(instance.get("asset_binding", {})),
+                },
+            )
+
+        return enriched
+
+    @staticmethod
+    def _apply_runtime_geometry_defaults(payload: dict[str, Any], runtime_geometry: dict[str, Any]) -> None:
+        transport_path = runtime_geometry.get("transport_path") if isinstance(runtime_geometry, dict) else None
+        if isinstance(transport_path, dict):
+            start_position = transport_path.get("start_position")
+            end_position = transport_path.get("end_position")
+            DeviceRuntime._setdefault_if_present(payload, "from_position", start_position)
+            DeviceRuntime._setdefault_if_present(payload, "to_position", end_position)
+            waypoints = transport_path.get("waypoints") or ([start_position, end_position] if start_position and end_position else None)
+            if waypoints:
+                payload.setdefault("waypoints", deepcopy(waypoints))
+
+        pick_place_path = runtime_geometry.get("pick_place_path") if isinstance(runtime_geometry, dict) else None
+        if isinstance(pick_place_path, dict):
+            pick_position = pick_place_path.get("pick_position")
+            place_position = pick_place_path.get("place_position")
+            DeviceRuntime._setdefault_if_present(payload, "pick_position", pick_position)
+            DeviceRuntime._setdefault_if_present(payload, "place_position", place_position)
+            DeviceRuntime._setdefault_if_present(payload, "from_position", pick_position)
+            DeviceRuntime._setdefault_if_present(payload, "to_position", place_position)
+            DeviceRuntime._setdefault_if_present(payload, "input_process_port", pick_place_path.get("input_process_port"))
+            DeviceRuntime._setdefault_if_present(payload, "output_process_port", pick_place_path.get("output_process_port"))
+            lift_height = pick_place_path.get("lift_height") or pick_place_path.get("approach_height")
+            if lift_height is not None:
+                payload.setdefault("lift_height", lift_height)
+            if pick_place_path.get("waypoints"):
+                payload.setdefault("waypoints", deepcopy(pick_place_path["waypoints"]))
+
+    @staticmethod
+    def _setdefault_if_present(payload: dict[str, Any], key: str, value: Any) -> None:
+        if value is not None:
+            payload.setdefault(key, deepcopy(value))
 
     @staticmethod
     def _mark_device_busy(snapshot: dict[str, Any], instance_id: str) -> None:

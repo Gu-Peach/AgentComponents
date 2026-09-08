@@ -366,6 +366,7 @@ class SignalBusRuntime:
         spec = self.device_specs.get(instance.get("spec_id", ""))
         spec_doc = spec.document if spec else {}
         behavior_id = self._behavior_for_signal(spec_doc, signal_port)
+        task_payload = DeviceRuntime._payload_with_instance_runtime_context(payload, instance)
 
         return {
             "task_id": new_id("task"),
@@ -375,7 +376,7 @@ class SignalBusRuntime:
             "trigger_signal": target_signal,
             "signal_port": signal_port,
             "behavior_id": behavior_id,
-            "payload": deepcopy(payload),
+            "payload": task_payload,
             "status": "pending",
             "source_signal": edge.get("source"),
             "route_id": edge.get("route_id"),

@@ -44,6 +44,36 @@ describe("runtime behavior mapping", () => {
     expect(action?.waypoints.length).toBeGreaterThanOrEqual(4);
   });
 
+  it("uses scene instance runtime geometry from event payload before fallback robot paths", () => {
+    const event: RuntimeBehaviorEvent = {
+      type: "device_behavior_triggered",
+      run_id: "run_1",
+      action_id: "act_scene_runtime",
+      instance_id: "robot_arm_1",
+      behavior_id: "pick_and_place",
+      payload: {
+        material_id: "carrier_tray_1",
+        runtime_geometry: {
+          pick_place_path: {
+            waypoints: [
+              [0.1, 0.5, 0.3],
+              [0.1, 0.2, 0.3],
+              [1.1, 1.2, 1.3],
+            ],
+          },
+        },
+      },
+    };
+
+    const action = buildRuntimeAnimationAction(event, mockInitialSceneObjects, 1000);
+
+    expect(action?.waypoints).toEqual([
+      { x: 0.1, y: 0.5, z: 0.3 },
+      { x: 0.1, y: 0.2, z: 0.3 },
+      { x: 1.1, y: 1.2, z: 1.3 },
+    ]);
+  });
+
   it("interpolates multi-point paths by path length", () => {
     const position = interpolateWaypoints(
       [

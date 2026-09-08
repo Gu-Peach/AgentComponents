@@ -19,6 +19,7 @@
     "SceneDocument 不保存当前运行时状态。",
     "instances 通过 spec_id 引用 DeviceSpec。",
     "传送带实例可通过 param_overrides 覆盖 stop_point_count、capacity、resume_threshold 等场景级参数。",
+    "运行时执行所需的场景空间点位和实例级运动结构应保存在 instances[].runtime_geometry / runtime_kinematics；DeviceSpec 只提供设备局部默认定义和编译来源。",
     "v0.2 明确 process_edges、physical_edges、signal_edges 是三类不同场景事实；topology_graph 是从这些事实派生的运行时索引，不是第四类手工连线。"
   ],
   "required_sections": [
@@ -110,9 +111,9 @@
     ]
   },
   "instance_contract": {
-    "description": "instances 描述场景中实际使用的设备实例。DeviceSpec 给出默认能力，param_overrides 给出该实例在本场景中的参数覆盖。",
+    "description": "instances 描述场景中实际使用的设备实例。DeviceSpec 给出设备局部默认能力；SceneDocument instance 保存该设备在当前场景中的位姿、参数覆盖、已编译/校准的执行几何与运行时运动结构。",
     "required_fields": ["instance_id", "spec_id", "device_type", "transform"],
-    "recommended_fields": ["display_name", "param_overrides"],
+    "recommended_fields": ["display_name", "param_overrides", "runtime_geometry", "runtime_kinematics", "asset_binding"],
     "legacy_aliases": {
       "params": "param_overrides"
     },
@@ -121,6 +122,18 @@
       "stop_point_spacing_policy": "停留点分布策略，第一阶段默认 evenly_spaced。",
       "capacity": "该实例可同时承载的物料或载具数量。",
       "resume_threshold": "blocked 后恢复接收的负载阈值。"
+    },
+    "runtime_geometry_contract": {
+      "description": "场景实例级执行几何，坐标使用 scene/world 坐标。它由 DeviceSpec.process_ports.local_frame、实例 transform、用户校准结果和 process_edges 编译得到；运行时动画优先读取这里，而不是重新读取 DeviceSpec 局部坐标。",
+      "common_fields": ["coordinate_space", "source", "needs_calibration"],
+      "conveyor_transport_path": ["start_process_port", "end_process_port", "start_position", "end_position", "waypoints", "stop_points"],
+      "robot_pick_place_path": ["input_process_port", "output_process_port", "pick_position", "place_position", "approach_height", "waypoints", "source_process_edge", "target_process_edge"],
+      "process_points": "可选映射。按 process_port id 保存该实例在当前场景中的工艺点 scene 坐标，例如 flow_input/flow_output。"
+    },
+    "runtime_kinematics_contract": {
+      "description": "场景实例级运动结构快照。机械臂可在这里保存由 DeviceSpec.type_specific_contract.urdf + asset_binding 编译出的 IK chain、joint nodeName 映射、TCP 等，供前端/运行时直接使用。",
+      "robot_kinematic_chain": ["root_node_name", "end_effector_node_name", "joints", "needs_calibration", "compiled_from"],
+      "runtime_rule": "DeviceSpec 是编译来源；真正播放动画时优先使用 SceneDocument.instances[].runtime_kinematics。"
     }
   },
   "runtime_config_contract": {

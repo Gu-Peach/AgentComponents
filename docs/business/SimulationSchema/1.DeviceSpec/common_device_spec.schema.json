@@ -30,7 +30,7 @@
     "process_ports": "工艺流程和物料运动发生点；例如传送带起点/终点、机械臂抓取点/放置点、加工/等待/交接位置；可有独立 local_frame。",
     "signal_ports": "设备可接收或发出的运行时命令、状态和事件；物料/动作相关信号优先绑定到 process_port，也可不绑定空间对象。",
     "interface_bindings": "声明 process_port、signal_ports 和 transport_behaviors 的关联关系；physical_interface 仅在需要表达设备连接锚点关联时显式填写。",
-    "transport_behaviors": "设备可执行的物料流转行为能力，应引用已定义的 process_ports 和 signal_ports；执行几何来自 process_ports 或实例级 runtime_geometry。",
+    "transport_behaviors": "设备可执行的物料流转行为能力，应引用已定义的 process_ports 和 signal_ports；DeviceSpec 中的几何只作为局部默认定义，运行时执行几何应读取 SceneDocument.instances[].runtime_geometry。",
     "runtime_contract": "FSM、资源、容量、错误策略和运行约束。",
     "type_specific_contract": "设备类型专属的运动、控制、容量或几何语义。"
   },

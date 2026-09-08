@@ -109,8 +109,12 @@ function resolveConveyorWaypoints(
   const explicit = readWaypoints(payload);
   if (explicit.length >= 2) return explicit;
 
-  const from = readPosition(payload, ["from_position", "source_position", "entry_position"]);
-  const to = readPosition(payload, ["to_position", "target_position", "exit_position"]);
+  const transportPath = readRecord(readRecord(payload.runtime_geometry)?.transport_path);
+
+  const from = readPosition(payload, ["from_position", "source_position", "entry_position"]) ??
+    readPosition(transportPath, ["start_position"]);
+  const to = readPosition(payload, ["to_position", "target_position", "exit_position"]) ??
+    readPosition(transportPath, ["end_position"]);
   if (from && to) return [from, to];
 
   const subject = subjectId ? sceneObjects.find((object) => object.id === subjectId) : null;
@@ -131,18 +135,26 @@ function resolveRobotWaypoints(
   const explicit = readWaypoints(payload);
   if (explicit.length >= 2) return explicit;
 
+  const pickPlacePath = readRecord(readRecord(payload.runtime_geometry)?.pick_place_path);
+
   const subject = subjectId ? sceneObjects.find((object) => object.id === subjectId) : null;
   const pick =
     readPosition(payload, ["pick_position", "from_position", "source_position"]) ??
+    readPosition(pickPlacePath, ["pick_position", "from_position", "source_position"]) ??
     vectorFromTuple(subject?.transform.position) ??
     offsetPoint(robot, [0.95, 0.45, 0]);
 
   const place =
     readPosition(payload, ["place_position", "to_position", "target_position", "destination_position"]) ??
+    readPosition(pickPlacePath, ["place_position", "to_position", "target_position", "destination_position"]) ??
     resolveTargetObjectPosition(payload, sceneObjects, robot) ??
     offsetPoint(robot, [1.75, 0.48, robot.id.endsWith("2") ? 0.45 : -0.45]);
 
-  const liftHeight = numberFrom(payload.lift_height) ?? numberFrom(payload.liftHeight) ?? DEFAULT_LIFT_HEIGHT;
+  const liftHeight = numberFrom(payload.lift_height) ??
+    numberFrom(payload.liftHeight) ??
+    numberFrom(pickPlacePath?.lift_height) ??
+    numberFrom(pickPlacePath?.approach_height) ??
+    DEFAULT_LIFT_HEIGHT;
   const pickAbove = { ...pick, y: pick.y + liftHeight };
   const placeAbove = { ...place, y: place.y + liftHeight };
   return [pickAbove, pick, pickAbove, placeAbove, place, placeAbove];
@@ -179,12 +191,22 @@ function resolveTargetObjectPosition(
 }
 
 function readWaypoints(payload: Record<string, unknown>): RuntimeVector3[] {
-  const raw = payload.waypoints;
-  if (!Array.isArray(raw)) return [];
-  return raw.map(readVector).filter((item): item is RuntimeVector3 => item !== null);
+  for (const source of [
+    payload,
+    readRecord(readRecord(payload.runtime_geometry)?.transport_path),
+    readRecord(readRecord(payload.runtime_geometry)?.pick_place_path),
+  ]) {
+    const raw = source?.waypoints;
+    if (!Array.isArray(raw)) continue;
+    const waypoints = raw.map(readVector).filter((item): item is RuntimeVector3 => item !== null);
+    if (waypoints.length > 0) return waypoints;
+  }
+
+  return [];
 }
 
-function readPosition(payload: Record<string, unknown>, keys: string[]): RuntimeVector3 | null {
+function readPosition(payload: Record<string, unknown> | null | undefined, keys: string[]): RuntimeVector3 | null {
+  if (!payload) return null;
   for (const key of keys) {
     const position = readVector(payload[key]);
     if (position) return position;
@@ -207,6 +229,10 @@ function readVector(value: unknown): RuntimeVector3 | null {
   }
 
   return null;
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function resolveDuration(payload: Record<string, unknown>, length: number, speed: number, minDuration: number): number {
