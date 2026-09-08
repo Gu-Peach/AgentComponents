@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.serializers import scene_response
 from app.db.session import get_db
-from app.schemas.domain import CompileInterfacesRequest, EdgeCreate, EdgeDelete, InstanceCreate, InstanceDelete, InstancePatch, MutationResponse, SceneResponse, SignalEdgeCreate, TopologyResponse
+from app.schemas.domain import CompileInterfacesRequest, EdgeCreate, EdgeDelete, InstanceCreate, InstanceDelete, InstancePatch, MutationResponse, SceneDocumentPut, SceneResponse, SignalEdgeCreate, TopologyResponse
 from app.services.scene_service import SceneService
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["scenes"])
@@ -17,6 +17,11 @@ router = APIRouter(prefix="/api/projects/{project_id}", tags=["scenes"])
 @router.get("/scene", response_model=SceneResponse)
 def get_scene(project_id: str, db: Session = Depends(get_db)) -> dict:
     return scene_response(SceneService(db).get_scene_for_project(project_id))
+
+
+@router.put("/scene", response_model=MutationResponse)
+def replace_scene(project_id: str, payload: SceneDocumentPut, db: Session = Depends(get_db)) -> dict:
+    return SceneService(db).replace_scene_document(project_id, payload)
 
 
 # 添加设备实例：POST /api/projects/{project_id}/scene/instances，向场景中新增一个设备实例。
@@ -89,4 +94,3 @@ def get_topology(project_id: str, db: Session = Depends(get_db)) -> dict:
 @router.get("/topology/reachability")
 def get_reachability(project_id: str, source: str, target: str, graph: str = Query(default="process_graph"), db: Session = Depends(get_db)) -> dict:
     return SceneService(db).reachability(project_id, source, target, graph)
-

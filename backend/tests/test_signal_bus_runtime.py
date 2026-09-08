@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.db import models
 from app.db.session import SessionLocal
-from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, InstanceCreate, ProjectCreate, SignalEdgeCreate, SignalEmitRequest, SimulationRunCreate
+from app.schemas.domain import ActionCompleteRequest, DeviceTaskDispatchRequest, EdgeCreate, InstanceCreate, ProjectCreate, SignalEdgeCreate, SignalEmitRequest, SimulationRunCreate
 from app.services.catalog_service import DeviceSpecService
 from app.services.device_runtime import DeviceRuntime
 from app.services.project_service import ProjectService
@@ -25,7 +25,7 @@ def _db_events(db, run_id: str) -> list[models.SimulationEvent]:
     return list(db.scalars(stmt))
 
 
-def _create_run_with_signal_edges(edges: list[dict]) -> tuple:
+def _create_run_with_signal_edges(edges: list[dict], process_edges: list[dict] | None = None) -> tuple:
     db = SessionLocal()
     store = InMemoryRuntimeStateStore()
     DeviceSpecService(db).import_defaults()
@@ -38,8 +38,27 @@ def _create_run_with_signal_edges(edges: list[dict]) -> tuple:
     scene_service.add_instance(project.id, InstanceCreate(base_revision=revision, spec_id="robot_arm_1", instance_id="robot_1"))
     revision += 1
 
-    if any(edge["target"].startswith("robot_2.") for edge in edges):
+    process_edges = process_edges or []
+    if any(edge.get("target", "").startswith("robot_2.") for edge in edges) or any(
+        str(edge.get("source", "")).startswith("robot_2.") or str(edge.get("target", "")).startswith("robot_2.")
+        for edge in process_edges
+    ):
         scene_service.add_instance(project.id, InstanceCreate(base_revision=revision, spec_id="robot_arm_1", instance_id="robot_2"))
+        revision += 1
+
+    for edge in process_edges:
+        scene_service.create_edge(
+            project.id,
+            "process",
+            EdgeCreate(
+                base_revision=revision,
+                edge_id=edge.get("edge_id"),
+                source=edge["source"],
+                target=edge["target"],
+                edge_type=edge.get("edge_type", "material_flow"),
+                metadata=edge.get("metadata", {}),
+            ),
+        )
         revision += 1
 
     for edge in edges:
@@ -246,6 +265,80 @@ def test_complete_frontend_device_task_marks_runtime_done() -> None:
         assert snapshot["frontend_events"][0]["status"] == "done"
         assert any(event["type"] == "device_action_completed" and event["task_id"] == task_id for event in snapshot["event_queue"])
         assert any(event.event_type == "device_action_completed" for event in _db_events(db, run.id))
+    finally:
+        db.close()
+
+
+def test_event_signal_can_route_repeated_true_values() -> None:
+    db, store, simulation, run = _create_run_with_signal_edges(
+        [
+            {
+                "edge_id": "sig_conveyor_to_robot",
+                "target": "robot_1.start_pick",
+                "route_id": "route_conveyor_to_robot",
+            }
+        ]
+    )
+    try:
+        first = simulation.emit_signal(
+            run.id,
+            "conveyor_1.part_ready",
+            SignalEmitRequest(value=True, payload={"material_id": "part_001"}, sim_time_s=2.0),
+        )
+        second = simulation.emit_signal(
+            run.id,
+            "conveyor_1.part_ready",
+            SignalEmitRequest(value=True, payload={"material_id": "part_002"}, sim_time_s=3.0),
+        )
+
+        assert len(first["device_tasks"]) == 1
+        assert len(second["device_tasks"]) == 1
+        assert second["device_tasks"][0]["payload"] == {"material_id": "part_002"}
+        assert [event["sequence"] for event in store.get_frontend_events(run.id)] == [1, 2]
+    finally:
+        db.close()
+
+
+def test_complete_task_emits_output_signal_and_process_handoff() -> None:
+    db, store, simulation, run = _create_run_with_signal_edges(
+        [
+            {
+                "edge_id": "sig_conveyor_to_robot",
+                "source": "conveyor_1.part_ready",
+                "target": "robot_1.start_pick",
+                "route_id": "route_conveyor_to_robot",
+            }
+        ],
+        process_edges=[
+            {
+                "edge_id": "proc_robot_to_conveyor",
+                "source": "robot_1.flow_output",
+                "target": "conveyor_1.flow_input",
+            }
+        ],
+    )
+    try:
+        emitted = simulation.emit_signal(
+            run.id,
+            "conveyor_1.part_ready",
+            SignalEmitRequest(value=True, payload={"material_id": "part_001"}, sim_time_s=2.0),
+        )
+        task_id = emitted["device_tasks"][0]["task_id"]
+
+        completed = simulation.complete_action(
+            run.id,
+            task_id,
+            ActionCompleteRequest(sim_time_s=3.0, payload={"completed_by": "frontend"}),
+        )
+
+        assert completed["status"] == "completed_device_task"
+        assert [item["signal_id"] for item in completed["completion_signal_results"]] == ["robot_1.done"]
+        assert store.get_signals(run.id)["robot_1.done"]["value"] is True
+        assert len(completed["process_handoff_tasks"]) == 1
+        assert completed["process_handoff_tasks"][0]["instance_id"] == "conveyor_1"
+        assert completed["process_handoff_tasks"][0]["behavior_id"] == "accept_material"
+        assert completed["process_handoff_frontend_events"][0]["behavior_id"] == "accept_material"
+        assert completed["snapshot"]["device_states"]["conveyor_1"] == "queued"
     finally:
         db.close()
 

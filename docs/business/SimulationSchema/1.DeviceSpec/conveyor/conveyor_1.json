@@ -370,7 +370,7 @@
     {
       "behavior_id": "accept_material",
       "behavior_type": "material_transfer",
-      "input_physical_interface": "entry",
+      "input_process_port": "flow_input",
       "output_signals": [
         "stop_point_occupied"
       ],
@@ -382,8 +382,8 @@
     {
       "behavior_id": "advance_to_next_stop_point",
       "behavior_type": "stop_point_buffered_transport",
-      "input_physical_interface": "entry",
-      "output_physical_interface": "exit",
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output",
       "default_algorithm": "linear_stop_point_motion",
       "output_signals": [
         "stop_point_occupied",
@@ -393,8 +393,8 @@
     {
       "behavior_id": "transport_to_exit",
       "behavior_type": "stop_point_buffered_transport",
-      "input_physical_interface": "entry",
-      "output_physical_interface": "exit",
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output",
       "default_algorithm": "linear_stop_point_motion",
       "output_signals": [
         "part_ready",
@@ -408,7 +408,7 @@
       "input_signals": [
         "release_waiting_material"
       ],
-      "output_physical_interface": "exit"
+      "output_process_port": "flow_output"
     }
   ],
   "runtime_contract": {

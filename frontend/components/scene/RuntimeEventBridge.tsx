@@ -10,6 +10,7 @@ const POLL_INTERVAL_MS = 650;
 export function RuntimeEventBridge() {
   const runId = useWorkspaceStore((state) => state.runtimeRunId);
   const failureLoggedRef = useRef(false);
+  const missingDocumentLoggedRef = useRef(false);
 
   useEffect(() => {
     if (!runId) return;
@@ -24,19 +25,29 @@ export function RuntimeEventBridge() {
       try {
         const events = await frontendApiClient.listFrontendEvents(activeRunId);
         const store = useWorkspaceStore.getState();
+        const sceneDocument = store.runtimeSceneDocument;
         for (const event of events) {
           if (event.type !== "device_behavior_triggered") continue;
           const eventRef = actionRefFromEvent(event) ?? `${event.sequence ?? "unknown"}`;
           if (store.hasSeenRuntimeEvent(eventRef)) continue;
 
-          const action = buildRuntimeAnimationAction(event, store.sceneObjects);
+          if (!sceneDocument) {
+            if (!missingDocumentLoggedRef.current) {
+              store.appendLog("warning", "runtime event waiting for SceneDocument runtime context");
+              missingDocumentLoggedRef.current = true;
+            }
+            continue;
+          }
+
+          const action = buildRuntimeAnimationAction(event, sceneDocument);
           store.markRuntimeEventSeen(eventRef);
           if (action) {
             store.startRuntimeAction(action);
           } else {
-            store.appendLog("warning", `runtime event skipped: ${event.instance_id}.${event.behavior_id}`);
+            store.appendLog("warning", `runtime event skipped: missing SceneDocument GLB runtime data for ${event.instance_id}.${event.behavior_id}`);
           }
         }
+        if (sceneDocument) missingDocumentLoggedRef.current = false;
         failureLoggedRef.current = false;
       } catch (error) {
         if (!failureLoggedRef.current) {

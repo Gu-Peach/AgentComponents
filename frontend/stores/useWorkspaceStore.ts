@@ -8,6 +8,7 @@ import type {
   PanelState,
   RuntimeAnimationAction,
   RuntimeDeviceVisualState,
+  SceneDocumentRecord,
   SceneObject,
   Transform3D,
   Vector3Tuple,
@@ -62,6 +63,9 @@ interface WorkspaceState {
   selectedObjectId: string | null;
   logs: ReturnType<typeof makeLog>[];
   runtimeRunId: string | null;
+  runtimeSceneDocument: SceneDocumentRecord | null;
+  runtimeGlbLoaded: boolean;
+  runtimeGlbObjectIds: string[];
   activeRuntimeActions: RuntimeAnimationAction[];
   runtimeDeviceVisuals: Record<string, RuntimeDeviceVisualState>;
   seenRuntimeEventRefs: string[];
@@ -75,10 +79,14 @@ interface WorkspaceState {
   updateSceneObject: (objectId: string, patch: Partial<Omit<SceneObject, "id">>) => void;
   updateSceneObjectTransform: (objectId: string, patch: Partial<Transform3D>) => void;
   applyRuntimeObjectTransform: (objectId: string, patch: Partial<Transform3D>) => void;
+  replaceSceneObjects: (objects: SceneObject[]) => void;
   setRuntimeRunId: (runId: string | null) => void;
+  setRuntimeSceneDocument: (document: SceneDocumentRecord | null) => void;
+  setRuntimeGlbLoaded: (loaded: boolean) => void;
+  setRuntimeGlbObjectIds: (objectIds: string[]) => void;
   startRuntimeAction: (action: RuntimeAnimationAction) => void;
   updateRuntimeAction: (actionId: string, patch: Partial<RuntimeAnimationAction>) => void;
-  completeRuntimeAction: (actionId: string) => RuntimeAnimationAction | undefined;
+  completeRuntimeAction: (actionId: string, status?: "done" | "failed") => RuntimeAnimationAction | undefined;
   setRuntimeDeviceVisual: (objectId: string, visual: RuntimeDeviceVisualState | null) => void;
   markRuntimeEventSeen: (eventRef: string) => void;
   hasSeenRuntimeEvent: (eventRef: string) => boolean;
@@ -105,6 +113,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   selectedObjectId: mockInitialSceneObjects[0]?.id ?? null,
   logs: initialLogs,
   runtimeRunId: process.env.NEXT_PUBLIC_SIMULATION_RUN_ID ?? null,
+  runtimeSceneDocument: null,
+  runtimeGlbLoaded: false,
+  runtimeGlbObjectIds: [],
   activeRuntimeActions: [],
   runtimeDeviceVisuals: {},
   seenRuntimeEventRefs: [],
@@ -179,7 +190,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ),
     }));
   },
+  replaceSceneObjects: (objects) => set((state) => ({
+    sceneObjects: objects,
+    selectedObjectId: objects[0]?.id ?? null,
+    activeRuntimeActions: [],
+    runtimeDeviceVisuals: {},
+    seenRuntimeEventRefs: [],
+    runtimeGlbLoaded: false,
+    runtimeGlbObjectIds: [],
+    logs: [...state.logs, makeLog("success", `scene document loaded: ${objects.length} objects`)],
+  })),
   setRuntimeRunId: (runId) => set({ runtimeRunId: runId }),
+  setRuntimeSceneDocument: (document) => set({ runtimeSceneDocument: document, runtimeGlbLoaded: false, runtimeGlbObjectIds: [] }),
+  setRuntimeGlbLoaded: (loaded) => set({ runtimeGlbLoaded: loaded }),
+  setRuntimeGlbObjectIds: (objectIds) => set({ runtimeGlbObjectIds: objectIds }),
   startRuntimeAction: (action) => {
     set((state) => {
       if (state.activeRuntimeActions.some((item) => item.actionId === action.actionId)) return {};
@@ -204,7 +228,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ),
     }));
   },
-  completeRuntimeAction: (actionId) => {
+  completeRuntimeAction: (actionId, status = "done") => {
     const action = get().activeRuntimeActions.find((item) => item.actionId === actionId);
     if (!action) return undefined;
     set((state) => {
@@ -229,10 +253,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       return {
         activeRuntimeActions: state.activeRuntimeActions.filter((item) => item.actionId !== actionId),
         runtimeDeviceVisuals: nextVisuals,
-        logs: [...state.logs, makeLog("success", `runtime action completed: ${action.instanceId}.${action.behaviorId}`)],
+        logs: [
+          ...state.logs,
+          makeLog(status === "done" ? "success" : "error", `runtime action ${status}: ${action.instanceId}.${action.behaviorId}`),
+        ],
       };
     });
-    return action;
+    return { ...action, status };
   },
   setRuntimeDeviceVisual: (objectId, visual) => {
     set((state) => {
@@ -266,6 +293,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       selectedObjectId: mockInitialSceneObjects[0]?.id ?? null,
       logs: initialLogs,
       runtimeRunId: process.env.NEXT_PUBLIC_SIMULATION_RUN_ID ?? null,
+      runtimeSceneDocument: null,
+      runtimeGlbLoaded: false,
+      runtimeGlbObjectIds: [],
       activeRuntimeActions: [],
       runtimeDeviceVisuals: {},
       seenRuntimeEventRefs: [],

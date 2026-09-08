@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from conftest import make_client
+
+
+SCENE1_DOCUMENT = Path("../frontend/public/test/scene1/scene_document.json")
 
 
 def test_project_scene_edges_compile_topology_and_runtime() -> None:
@@ -114,6 +118,56 @@ def test_project_scene_edges_compile_topology_and_runtime() -> None:
     cleanup = client.delete(f"/api/simulation-runs/{run_id}/runtime-state")
     assert cleanup.status_code == 200
     assert cleanup.json()["cleared"] is True
+
+
+def test_replace_scene_document_rebuilds_topology_and_bootstraps_startup_runtime() -> None:
+    client = make_client()
+    assert client.post("/api/device-specs/import-defaults").status_code == 200
+
+    project = client.post("/api/projects", json={"name": "Scene1 local runtime"})
+    assert project.status_code == 200
+    project_id = project.json()["id"]
+    scene = client.get(f"/api/projects/{project_id}/scene").json()
+    scene_doc = json.loads(SCENE1_DOCUMENT.read_text(encoding="utf-8-sig"))
+
+    replaced = client.put(
+        f"/api/projects/{project_id}/scene",
+        json={"base_revision": scene["revision"], "document": scene_doc},
+    )
+    assert replaced.status_code == 200
+    assert replaced.json()["new_revision"] == 1
+
+    topology = client.post(f"/api/projects/{project_id}/topology/rebuild")
+    assert topology.status_code == 200
+    assert topology.json()["document"]["signal_graph"]["edges"]
+
+    run = client.post(f"/api/projects/{project_id}/simulation-runs", json={"base_scene_revision": 1})
+    assert run.status_code == 200
+    run_id = run.json()["run_id"]
+
+    frontend_events = client.get(f"/api/simulation-runs/{run_id}/frontend-events")
+    assert frontend_events.status_code == 200
+    first_event = frontend_events.json()["events"][0]
+    assert first_event["type"] == "device_behavior_triggered"
+    assert first_event["instance_id"] == "main_conveyor_1"
+    assert first_event["behavior_id"] == "transport_to_exit"
+    assert first_event["payload"]["from_point_id"] == "main_conveyor_1.sp_01"
+    assert first_event["payload"]["to_point_id"] == "main_conveyor_1.sp_02"
+    assert first_event["payload"]["runtime_geometry"]["transport_path"]["waypoints"][0] == [2.619, 0.15, -1.197]
+
+    first_complete = client.post(
+        f"/api/simulation-runs/{run_id}/actions/{first_event['task_id']}/complete",
+        json={"sim_time_s": 1.4, "payload": {"completed_by": "frontend"}},
+    )
+    assert first_complete.status_code == 200
+    first_complete_body = first_complete.json()
+    assert first_complete_body["snapshot"]["conveyor_occupancy"]["main_conveyor_1"]["main_conveyor_1.sp_01"] is None
+    assert first_complete_body["snapshot"]["conveyor_occupancy"]["main_conveyor_1"]["main_conveyor_1.sp_02"] == "pallet_1"
+    followup_event = first_complete_body["runtime_followup_frontend_events"][0]
+    assert followup_event["instance_id"] == "main_conveyor_1"
+    assert followup_event["behavior_id"] == "advance_to_next_stop_point"
+    assert followup_event["payload"]["from_point_id"] == "main_conveyor_1.sp_02"
+    assert followup_event["payload"]["to_point_id"] == "main_conveyor_1.sp_03"
 
 
 def test_supabase_migration_contains_required_runtime_and_agent_tables() -> None:

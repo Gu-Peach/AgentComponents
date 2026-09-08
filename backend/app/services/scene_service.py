@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.errors import AppError, NotFoundError, RevisionConflictError
 from app.db import models
 from app.repositories.sql import DeviceSpecRepository, ProjectRepository, SceneRepository
-from app.schemas.domain import CompileInterfacesRequest, EdgeCreate, EdgeDelete, InstanceCreate, InstanceDelete, InstancePatch, SignalEdgeCreate
+from app.schemas.domain import CompileInterfacesRequest, EdgeCreate, EdgeDelete, InstanceCreate, InstanceDelete, InstancePatch, SceneDocumentPut, SignalEdgeCreate
 from app.services.ids import new_id
 from app.services.interface_compiler import InterfaceCompiler
 from app.services.topology_builder import TopologyBuilder
@@ -29,6 +29,14 @@ class SceneService:
         if not scene:
             raise NotFoundError("Scene", project_id)
         return scene
+
+    def replace_scene_document(self, project_id: str, payload: SceneDocumentPut) -> dict[str, Any]:
+        scene = self.get_scene_for_project(project_id)
+        self._check_revision(scene, payload.base_revision)
+        document = deepcopy(payload.document)
+        self._validate_referenced_specs(document)
+        self._invalidate_topology(document)
+        return self._save_scene(scene, document, "scene.document_replaced", {"source_scene_id": document.get("scene_id")})
 
     def add_instance(self, project_id: str, payload: InstanceCreate) -> dict[str, Any]:
         scene = self.get_scene_for_project(project_id)
@@ -238,6 +246,16 @@ class SceneService:
                 if spec:
                     specs[spec_id] = spec.document
         return specs
+
+    def _validate_referenced_specs(self, document: dict[str, Any]) -> None:
+        missing: list[dict[str, Any]] = []
+        for section, id_key in [("instances", "instance_id"), ("materials", "material_id")]:
+            for item in document.get(section, []):
+                spec_id = item.get("spec_id")
+                if spec_id and not self.device_specs.get(spec_id):
+                    missing.append({"section": section, id_key: item.get(id_key), "spec_id": spec_id})
+        if missing:
+            raise AppError("SCENE_SPEC_REFERENCES_MISSING", "SceneDocument references DeviceSpecs that are not imported.", 422, {"missing": missing})
 
     @staticmethod
     def _invalidate_topology(document: dict[str, Any]) -> None:

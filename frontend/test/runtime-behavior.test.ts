@@ -1,77 +1,151 @@
 import { describe, expect, it } from "vitest";
-import { mockInitialSceneObjects } from "@/mocks/catalog";
 import { buildRuntimeAnimationAction, interpolateWaypoints } from "@/lib/runtime-behavior";
-import type { RuntimeBehaviorEvent } from "@/types/scene";
+import type { RuntimeBehaviorEvent, SceneDocumentRecord } from "@/types/scene";
+
+const sceneDocument: SceneDocumentRecord = {
+  source: { asset_path: "frontend/public/test/scene1/1.glb" },
+  instances: [
+    {
+      instance_id: "main_conveyor_1",
+      device_type: "conveyor",
+      param_overrides: { speed_mps: 0.25 },
+      asset_binding: { glb_node_name: "Conveyor(1)" },
+      runtime_geometry: {
+        transport_path: {
+          waypoints: [
+            [2.619, 0.15, -1.197],
+            [0.719, 0.15, -1.197],
+          ],
+          stop_points: [
+            { point_id: "main_conveyor_1.sp_01", role: "entry", position: [2.619, 0.15, -1.197] },
+            { point_id: "main_conveyor_1.sp_02", role: "middle", position: [1.9857, 0.15, -1.197] },
+            { point_id: "main_conveyor_1.sp_03", role: "middle", position: [1.3523, 0.15, -1.197] },
+            { point_id: "main_conveyor_1.sp_04", role: "exit", position: [0.719, 0.15, -1.197] },
+          ],
+        },
+      },
+    },
+    {
+      instance_id: "robot_1",
+      device_type: "robot_arm",
+      param_overrides: { speed: 1.0 },
+      asset_binding: { glb_node_name: "robot(center)(1)" },
+      runtime_geometry: {
+        pick_place_path: {
+          waypoints: [
+            [-0.649, 0.45, -1.197],
+            [-0.649, 0.15, -1.197],
+            [-1.093, 0.7, -0.173],
+          ],
+        },
+      },
+    },
+    {
+      instance_id: "pallet_1",
+      device_type: "workpiece_carrier",
+      asset_binding: { glb_node_name: "Euro Pallet [00Mn]" },
+    },
+  ],
+  materials: [
+    { material_id: "part_001", asset_binding: { glb_node_name: "Lathe_Comp_3_00On" } },
+  ],
+};
 
 describe("runtime behavior mapping", () => {
-  it("maps a conveyor behavior event to a linear animation action", () => {
+  it("maps a conveyor behavior event from SceneDocument transport geometry", () => {
     const event: RuntimeBehaviorEvent = {
       type: "device_behavior_triggered",
       run_id: "run_1",
       task_id: "task_1",
       instance_id: "main_conveyor_1",
       behavior_id: "transport_to_exit",
-      payload: { carrier_id: "carrier_tray_1" },
+      payload: { carrier_id: "pallet_1" },
     };
 
-    const action = buildRuntimeAnimationAction(event, mockInitialSceneObjects, 1000);
+    const action = buildRuntimeAnimationAction(event, sceneDocument, 1000);
 
     expect(action?.actionId).toBe("task_1");
     expect(action?.kind).toBe("conveyor_linear");
-    expect(action?.subjectId).toBe("carrier_tray_1");
-    expect(action?.waypoints).toHaveLength(2);
-    expect(action?.duration).toBeGreaterThan(1);
+    expect(action?.subjectId).toBe("pallet_1");
+    expect(action?.waypoints).toEqual([
+      { x: 2.619, y: 0.15, z: -1.197 },
+      { x: 0.719, y: 0.15, z: -1.197 },
+    ]);
+    expect(action?.duration).toBeCloseTo(7.6);
   });
 
-  it("maps a robot behavior event to a pick-and-place animation action", () => {
+  it("maps conveyor stop-point actions to the requested segment", () => {
     const event: RuntimeBehaviorEvent = {
       type: "device_behavior_triggered",
       run_id: "run_1",
       action_id: "act_1",
-      instance_id: "robot_arm_1",
-      behavior_id: "pick_and_place",
+      instance_id: "main_conveyor_1",
+      behavior_id: "advance_to_next_stop_point",
       payload: {
-        material_id: "carrier_tray_1",
-        target_conveyor_id: "output_conveyor_top",
+        carrier_id: "pallet_1",
+        from_point_id: "main_conveyor_1.sp_02",
+        to_point_id: "main_conveyor_1.sp_03",
       },
     };
 
-    const action = buildRuntimeAnimationAction(event, mockInitialSceneObjects, 1000);
+    const action = buildRuntimeAnimationAction(event, sceneDocument, 1000);
 
     expect(action?.actionId).toBe("act_1");
-    expect(action?.kind).toBe("robot_pick_place");
-    expect(action?.subjectId).toBe("carrier_tray_1");
-    expect(action?.waypoints.length).toBeGreaterThanOrEqual(4);
+    expect(action?.waypoints).toEqual([
+      { x: 1.9857, y: 0.15, z: -1.197 },
+      { x: 1.3523, y: 0.15, z: -1.197 },
+    ]);
+    expect(action?.duration).toBeCloseTo(2.5336);
   });
 
-  it("uses scene instance runtime geometry from event payload before fallback robot paths", () => {
+  it("maps a robot behavior event from SceneDocument pick-place geometry", () => {
     const event: RuntimeBehaviorEvent = {
       type: "device_behavior_triggered",
       run_id: "run_1",
-      action_id: "act_scene_runtime",
-      instance_id: "robot_arm_1",
+      action_id: "act_1",
+      instance_id: "robot_1",
       behavior_id: "pick_and_place",
-      payload: {
-        material_id: "carrier_tray_1",
-        runtime_geometry: {
-          pick_place_path: {
-            waypoints: [
-              [0.1, 0.5, 0.3],
-              [0.1, 0.2, 0.3],
-              [1.1, 1.2, 1.3],
-            ],
-          },
-        },
-      },
+      payload: { material_id: "part_001" },
     };
 
-    const action = buildRuntimeAnimationAction(event, mockInitialSceneObjects, 1000);
+    const action = buildRuntimeAnimationAction(event, sceneDocument, 1000);
 
+    expect(action?.actionId).toBe("act_1");
+    expect(action?.kind).toBe("robot_pick_place");
+    expect(action?.subjectId).toBe("part_001");
     expect(action?.waypoints).toEqual([
-      { x: 0.1, y: 0.5, z: 0.3 },
-      { x: 0.1, y: 0.2, z: 0.3 },
-      { x: 1.1, y: 1.2, z: 1.3 },
+      { x: -0.649, y: 0.45, z: -1.197 },
+      { x: -0.649, y: 0.15, z: -1.197 },
+      { x: -1.093, y: 0.7, z: -0.173 },
     ]);
+    expect(action?.payload.runtime_geometry).toBeTruthy();
+  });
+
+  it("does not create a runtime action when SceneDocument runtime geometry is missing", () => {
+    const event: RuntimeBehaviorEvent = {
+      type: "device_behavior_triggered",
+      instance_id: "robot_1",
+      behavior_id: "pick_and_place",
+      payload: { material_id: "part_001" },
+    };
+
+    const action = buildRuntimeAnimationAction(event, {
+      instances: [{ instance_id: "robot_1", device_type: "robot_arm", asset_binding: { glb_node_name: "robot(center)(1)" } }],
+      materials: [{ material_id: "part_001", asset_binding: { glb_node_name: "Lathe_Comp_3_00On" } }],
+    });
+
+    expect(action).toBeNull();
+  });
+
+  it("does not turn robot control signals into animation actions", () => {
+    const event: RuntimeBehaviorEvent = {
+      type: "device_behavior_triggered",
+      instance_id: "robot_1",
+      behavior_id: "pause_pick",
+      payload: { reason: "output blocked" },
+    };
+
+    expect(buildRuntimeAnimationAction(event, sceneDocument)).toBeNull();
   });
 
   it("interpolates multi-point paths by path length", () => {

@@ -397,8 +397,8 @@
     {
       "behavior_id": "pick_and_place",
       "behavior_type": "material_transfer",
-      "input_physical_interface": "pick_area",
-      "output_physical_interface": "place_area",
+      "input_process_port": "flow_input",
+      "output_process_port": "flow_output",
       "default_algorithm": "robot_pick_place",
       "input_signals": [
         "start_pick",
@@ -418,12 +418,12 @@
       ],
       "preconditions": [
         "fsm_state == idle",
-        "material_at(input_physical_interface)",
+        "material_at(input_process_port)",
         "gripper.empty == true",
         "pause_pick.active != true"
       ],
       "effects": [
-        "material_at(output_physical_interface)",
+        "material_at(output_process_port)",
         "emit done"
       ]
     }

@@ -18,6 +18,16 @@ export interface Transform3D {
   scale: Vector3Tuple;
 }
 
+export type SceneDocumentRecord = Record<string, unknown>;
+
+export interface SceneAssetBinding extends SceneDocumentRecord {
+  asset_path?: string;
+  glb_node_index?: number;
+  glb_node_name?: string;
+  parsed_glb_y_up?: SceneDocumentRecord;
+  parsed_glb_y_up_world_position?: Vector3Tuple;
+}
+
 export interface CatalogAsset {
   id: string;
   name: string;
@@ -41,6 +51,10 @@ export interface SceneObject {
   dimensions: Vector3Tuple;
   color: string;
   createdFrom: string;
+  assetBinding?: SceneAssetBinding;
+  glbNodeName?: string;
+  runtimeGeometry?: SceneDocumentRecord;
+  runtimeKinematics?: SceneDocumentRecord;
 }
 
 export interface UrdfJointConfig {

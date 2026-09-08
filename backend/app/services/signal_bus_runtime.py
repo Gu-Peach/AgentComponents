@@ -81,7 +81,12 @@ class SignalBusRuntime:
                 continue
 
             # 根据边上的 trigger 配置判断是否触发；不满足则记录跳过原因。
-            if not self._trigger_matches(edge.get("trigger", "on_rising_edge"), previous_signals.get(signal_id), payload.value):
+            if not self._trigger_matches(
+                edge.get("trigger", "on_rising_edge"),
+                previous_signals.get(signal_id),
+                payload.value,
+                event_signal=self._is_event_signal(scene.current_document, signal_id),
+            ):
                 skipped_routes.append(
                     {
                     "edge_id": edge.get("edge_id"),
@@ -321,10 +326,14 @@ class SignalBusRuntime:
 
     # 判断触发条件：根据旧值和新值判断 manual/level/on_change/falling/rising 是否满足。
     @staticmethod
-    def _trigger_matches(trigger: str, previous_event: dict[str, Any] | None, value: Any) -> bool:
+    def _trigger_matches(trigger: str, previous_event: dict[str, Any] | None, value: Any, *, event_signal: bool = False) -> bool:
         previous_value = previous_event.get("value") if previous_event else None
         if trigger == "manual":
             return True
+        if event_signal:
+            if trigger == "on_falling_edge":
+                return value is False
+            return value is not False and value is not None
         if trigger == "level":
             return bool(value)
         if trigger == "on_change":
@@ -332,6 +341,19 @@ class SignalBusRuntime:
         if trigger == "on_falling_edge":
             return bool(previous_value) and not bool(value)
         return not bool(previous_value) and bool(value)
+
+    def _is_event_signal(self, scene_doc: dict[str, Any], signal_ref: str) -> bool:
+        parsed = self._parse_signal_ref(signal_ref)
+        if not parsed:
+            return False
+        instance_id, signal_port = parsed
+        instance = self._find_instance(scene_doc, instance_id)
+        if not instance:
+            return False
+        spec = self.device_specs.get(instance.get("spec_id", ""))
+        if not spec:
+            return False
+        return any(port.get("port_id") == signal_port and port.get("value_type") == "event" for port in spec.document.get("signal_ports", []))
 
     # 应用信号转换：根据 transform 配置转换 value/payload，当前仅支持 identity 原样传递。
     @staticmethod

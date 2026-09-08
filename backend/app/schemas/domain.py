@@ -60,6 +60,11 @@ class SceneResponse(BaseModel):
     document: JsonDict
 
 
+class SceneDocumentPut(BaseModel):
+    base_revision: int = Field(ge=0)
+    document: JsonDict
+
+
 class RevisionedRequest(BaseModel):
     base_revision: int = Field(ge=0)
 

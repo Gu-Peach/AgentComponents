@@ -5,16 +5,14 @@ import { Grid, OrbitControls } from "@react-three/drei";
 import { Box, Eye, MousePointer2 } from "lucide-react";
 import { useMemo } from "react";
 import { RuntimeEventBridge } from "@/components/scene/RuntimeEventBridge";
+import { SceneGlbLayer } from "@/components/scene/SceneGlbLayer";
+import { SceneRuntimeBootstrap } from "@/components/scene/SceneRuntimeBootstrap";
 import { SceneRuntimeAnimator } from "@/components/scene/SceneRuntimeAnimator";
-import { SceneObjectMesh } from "@/components/scene/SceneObjectMesh";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import type { Vector3Tuple } from "@/types/scene";
 
 function SceneContent() {
   const sceneObjects = useWorkspaceStore((state) => state.sceneObjects);
-  const selectedObjectId = useWorkspaceStore((state) => state.selectedObjectId);
-  const runtimeDeviceVisuals = useWorkspaceStore((state) => state.runtimeDeviceVisuals);
-  const selectSceneObject = useWorkspaceStore((state) => state.selectSceneObject);
 
   const objectCount = sceneObjects.length;
 
@@ -27,15 +25,7 @@ function SceneContent() {
       <Grid args={[20, 20]} cellSize={0.5} cellThickness={0.6} sectionSize={2} sectionThickness={1.2} fadeDistance={28} fadeStrength={1.2} position={[0, -0.01, 0]} />
       <axesHelper args={[1.8]} />
 
-      {sceneObjects.map((object) => (
-        <SceneObjectMesh
-          key={object.id}
-          object={object}
-          selected={object.id === selectedObjectId}
-          visual={runtimeDeviceVisuals[object.id]}
-          onSelect={selectSceneObject}
-        />
-      ))}
+      <SceneGlbLayer />
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.025, 0]} receiveShadow>
         <planeGeometry args={[22, 16]} />
@@ -85,6 +75,7 @@ export function SceneViewport() {
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
     >
+      <SceneRuntimeBootstrap />
       <RuntimeEventBridge />
       <div className="viewport-toolbar">
         <MousePointer2 size={15} />

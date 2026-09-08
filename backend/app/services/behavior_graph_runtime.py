@@ -39,17 +39,23 @@ class BehaviorGraphRuntime:
             self.executor.apply_runtime_event_state(event["event_id"], event.get("payload", {}))
             result["emitted_events"].append(event)
 
+            routed_rule_ids: set[str] = set()
             routes = self.routes_by_source.get(event["event_id"], [])
             for route in routes:
                 target = route.get("to", {})
                 target_type = target.get("type")
                 if target_type == "rule":
-                    queue.extend(self._run_rule(target.get("id"), event, result, sim_time_s=sim_time_s))
+                    rule_id = target.get("id")
+                    if rule_id:
+                        routed_rule_ids.add(rule_id)
+                    queue.extend(self._run_rule(rule_id, event, result, sim_time_s=sim_time_s))
                 elif target_type == "topic":
                     queue.extend(self._publish_topic(target.get("id"), event, result, sim_time_s=sim_time_s))
-            if not routes:
-                for rule_id in self._rule_ids_for_event(event["event_id"]):
+            for rule_id in self._rule_ids_for_event(event["event_id"]):
+                if rule_id not in routed_rule_ids:
                     queue.extend(self._run_rule(rule_id, event, result, sim_time_s=sim_time_s))
+            if event["event_id"] in {"conveyor.stop_point_released", "conveyor.capacity_available"}:
+                self._resume_waiting_conveyor_materials(event, result, sim_time_s=sim_time_s)
 
         return {**result, "snapshot": self.snapshot}
 
@@ -98,7 +104,10 @@ class BehaviorGraphRuntime:
         if trigger.get("type") == "event" and trigger.get("event_id") != event["event_id"]:
             result["skipped_rules"].append({"rule_id": rule_id, "event_id": event["event_id"], "reason": "trigger_not_matched"})
             return []
-        if not self._guard_matches(rule.get("guard", {}), event):
+        if self._is_exit_stop_point_queue_wait(rule, event):
+            result["skipped_rules"].append({"rule_id": rule_id, "event_id": event["event_id"], "reason": "exit_stop_point_has_no_next_stop_point"})
+            return []
+        if not self._guard_matches(rule.get("guard", {}), event) and not self._policy_wait_condition_matches(rule, event):
             result["skipped_rules"].append({"rule_id": rule_id, "event_id": event["event_id"], "reason": "guard_not_matched"})
             return []
 
@@ -119,6 +128,8 @@ class BehaviorGraphRuntime:
                 result["skipped_rules"].append({"rule_id": rule.get("rule_id"), "reason": "behavior_already_running", "instance_id": instance_id, "behavior_id": behavior_id})
                 return []
             payload = self._resolve_template(action.get("payload", {}), event, policy_outputs)
+            payload = self._payload_with_policy_outputs(payload, policy_outputs)
+            payload = self._inherit_runtime_payload(payload, event)
             started = self.executor.start_behavior(instance_id=instance_id, behavior_id=behavior_id, payload=payload, sim_time_s=sim_time_s, source_rule_id=rule.get("rule_id"))
             if started.get("action"):
                 result["actions"].append(started["action"])
@@ -126,6 +137,8 @@ class BehaviorGraphRuntime:
                 result["frontend_events"].append(started["frontend_event"])
             if started.get("task"):
                 result["waiting_tasks"].append(started["task"])
+            if started.get("status") == "running":
+                return self._policy_side_effect_events(policy_outputs, sim_time_s=sim_time_s)
             return []
 
         if action_type == "emit_event":
@@ -156,6 +169,8 @@ class BehaviorGraphRuntime:
             return {"point_id": self._first_available_stop_point(inputs.get("conveyor_id"))}
         if policy_id == "conveyor_queue_wait":
             self._append_wait_queue(inputs.get("conveyor_id"), inputs.get("material_id"), inputs.get("point_id"))
+        if policy_id == "downstream_release":
+            return self._policy_downstream_release(inputs)
         return {}
 
     def _policy_claim_workpiece(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -208,6 +223,53 @@ class BehaviorGraphRuntime:
                 target_robots.extend(binding.get("affected_robots", []))
         return {"target_robots": target_robots}
 
+    def _policy_downstream_release(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        conveyor_id = inputs.get("conveyor_id")
+        point_id = inputs.get("point_id")
+        if conveyor_id and point_id:
+            return {"from_point_id": point_id, "to_point_id": self._next_stop_point(conveyor_id, point_id)}
+
+        from_conveyor_id = inputs.get("from_conveyor_id")
+        to_conveyor_id = inputs.get("to_conveyor_id")
+        if from_conveyor_id and to_conveyor_id:
+            release_point_id = self._exit_stop_point(from_conveyor_id)
+            return {
+                "release_conveyor_id": from_conveyor_id,
+                "release_point_id": release_point_id,
+                "material_id": inputs.get("material_id") or self._material_at_stop_point(from_conveyor_id, release_point_id),
+            }
+
+        if conveyor_id:
+            exit_point_id = self._exit_stop_point(conveyor_id)
+            return {
+                "from_point_id": exit_point_id,
+                "point_id": exit_point_id,
+                "material_id": inputs.get("material_id") or self._material_at_stop_point(conveyor_id, exit_point_id),
+            }
+
+        return {}
+
+    def _policy_wait_condition_matches(self, rule: dict[str, Any], event: dict[str, Any]) -> bool:
+        if rule.get("policy", {}).get("policy_id") != "conveyor_queue_wait":
+            return False
+        if event.get("event_id") != "conveyor.stop_point_occupied":
+            return False
+        payload = event.get("payload", {})
+        conveyor_id = payload.get("conveyor_id")
+        point_id = payload.get("point_id")
+        if not conveyor_id or not point_id or self._is_exit_stop_point(conveyor_id, point_id):
+            return False
+        next_point_id = self._next_stop_point(conveyor_id, point_id)
+        return next_point_id is not None and self._material_at_stop_point(conveyor_id, next_point_id) is not None
+
+    def _is_exit_stop_point_queue_wait(self, rule: dict[str, Any], event: dict[str, Any]) -> bool:
+        if rule.get("policy", {}).get("policy_id") != "conveyor_queue_wait":
+            return False
+        if event.get("event_id") != "conveyor.stop_point_occupied":
+            return False
+        payload = event.get("payload", {})
+        return self._is_exit_stop_point(payload.get("conveyor_id"), payload.get("point_id"))
+
     def _guard_matches(self, guard: dict[str, Any], event: dict[str, Any]) -> bool:
         all_exprs = guard.get("all", [])
         any_exprs = guard.get("any", [])
@@ -255,6 +317,10 @@ class BehaviorGraphRuntime:
             return event.get("event_id")
         if expression.startswith("trigger.payload."):
             return self._nested_get(event.get("payload", {}), expression.removeprefix("trigger.payload."))
+        if expression.startswith("trigger."):
+            trigger_path = expression.removeprefix("trigger.")
+            direct_value = self._nested_get(event, trigger_path)
+            return direct_value if direct_value is not None else self._nested_get(event.get("payload", {}), trigger_path)
         if expression.startswith("event.payload."):
             return self._nested_get(event.get("payload", {}), expression.removeprefix("event.payload."))
         if expression == "workpiece_pool.remaining_parts.empty":
@@ -268,7 +334,13 @@ class BehaviorGraphRuntime:
             conveyor_id = self._resolve_expr_value(args[0], event)
             point_id = self._resolve_expr_value(args[1], event)
             next_point = self._next_stop_point(conveyor_id, point_id)
+            if next_point is None:
+                return True
             return self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).get(next_point) is not None
+        if expression.startswith("exit_stop_point(") and expression.endswith(").occupied"):
+            conveyor_id = self._resolve_expr_value(expression.removeprefix("exit_stop_point(").removesuffix(").occupied"), event)
+            point_id = self._exit_stop_point(conveyor_id)
+            return self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).get(point_id) is not None
         if expression.startswith("downstream_available(") and expression.endswith(")"):
             conveyor_id = self._resolve_expr_value(expression.removeprefix("downstream_available(").removesuffix(")"), event)
             return self._downstream_available(conveyor_id)
@@ -301,6 +373,10 @@ class BehaviorGraphRuntime:
             return deepcopy(event.get("payload", {}))
         if template.startswith("trigger.payload."):
             return self._nested_get(event.get("payload", {}), template.removeprefix("trigger.payload."))
+        if template.startswith("trigger."):
+            trigger_path = template.removeprefix("trigger.")
+            direct_value = self._nested_get(event, trigger_path)
+            return direct_value if direct_value is not None else self._nested_get(event.get("payload", {}), trigger_path)
         if template.startswith("event.payload."):
             return self._nested_get(event.get("payload", {}), template.removeprefix("event.payload."))
         if template.startswith("policy."):
@@ -326,6 +402,107 @@ class BehaviorGraphRuntime:
         material_id = self._resolve_template(payload.get("material_id"), event, policy_outputs)
         conveyor_id = self._resolve_template("trigger.payload.conveyor_id", event, policy_outputs)
         self._append_wait_queue(conveyor_id, material_id, self._resolve_template("trigger.payload.point_id", event, policy_outputs))
+
+    @staticmethod
+    def _payload_with_policy_outputs(payload: Any, policy_outputs: dict[str, Any]) -> dict[str, Any]:
+        merged = deepcopy(payload) if isinstance(payload, dict) else {}
+        for key in [
+            "material_id",
+            "carrier_id",
+            "point_id",
+            "from_point_id",
+            "to_point_id",
+            "from_stop_point_id",
+            "to_stop_point_id",
+            "target_conveyor_id",
+        ]:
+            value = policy_outputs.get(key)
+            if value is not None:
+                merged.setdefault(key, value)
+        return merged
+
+    @staticmethod
+    def _inherit_runtime_payload(payload: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+        inherited = deepcopy(payload)
+        source_payload = event.get("payload", {}) if isinstance(event.get("payload"), dict) else {}
+        for key in [
+            "carrier_id",
+            "material_id",
+            "subject_id",
+            "workpiece_id",
+            "transport_goal_behavior_id",
+            "from_conveyor_id",
+            "to_conveyor_id",
+        ]:
+            value = source_payload.get(key)
+            if value is not None:
+                inherited.setdefault(key, value)
+        return inherited
+
+    def _policy_side_effect_events(self, policy_outputs: dict[str, Any], *, sim_time_s: float | None) -> list[dict[str, Any]]:
+        conveyor_id = policy_outputs.get("release_conveyor_id")
+        point_id = policy_outputs.get("release_point_id")
+        if not conveyor_id or not point_id:
+            return []
+
+        material_id = policy_outputs.get("material_id") or self._material_at_stop_point(conveyor_id, point_id)
+        self._release_stop_point(conveyor_id, point_id, material_id, decrement_load=True)
+        return [
+            {
+                "event_id": "conveyor.stop_point_released",
+                "payload": {
+                    "conveyor_id": conveyor_id,
+                    "point_id": point_id,
+                    "from_point_id": point_id,
+                    "material_id": material_id,
+                    "released_by_policy": "downstream_release",
+                },
+                "sim_time_s": sim_time_s,
+                "source": "policy:downstream_release",
+            }
+        ]
+
+    def _resume_waiting_conveyor_materials(self, event: dict[str, Any], result: dict[str, Any], *, sim_time_s: float | None) -> None:
+        conveyor_id = event.get("payload", {}).get("conveyor_id")
+        if not conveyor_id or self._conveyor_blocked(conveyor_id) or self._conveyor_has_active_action(conveyor_id):
+            return
+
+        queue_key = f"conveyor:{conveyor_id}"
+        waiting_items = list(self.snapshot.setdefault("wait_queues", {}).get(queue_key, []))
+        if not waiting_items:
+            return
+
+        for item in self._sort_waiting_items_towards_exit(conveyor_id, waiting_items):
+            item_payload = deepcopy(item.get("payload", item)) if isinstance(item, dict) else {}
+            material_id = self._material_id(item_payload) or item.get("material_id")
+            point_id = item.get("waiting_at_point_id") or item_payload.get("from_point_id") or item.get("point_id") or self._current_stop_point_for_material(conveyor_id, material_id)
+            next_point_id = self._next_stop_point(conveyor_id, point_id)
+            if not material_id or not point_id or not next_point_id:
+                continue
+            if self._material_at_stop_point(conveyor_id, next_point_id) is not None:
+                continue
+
+            item_payload.setdefault("material_id", material_id)
+            item_payload.setdefault("from_point_id", point_id)
+            item_payload.setdefault("from_stop_point_id", point_id)
+            item_payload.setdefault("to_point_id", next_point_id)
+            item_payload.setdefault("to_stop_point_id", next_point_id)
+            started = self.executor.start_behavior(
+                instance_id=conveyor_id,
+                behavior_id=item.get("behavior_id") or "advance_to_next_stop_point",
+                payload=item_payload,
+                sim_time_s=sim_time_s,
+                source_rule_id=item.get("source_rule_id") or "runtime_resume_waiting_conveyor_materials",
+            )
+            if started.get("action"):
+                self._remove_waiting_item(conveyor_id, material_id, point_id, task_id=item.get("task_id"))
+                result["actions"].append(started["action"])
+            if started.get("frontend_event"):
+                result["frontend_events"].append(started["frontend_event"])
+            if started.get("task"):
+                result["waiting_tasks"].append(started["task"])
+            if started.get("status") == "running":
+                break
 
     def _record_runtime_event(self, event: dict[str, Any]) -> None:
         self.snapshot.setdefault("signal_values", {})[event["event_id"]] = deepcopy(event.get("payload", {}))
@@ -402,6 +579,13 @@ class BehaviorGraphRuntime:
     def _split_args(raw: str) -> list[str]:
         return [item.strip() for item in raw.split(",")]
 
+    def _ordered_stop_point_ids(self, conveyor_id: str | None) -> list[str]:
+        if not conveyor_id:
+            return []
+        points = self.snapshot.get("conveyor_stop_points", {}).get(conveyor_id, {}).get("points", [])
+        ordered = [point.get("point_id") for point in sorted(points, key=lambda item: item.get("index", 0)) if point.get("point_id")]
+        return ordered or list(self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).keys())
+
     def _entry_stop_point(self, conveyor_id: str | None) -> str | None:
         if not conveyor_id:
             return None
@@ -409,14 +593,23 @@ class BehaviorGraphRuntime:
         for point in points:
             if point.get("role") == "entry":
                 return point.get("point_id")
-        return next(iter(self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {})), None)
+        ordered = self._ordered_stop_point_ids(conveyor_id)
+        return ordered[0] if ordered else None
+
+    def _exit_stop_point(self, conveyor_id: str | None) -> str | None:
+        if not conveyor_id:
+            return None
+        points = self.snapshot.get("conveyor_stop_points", {}).get(conveyor_id, {}).get("points", [])
+        for point in points:
+            if point.get("role") == "exit":
+                return point.get("point_id")
+        ordered = self._ordered_stop_point_ids(conveyor_id)
+        return ordered[-1] if ordered else None
 
     def _next_stop_point(self, conveyor_id: str | None, point_id: str | None) -> str | None:
         if not conveyor_id or not point_id:
             return None
-        ordered = [point.get("point_id") for point in self.snapshot.get("conveyor_stop_points", {}).get(conveyor_id, {}).get("points", [])]
-        if not ordered:
-            ordered = list(self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).keys())
+        ordered = self._ordered_stop_point_ids(conveyor_id)
         if point_id not in ordered:
             return None
         index = ordered.index(point_id)
@@ -425,10 +618,52 @@ class BehaviorGraphRuntime:
     def _first_available_stop_point(self, conveyor_id: str | None) -> str | None:
         if not conveyor_id:
             return None
-        for point_id, material_id in self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).items():
-            if material_id is None:
+        occupancy = self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {})
+        for point_id in self._ordered_stop_point_ids(conveyor_id):
+            if occupancy.get(point_id) is None:
                 return point_id
         return None
+
+    def _current_stop_point_for_material(self, conveyor_id: str | None, material_id: str | None) -> str | None:
+        if not conveyor_id or not material_id:
+            return None
+        for point_id, current_material in self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).items():
+            if current_material == material_id:
+                return point_id
+        return None
+
+    def _material_at_stop_point(self, conveyor_id: str | None, point_id: str | None) -> str | None:
+        if not conveyor_id or not point_id:
+            return None
+        material_id = self.snapshot.get("conveyor_occupancy", {}).get(conveyor_id, {}).get(point_id)
+        return material_id if isinstance(material_id, str) else None
+
+    def _is_exit_stop_point(self, conveyor_id: str | None, point_id: str | None) -> bool:
+        return bool(point_id) and point_id == self._exit_stop_point(conveyor_id)
+
+    def _release_stop_point(self, conveyor_id: str | None, point_id: str | None, material_id: str | None, *, decrement_load: bool) -> None:
+        if not conveyor_id or not point_id:
+            return
+        occupancy = self.snapshot.setdefault("conveyor_occupancy", {}).setdefault(conveyor_id, {})
+        if material_id is None or occupancy.get(point_id) in {None, material_id}:
+            occupancy[point_id] = None
+        if decrement_load:
+            load = self.snapshot.setdefault("conveyor_loads", {}).setdefault(conveyor_id, {"current_load": 0, "max_capacity": 1, "resume_threshold": 1, "blocked": False})
+            load["current_load"] = max(0, int(load.get("current_load", 0)) - 1)
+            if int(load.get("current_load", 0)) <= int(load.get("resume_threshold", 0)):
+                load["blocked"] = False
+            if material_id:
+                self.snapshot.setdefault("material_locations", {})[material_id] = f"{conveyor_id}.released"
+
+    def _conveyor_blocked(self, conveyor_id: str) -> bool:
+        return bool(self.snapshot.get("conveyor_loads", {}).get(conveyor_id, {}).get("blocked", False))
+
+    def _conveyor_has_active_action(self, conveyor_id: str) -> bool:
+        return any(action.get("instance_id") == conveyor_id and action.get("status") == "running" for action in self.snapshot.get("active_actions", {}).values())
+
+    def _sort_waiting_items_towards_exit(self, conveyor_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        order = {point_id: index for index, point_id in enumerate(self._ordered_stop_point_ids(conveyor_id))}
+        return sorted(items, key=lambda item: order.get(item.get("waiting_at_point_id") or item.get("point_id") or item.get("payload", {}).get("from_point_id"), -1), reverse=True)
 
     def _downstream_available(self, conveyor_id: str | None) -> bool:
         if not conveyor_id:
@@ -457,8 +692,44 @@ class BehaviorGraphRuntime:
         if not conveyor_id or not material_id:
             return
         item = {"material_id": material_id, "point_id": point_id}
-        self.snapshot.setdefault("conveyor_queues", {}).setdefault(conveyor_id, {"queue_id": f"{conveyor_id}.stop_point_queue", "waiting_materials": []}).setdefault("waiting_materials", []).append(item)
-        self.snapshot.setdefault("wait_queues", {}).setdefault(f"conveyor:{conveyor_id}", []).append(item)
+        waiting_materials = self.snapshot.setdefault("conveyor_queues", {}).setdefault(conveyor_id, {"queue_id": f"{conveyor_id}.stop_point_queue", "waiting_materials": []}).setdefault("waiting_materials", [])
+        wait_queue = self.snapshot.setdefault("wait_queues", {}).setdefault(f"conveyor:{conveyor_id}", [])
+        if not any(entry.get("material_id") == material_id and entry.get("point_id") == point_id for entry in waiting_materials):
+            waiting_materials.append(deepcopy(item))
+        if not any(self._waiting_item_matches(entry, material_id, point_id, None) for entry in wait_queue):
+            wait_queue.append(item)
+
+    def _remove_waiting_item(self, conveyor_id: str, material_id: str | None, point_id: str | None, *, task_id: str | None = None) -> None:
+        queue_key = f"conveyor:{conveyor_id}"
+        self.snapshot.setdefault("wait_queues", {})[queue_key] = [
+            item
+            for item in self.snapshot.setdefault("wait_queues", {}).get(queue_key, [])
+            if not self._waiting_item_matches(item, material_id, point_id, task_id)
+        ]
+        conveyor_queue = self.snapshot.setdefault("conveyor_queues", {}).setdefault(conveyor_id, {"queue_id": f"{conveyor_id}.stop_point_queue", "waiting_materials": []})
+        conveyor_queue["waiting_materials"] = [
+            item
+            for item in conveyor_queue.get("waiting_materials", [])
+            if not self._waiting_item_matches(item, material_id, point_id, task_id)
+        ]
+
+    def _waiting_item_matches(self, item: dict[str, Any], material_id: str | None, point_id: str | None, task_id: str | None) -> bool:
+        if task_id and item.get("task_id") == task_id:
+            return True
+        payload = item.get("payload", {}) if isinstance(item.get("payload"), dict) else item
+        item_material_id = self._material_id(payload) or item.get("material_id")
+        item_point_id = item.get("waiting_at_point_id") or item.get("point_id") or payload.get("from_point_id")
+        return item_material_id == material_id and (point_id is None or item_point_id == point_id)
+
+    @staticmethod
+    def _material_id(payload: dict[str, Any] | None) -> str | None:
+        if not payload:
+            return None
+        for key in ["material_id", "carrier_id", "subject_id", "workpiece_id", "object_id"]:
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+        return None
 
     @staticmethod
     def _empty_result() -> dict[str, Any]:

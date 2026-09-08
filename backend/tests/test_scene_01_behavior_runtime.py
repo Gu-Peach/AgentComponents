@@ -29,6 +29,97 @@ def test_scene_01_json_is_runtime_compatible_before_execution() -> None:
     ]
 
 
+def test_scene_01_startup_transport_uses_first_stop_point_segment() -> None:
+    runtime = BehaviorGraphRuntime(load_scene_01())
+
+    result = runtime.emit_event("runtime.sim_start", sim_time_s=0.0)
+
+    assert [(action["instance_id"], action["behavior_id"]) for action in result["actions"]] == [("main_conveyor_1", "transport_to_exit")]
+    action_payload = result["actions"][0]["payload"]
+    assert action_payload["from_point_id"] == "main_conveyor_1.sp_01"
+    assert action_payload["to_point_id"] == "main_conveyor_1.sp_02"
+    assert result["snapshot"]["conveyor_occupancy"]["main_conveyor_1"]["main_conveyor_1.sp_01"] == "pallet_1"
+
+
+def test_scene_01_conveyor_segment_completion_advances_to_next_stop_point() -> None:
+    runtime = BehaviorGraphRuntime(load_scene_01())
+    started = runtime.emit_event("runtime.sim_start", sim_time_s=0.0)
+    action = started["actions"][0]
+
+    completed = runtime.complete_action(action["action_id"], sim_time_s=1.0)
+
+    occupancy = completed["snapshot"]["conveyor_occupancy"]["main_conveyor_1"]
+    assert occupancy["main_conveyor_1.sp_01"] is None
+    assert occupancy["main_conveyor_1.sp_02"] == "pallet_1"
+    assert any(event["event_id"] == "conveyor.stop_point_released" for event in completed["emitted_events"])
+    assert any(event["event_id"] == "conveyor.stop_point_occupied" for event in completed["emitted_events"])
+    next_action = completed["actions"][0]
+    assert next_action["behavior_id"] == "advance_to_next_stop_point"
+    assert next_action["payload"]["from_point_id"] == "main_conveyor_1.sp_02"
+    assert next_action["payload"]["to_point_id"] == "main_conveyor_1.sp_03"
+    assert next_action["payload"]["transport_goal_behavior_id"] == "transport_to_exit"
+
+
+def test_scene_01_conveyor_waits_when_next_stop_point_is_occupied_then_resumes_on_release() -> None:
+    runtime = BehaviorGraphRuntime(load_scene_01())
+    occupancy = runtime.snapshot["conveyor_occupancy"]["main_conveyor_1"]
+    occupancy["main_conveyor_1.sp_02"] = "pallet_1"
+    occupancy["main_conveyor_1.sp_03"] = "blocking_carrier"
+
+    blocked = runtime.emit_event(
+        "conveyor.stop_point_occupied",
+        {
+            "conveyor_id": "main_conveyor_1",
+            "point_id": "main_conveyor_1.sp_02",
+            "material_id": "pallet_1",
+            "transport_goal_behavior_id": "transport_to_exit",
+        },
+        sim_time_s=1.0,
+    )
+
+    assert blocked["actions"] == []
+    assert blocked["snapshot"]["wait_queues"]["conveyor:main_conveyor_1"] == [
+        {"material_id": "pallet_1", "point_id": "main_conveyor_1.sp_02"}
+    ]
+
+    occupancy["main_conveyor_1.sp_03"] = None
+    resumed = runtime.emit_event(
+        "conveyor.stop_point_released",
+        {"conveyor_id": "main_conveyor_1", "point_id": "main_conveyor_1.sp_03", "material_id": "blocking_carrier"},
+        sim_time_s=2.0,
+    )
+
+    assert resumed["snapshot"]["wait_queues"]["conveyor:main_conveyor_1"] == []
+    resumed_action = resumed["actions"][0]
+    assert resumed_action["instance_id"] == "main_conveyor_1"
+    assert resumed_action["behavior_id"] == "advance_to_next_stop_point"
+    assert resumed_action["payload"]["from_point_id"] == "main_conveyor_1.sp_02"
+    assert resumed_action["payload"]["to_point_id"] == "main_conveyor_1.sp_03"
+
+
+def test_scene_01_pallet_reaches_second_conveyor_exit_then_fans_out_to_robots() -> None:
+    runtime = BehaviorGraphRuntime(load_scene_01())
+    result = runtime.emit_event("runtime.sim_start", sim_time_s=0.0)
+    action = result["actions"][0]
+
+    for step in range(6):
+        result = runtime.complete_action(action["action_id"], sim_time_s=float(step + 1))
+        conveyor_actions = [item for item in result["actions"] if item["instance_id"].startswith("main_conveyor_")]
+        if conveyor_actions:
+            action = conveyor_actions[0]
+
+    assert any(event["event_id"] == "main_conveyor_2.pallet_ready" for event in result["emitted_events"])
+    assert [(action["instance_id"], action["behavior_id"]) for action in result["actions"]] == [
+        ("robot_1", "pick_and_place"),
+        ("robot_2", "pick_and_place"),
+    ]
+    assert [(event["sequence"], event["instance_id"], event["behavior_id"]) for event in runtime.snapshot["frontend_events"][-2:]] == [
+        (7, "robot_1", "pick_and_place"),
+        (8, "robot_2", "pick_and_place"),
+    ]
+    assert runtime.snapshot["wait_queues"] == {}
+
+
 def test_scene_01_pallet_ready_fans_out_to_two_robot_behaviors() -> None:
     runtime = BehaviorGraphRuntime(load_scene_01())
 
